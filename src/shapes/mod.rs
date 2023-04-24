@@ -36,46 +36,47 @@ impl Default for Shape {
 ///
 /// Shape specific methods will additionally add the component representing the corresponding shape.
 #[derive(Bundle)]
-pub struct ShapeBundle {
+pub struct ShapeBundle<T: Component> {
     pub spatial_bundle: SpatialBundle,
     pub shape: Shape,
+    pub shape_type: T,
 }
 
-impl ShapeBundle {
-    pub fn new(config: &ShapeConfig) -> Self {
+impl<T: Component> ShapeBundle<T> {
+    pub fn new(config: &ShapeConfig, component: T) -> Self {
         Self {
             spatial_bundle: SpatialBundle::from_transform(config.transform),
             shape: Shape {
                 alpha_mode: config.alpha_mode,
                 disable_laa: config.disable_laa,
             },
+            shape_type: component,
         }
     }
 
-    pub fn line(config: &ShapeConfig, start: Vec3, end: Vec3) -> impl Bundle {
-        (Self::new(config), Line::new(config, start, end))
+    pub fn line(config: &ShapeConfig, start: Vec3, end: Vec3) -> ShapeBundle<Line> {
+        ShapeBundle::<Line>::new(config, Line::new(config, start, end))
     }
 
-    pub fn rect(config: &ShapeConfig, size: Vec2) -> impl Bundle {
-        (Self::new(config), Rectangle::new(config, size))
+    pub fn rect(config: &ShapeConfig, size: Vec2) -> ShapeBundle<Rectangle> {
+        ShapeBundle::<Rectangle>::new(config, Rectangle::new(config, size))
     }
 
-    pub fn ngon(config: &ShapeConfig, sides: f32, radius: f32) -> impl Bundle {
-        (
-            Self::new(config),
-            RegularPolygon::new(config, sides, radius),
-        )
+    pub fn ngon(config: &ShapeConfig, sides: f32, radius: f32) -> ShapeBundle<RegularPolygon> {
+        ShapeBundle::<RegularPolygon>::new(config, RegularPolygon::new(config, sides, radius))
     }
 
-    pub fn circle(config: &ShapeConfig, radius: f32) -> impl Bundle {
-        (Self::new(config), Disc::circle(config, radius))
+    pub fn circle(config: &ShapeConfig, radius: f32) -> ShapeBundle<Disc> {
+        ShapeBundle::<Disc>::new(config, Disc::circle(config, radius))
     }
 
-    pub fn arc(config: &ShapeConfig, radius: f32, start_angle: f32, end_angle: f32) -> impl Bundle {
-        (
-            Self::new(config),
-            Disc::arc(config, radius, start_angle, end_angle),
-        )
+    pub fn arc(
+        config: &ShapeConfig,
+        radius: f32,
+        start_angle: f32,
+        end_angle: f32,
+    ) -> ShapeBundle<Disc> {
+        ShapeBundle::<Disc>::new(config, Disc::arc(config, radius, start_angle, end_angle))
     }
 }
 
