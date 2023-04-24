@@ -317,7 +317,7 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(ShapePlugin::default())
+        .add_plugin(ShapePlugin::immediate())
         .insert_resource(ClearColor(Color::DARK_GRAY))
         .insert_resource(Msaa::Off)
         .add_startup_system(setup)

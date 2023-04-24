@@ -10,7 +10,7 @@ use gallery_3d::gallery;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(Shape2dPlugin::default())
+        .add_plugin(Shape2dPlugin::immediate())
         .insert_resource(ClearColor(Color::DARK_GRAY))
         .insert_resource(Msaa::Off)
         .add_startup_system(setup)

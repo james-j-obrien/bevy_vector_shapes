@@ -19,27 +19,15 @@ Bevy Vector Shapes is in the very early stages of development. There may be issu
 
 ## Features
 - Variety of shape types: lines, rectangles, circles, arcs and regular polygons.
-- Supports various bevy rendering features: transparency, alpha modes, render layers, bloom.
+- Supports various bevy rendering features: 2D and 3D pipelines, transparency, alpha modes, render layers, bloom.
 - Immediate and retained mode.
 - Local anti-aliasing for smoother looking shapes.
 - Optional billboarding for each shape type to ensure they are always facing the camera.
 - Shapes of the same type and rendering configuration are fully batched and instanced together.
 
 ## Usage
-See the `minimal_2d` or `minimal_3d` examples for basic usage.
+See the `minimal_2d` or `minimal_3d` examples for basic usage and the remaining examples for explorations of supported features.
 
 | bevy | bevy_vector_shapes |
 | ---- | ------------------ |
 | 0.10 | 0.1                |
-
-
-## License
-
-bevy_vector_shapes is free and open source! All code in this repository is dual-licensed under either:
-
-* MIT License ([LICENSE-MIT](LICENSE-MIT) or [http://opensource.org/licenses/MIT](http://opensource.org/licenses/MIT))
-* Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0))
-
-at your option. This means you can select the license you prefer! This dual-licensing approach is the de-facto standard in the Rust ecosystem and there are very good reasons to include both.
-
-Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.

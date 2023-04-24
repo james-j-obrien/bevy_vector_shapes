@@ -49,6 +49,11 @@ impl ShapePlugin {
         s.base_config.immediate = false;
         s
     }
+
+    /// Creates a shape plugin where the default config is in immediate mode.
+    pub fn immediate() -> Self {
+        Self::default()
+    }
 }
 
 impl Plugin for ShapePlugin {
