@@ -130,7 +130,8 @@ struct FragmentInput {
     @location(2) cap_ratio: f32
 };
 
-
+// Due to https://github.com/gfx-rs/naga/issues/1743 this cannot be compiled into the vertex shader on web
+#ifdef FRAGMENT
 @fragment
 fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
     var in_shape = f.color.a;
@@ -170,3 +171,4 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
 
     return vec4<f32>(f.color.rgb, in_shape);
 }
+#endif

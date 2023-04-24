@@ -130,6 +130,8 @@ fn f_arc(flags: u32) -> u32 {
 #ifdef LOCAL_AA
 const AA_PADDING: f32 = 2.0;
 
+// Due to https://github.com/gfx-rs/naga/issues/1743 this cannot be compiled into the vertex shader on web
+#ifdef FRAGMENT
 fn partial_derivative(v: f32) -> f32 {
     var dv = vec2<f32>(dpdx(v), dpdy(v));
     return length(dv);
@@ -148,6 +150,7 @@ fn step_aa_pd(edge: f32, x: f32, pd: f32) -> f32 {
     var pd = partial_derivative(pd);
     return 1.0 - saturate(-value / pd);
 }
+#endif
 #endif
 
 #ifdef DISABLE_LOCAL_AA

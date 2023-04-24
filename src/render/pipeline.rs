@@ -180,6 +180,9 @@ impl<T: Instanceable> SpecializedRenderPipeline for InstancedPipeline<T> {
             false => TextureFormat::bevy_default(),
         };
 
+        let mut fragment_defs = shader_defs.clone();
+        fragment_defs.push("FRAGMENT".into());
+
         RenderPipelineDescriptor {
             vertex: VertexState {
                 shader: self.shader.clone(),
@@ -193,7 +196,7 @@ impl<T: Instanceable> SpecializedRenderPipeline for InstancedPipeline<T> {
             },
             fragment: Some(FragmentState {
                 shader: self.shader.clone(),
-                shader_defs,
+                shader_defs: fragment_defs,
                 entry_point: "fragment".into(),
                 targets: vec![Some(ColorTargetState {
                     format,
