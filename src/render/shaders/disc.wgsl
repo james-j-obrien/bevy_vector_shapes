@@ -86,7 +86,8 @@ struct FragmentInput {
     @location(5) cap: u32
 };
 
-
+// Due to https://github.com/gfx-rs/naga/issues/1743 this cannot be compiled into the vertex shader on web
+#ifdef FRAGMENT
 @fragment
 fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
     // Mask representing whether this fragment falls within the shape
@@ -123,3 +124,4 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
 
     return color_output(vec4<f32>(f.color.rgb, in_shape));
 }
+#endif

@@ -121,6 +121,8 @@ fn ngonSDF(pos: vec2<f32>, central_angle: f32, half_side_length: f32, apothem: f
     return length(pos - nearest_point) * sign(pos.x - apothem);
 }
 
+// Due to https://github.com/gfx-rs/naga/issues/1743 this cannot be compiled into the vertex shader on web
+#ifdef FRAGMENT
 @fragment
 fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
     // Mask representing whether this fragment falls within the shape
@@ -139,3 +141,4 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
 
     return vec4<f32>(f.color.rgb, in_shape);
 }
+#endif

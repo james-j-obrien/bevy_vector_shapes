@@ -707,7 +707,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_vector_shapes"
-version = "0.1.2"
+version = "0.1.3"
 dependencies = [
  "bevy",
  "bitfield",
