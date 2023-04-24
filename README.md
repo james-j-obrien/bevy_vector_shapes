@@ -23,7 +23,7 @@ Bevy Vector Shapes is in the very early stages of development. There may be issu
 - Immediate and retained mode.
 - Local anti-aliasing for smoother looking shapes.
 - Optional billboarding for each shape type to ensure they are always facing the camera.
-- Shapes of the same type and rendering configuration are fully batched and instanced together.
+- Shapes of the same type and rendering configuration are fully instanced together.
 
 ## Usage
 See the `minimal_2d` or `minimal_3d` examples for basic usage and the remaining examples for explorations of supported features.

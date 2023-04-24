@@ -53,19 +53,27 @@ impl<T: Component> ShapeBundle<T> {
             shape_type: component,
         }
     }
+}
 
-    pub fn line(config: &ShapeConfig, start: Vec3, end: Vec3) -> ShapeBundle<Line> {
-        ShapeBundle::<Line>::new(config, Line::new(config, start, end))
+impl ShapeBundle<Line> {
+    pub fn line(config: &ShapeConfig, start: Vec3, end: Vec3) -> Self {
+        Self::new(config, Line::new(config, start, end))
     }
+}
 
+impl ShapeBundle<Rectangle> {
     pub fn rect(config: &ShapeConfig, size: Vec2) -> ShapeBundle<Rectangle> {
         ShapeBundle::<Rectangle>::new(config, Rectangle::new(config, size))
     }
+}
 
+impl ShapeBundle<RegularPolygon> {
     pub fn ngon(config: &ShapeConfig, sides: f32, radius: f32) -> ShapeBundle<RegularPolygon> {
         ShapeBundle::<RegularPolygon>::new(config, RegularPolygon::new(config, sides, radius))
     }
+}
 
+impl ShapeBundle<Disc> {
     pub fn circle(config: &ShapeConfig, radius: f32) -> ShapeBundle<Disc> {
         ShapeBundle::<Disc>::new(config, Disc::circle(config, radius))
     }
