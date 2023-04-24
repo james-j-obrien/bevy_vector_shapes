@@ -1,0 +1,20 @@
+[package]
+authors = ["James O'Brien"]
+description = "A library for rendering vector shapes using the Bevy game engine"
+edition = "2021"
+exclude = [
+  "assets/*",
+]
+homepage = "https://github.com/james-j-obrien/bevy_vector_shapes"
+keywords = ["bevy", "gamedev", "graphics"]
+license-file = "LICENSE"
+name = "bevy_vector_shapes"
+repository = "https://github.com/james-j-obrien/bevy_vector_shapes"
+version = "0.1.0"
+
+[dependencies]
+bevy = {version = "0.10", default-features = false, features = ["bevy_render", "bevy_sprite", "bevy_asset", "bevy_winit", "bevy_core_pipeline", "bevy_pbr"]}
+bitfield = "0.14.0"
+bitflags = "2.0.2"
+bytemuck = "1.13.1"
+wgpu = "0.15.1"
