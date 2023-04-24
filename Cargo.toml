@@ -10,7 +10,7 @@ keywords = ["bevy", "gamedev", "graphics"]
 license-file = "LICENSE"
 name = "bevy_vector_shapes"
 repository = "https://github.com/james-j-obrien/bevy_vector_shapes"
-version = "0.1.1"
+version = "0.1.2"
 
 [dependencies]
 bevy = {version = "0.10", default-features = false, features = ["bevy_render", "bevy_sprite", "bevy_asset", "bevy_winit", "bevy_core_pipeline", "bevy_pbr"]}
