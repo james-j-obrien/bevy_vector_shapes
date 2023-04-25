@@ -131,7 +131,6 @@ impl DiscInstance {
         flags.set_thickness_type(config.thickness_type);
         flags.set_alignment(config.alignment);
         flags.set_hollow(config.hollow as u32);
-        flags.set_cap(config.cap);
         flags.set_arc(false as u32);
 
         DiscInstance {

@@ -37,7 +37,7 @@ pub fn extract_instances_2d<T: Instanceable>(
         })
         .collect::<Vec<_>>();
 
-    instances.extend(events.iter().map(|e| (e.render_key, e.instance)));
+    instances.extend(events.into_iter().map(|e| e.0));
 
     if !instances.is_empty() {
         commands.spawn(InstanceData::<T>(instances));

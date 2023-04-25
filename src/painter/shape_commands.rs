@@ -6,8 +6,8 @@ use crate::{painter::LocalShapeConfig, prelude::*};
 
 /// A system param that allows ergonomic spawning of shape entities.
 ///
-/// The ShapeConfig used is initially extracted from the BaseShapeConfig resource.
-/// Subsequent calls to .clear() will reset the config back to whatever is currently stored within the BaseShapeConfig resource.
+/// The ShapeConfig used is initially extracted from the [`BaseShapeConfig`] resource.
+/// Subsequent calls to .clear() will reset the config back to whatever is currently stored within the [`BaseShapeConfig`] resource.
 ///
 /// Shapes will be spawned with commands during the next instance of [`apply_system_buffers`]
 #[derive(SystemParam)]
@@ -21,15 +21,6 @@ impl<'w, 's> ShapeCommands<'w, 's> {
     /// Set the painter's [`ShapeConfig`] to the current value of the [`BaseShapeConfig`] resource.
     pub fn clear(&mut self) {
         self.config.0 = self.default_config.0;
-    }
-
-    /// Access the internal [`Commands`].
-    pub fn commands<'a>(&'a mut self) -> &'a mut Commands
-    where
-        'a: 's,
-        'a: 'w,
-    {
-        &mut self.commands
     }
 }
 

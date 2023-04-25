@@ -9,11 +9,12 @@ use crate::{
     shapes::{DiscInstance, LineInstance, NgonInstance, RectInstance},
 };
 
-pub struct ShapeEvent<T: Instanceable> {
-    pub(crate) render_key: RenderKey,
-    pub(crate) instance: T,
-}
+/// Event backing immediate mode shapes.
+pub struct ShapeEvent<T: Instanceable>(pub(crate) (RenderKey, T));
 
+/// A system param for writing each type of [`ShapeEvent`]
+///
+/// Generally should only be consumed as part of [`ShapePainter`] and not used directly.
 #[derive(SystemParam)]
 pub struct ShapeEventWriter<'w> {
     line_writer: EventWriter<'w, ShapeEvent<LineInstance>>,
@@ -24,40 +25,28 @@ pub struct ShapeEventWriter<'w> {
 
 impl<'w> ShapeEventWriter<'w> {
     fn line(&mut self, render_key: RenderKey, instance: LineInstance) {
-        self.line_writer.send(ShapeEvent {
-            render_key,
-            instance,
-        });
+        self.line_writer.send(ShapeEvent((render_key, instance)));
     }
 
     fn rect(&mut self, render_key: RenderKey, instance: RectInstance) {
-        self.rect_writer.send(ShapeEvent {
-            render_key,
-            instance,
-        });
+        self.rect_writer.send(ShapeEvent((render_key, instance)));
     }
 
     fn disc(&mut self, render_key: RenderKey, instance: DiscInstance) {
-        self.disc_writer.send(ShapeEvent {
-            render_key,
-            instance,
-        });
+        self.disc_writer.send(ShapeEvent((render_key, instance)));
     }
 
     fn ngon(&mut self, render_key: RenderKey, instance: NgonInstance) {
-        self.ngon_writer.send(ShapeEvent {
-            render_key,
-            instance,
-        });
+        self.ngon_writer.send(ShapeEvent((render_key, instance)));
     }
 }
 
-/// A system param that allows ergonomic spawning of shape entities.
+/// A system param that allows ergonomic drawing of immediate mode shapes.
 ///
-/// The ShapeConfig used is initially extracted from the BaseShapeConfig resource.
-/// Subsequent calls to .clear() will reset the config back to whatever is currently stored within the BaseShapeConfig resource.
+/// The ShapeConfig used is initially extracted from the [`BaseShapeConfig`] resource.
+/// Subsequent calls to .clear() will reset the config back to whatever is currently stored within the [`BaseShapeConfig`] resource.
 ///
-/// Shapes will be spawned with commands during the next instance of [`apply_system_buffers`]
+/// Shapes are spawned via events which will be extracted for rendering.
 #[derive(SystemParam)]
 pub struct ShapePainter<'w, 's> {
     config: Local<'s, LocalShapeConfig>,
@@ -113,6 +102,11 @@ impl<'w, 's> ShapePainter<'w, 's> {
         );
         self
     }
+
+    /// Takes a closure which builds children for this shape.
+    ///
+    /// While event based shapes don't have the parent child relationship that entities have,
+    /// this API allows parity between the behaviour of [`ShapeCommands`] and [`ShapePainter`]
     pub fn with_children(&mut self, spawn_children: impl FnOnce(&mut ShapePainter)) -> &mut Self {
         let config = self.config.clone();
         spawn_children(self);

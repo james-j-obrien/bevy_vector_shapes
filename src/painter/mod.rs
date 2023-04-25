@@ -29,9 +29,9 @@ impl FromWorld for LocalShapeConfig {
     }
 }
 
-/// Trait that contains logic for drawing each shape type.
+/// Trait that contains logic for spawning shape entities by type.
 ///
-/// Implemented by [`ShapePainter`] and [`ChildPainter`].
+/// Implemented by [`ShapeCommands`] and [`ShapeChildBuilder`].
 pub trait ShapeSpawner<'w, 's>: DerefMut<Target = ShapeConfig> {
     fn config(&self) -> &ShapeConfig;
 
