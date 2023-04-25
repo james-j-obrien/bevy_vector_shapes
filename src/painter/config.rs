@@ -73,6 +73,12 @@ impl ShapeConfig {
     pub fn set_scale(&mut self, scale: Vec3) {
         self.transform.scale = scale;
     }
+
+    pub fn without_transform(&self) -> Self {
+        let mut config = self.clone();
+        config.transform = Transform::IDENTITY;
+        config
+    }
 }
 
 impl Default for ShapeConfig {

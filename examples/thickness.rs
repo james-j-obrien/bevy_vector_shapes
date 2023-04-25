@@ -3,17 +3,10 @@
 use bevy::prelude::*;
 use bevy_vector_shapes::prelude::*;
 
-mod gallery_3d;
-
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(ShapePlugin {
-            base_config: ShapeConfig {
-                alignment: Alignment::Billboard,
-                ..default()
-            },
-        })
+        .add_plugin(ShapePlugin::immediate())
         .insert_resource(ClearColor(Color::DARK_GRAY))
         .insert_resource(Msaa::Off)
         .add_startup_system(setup)

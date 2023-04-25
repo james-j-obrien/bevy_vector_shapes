@@ -16,7 +16,9 @@ use painter::*;
 
 /// `use bevy_vector_shapes::prelude::*` to import commonly used items.
 pub mod prelude {
-    pub use crate::painter::{ShapeConfig, ShapePainter};
+    pub use crate::painter::{
+        ChildPainter, ShapeConfig, ShapeEntityCommands, ShapePainter, ShapeSpawner,
+    };
     pub use crate::{
         shapes::{
             Alignment, Cap, Disc, Line, Rectangle, RegularPolygon, Shape, ShapeBundle,
@@ -33,7 +35,7 @@ pub mod prelude {
 #[reflect(Resource)]
 pub struct BaseShapeConfig(pub ShapeConfig);
 
-/// Plugin that contains all necessary functionality to draw shapes.
+/// Plugin that contains all necessary functionality to draw shapes with a 3D camera.
 #[derive(Default)]
 pub struct ShapePlugin {
     /// Default config that will be used for all [`ShapePainter`]s.
@@ -83,6 +85,11 @@ impl Shape2dPlugin {
         let mut s = Self::default();
         s.base_config.immediate = false;
         s
+    }
+
+    /// Creates a shape plugin where the default config is in immediate mode.
+    pub fn immediate() -> Self {
+        Self::default()
     }
 }
 

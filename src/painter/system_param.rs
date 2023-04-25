@@ -1,9 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use bevy::{
-    ecs::system::{EntityCommands, SystemParam},
-    prelude::*,
-};
+use bevy::{ecs::system::SystemParam, prelude::*};
 
 use crate::{prelude::*, Immediate};
 
@@ -35,10 +32,6 @@ pub struct ShapePainter<'w, 's> {
 }
 
 impl<'w, 's> ShapePainter<'w, 's> {
-    pub fn config(&self) -> &ShapeConfig {
-        &self.config.0
-    }
-
     pub fn set_config(&mut self, config: &ShapeConfig) {
         self.config.0 = *config;
     }
@@ -47,47 +40,29 @@ impl<'w, 's> ShapePainter<'w, 's> {
     pub fn clear(&mut self) {
         self.config.0 = self.default_config.0;
     }
+}
 
-    fn spawn(&mut self, bundle: impl Bundle) -> EntityCommands<'w, 's, '_> {
+impl<'w, 's> ShapeSpawner<'w, 's> for ShapePainter<'w, 's> {
+    fn config(&self) -> &ShapeConfig {
+        &self.config.0
+    }
+
+    fn spawn_shape(&mut self, bundle: impl Bundle) -> ShapeEntityCommands<'w, 's, '_> {
         let immediate = self.immediate;
-        let mut commands = self.commands.spawn(bundle);
-        if let Some(layers) = self.config.render_layers {
-            commands.insert(layers);
+        let Self {
+            commands, config, ..
+        } = self;
+        let mut e = commands.spawn(bundle);
+        if let Some(layers) = config.render_layers {
+            e.insert(layers);
         }
         if immediate {
-            commands.insert(Immediate);
+            e.insert(Immediate);
         }
-        commands
-    }
-
-    pub fn line(&mut self, start: Vec3, end: Vec3) -> EntityCommands<'w, 's, '_> {
-        self.spawn(ShapeBundle::line(&self.config.0, start, end))
-    }
-
-    pub fn rect(&mut self, size: Vec2) -> EntityCommands<'w, 's, '_> {
-        self.spawn(ShapeBundle::rect(&self.config.0, size))
-    }
-
-    pub fn ngon(&mut self, sides: f32, radius: f32) -> EntityCommands<'w, 's, '_> {
-        self.spawn(ShapeBundle::ngon(&self.config.0, sides, radius))
-    }
-
-    pub fn circle(&mut self, radius: f32) -> EntityCommands<'w, 's, '_> {
-        self.spawn(ShapeBundle::circle(&self.config.0, radius))
-    }
-
-    pub fn arc(
-        &mut self,
-        radius: f32,
-        start_angle: f32,
-        end_angle: f32,
-    ) -> EntityCommands<'w, 's, '_> {
-        self.spawn(ShapeBundle::arc(
-            &self.config.0,
-            radius,
-            start_angle,
-            end_angle,
-        ))
+        ShapeEntityCommands {
+            commands: e,
+            config,
+        }
     }
 }
 
