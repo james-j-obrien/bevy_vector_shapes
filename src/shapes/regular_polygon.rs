@@ -98,6 +98,27 @@ pub struct NgonInstance {
     roundness: f32,
 }
 
+impl NgonInstance {
+    pub fn new(config: &ShapeConfig, sides: f32, radius: f32) -> NgonInstance {
+        let mut flags = Flags(0);
+        flags.set_thickness_type(config.thickness_type);
+        flags.set_alignment(config.alignment);
+        flags.set_hollow(config.hollow as u32);
+
+        NgonInstance {
+            transform: config.transform.compute_matrix().to_cols_array_2d(),
+
+            color: config.color.as_rgba_f32(),
+            thickness: config.thickness,
+            flags: flags.0,
+
+            sides,
+            radius,
+            roundness: config.roundness,
+        }
+    }
+}
+
 impl Instanceable for NgonInstance {
     type Component = RegularPolygon;
 

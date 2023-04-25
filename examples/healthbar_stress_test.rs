@@ -1,15 +1,20 @@
 // A stress test drawing a large number of shapes
 
-use bevy::prelude::*;
+use bevy::{
+    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    prelude::*,
+};
 use bevy_vector_shapes::prelude::*;
 
-const SHAPES_PER_AXIS: u32 = 100;
+const SHAPES_PER_AXIS: u32 = 200;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(ShapePlugin::immediate())
+        .add_plugin(ShapePlugin::default())
         .insert_resource(ClearColor(Color::DARK_GRAY))
+        .add_plugin(FrameTimeDiagnosticsPlugin)
+        .add_plugin(LogDiagnosticsPlugin::default())
         .add_startup_system(setup)
         .add_system(draw_spheres)
         .run();
@@ -19,7 +24,7 @@ fn setup(mut commands: Commands) {
     let shapes = SHAPES_PER_AXIS as f32;
     let center = Vec3::new(shapes, 0.0, shapes);
     commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 20.0, 0.0).looking_at(center, Vec3::Y),
+        transform: Transform::from_xyz(-20.0, 20.0, -20.0).looking_at(center, Vec3::Y),
         ..default()
     });
 }

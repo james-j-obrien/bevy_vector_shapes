@@ -24,8 +24,9 @@ pub fn extract_instances<T: Instanceable>(
             Option<&RenderLayers>,
         )>,
     >,
+    mut events: Extract<EventReader<ShapeEvent<T>>>,
 ) {
-    let instances = entities
+    let mut instances = entities
         .iter()
         .filter_map(|(cp, tf, vis, flags, rl)| {
             if vis.is_visible() {
@@ -35,6 +36,8 @@ pub fn extract_instances<T: Instanceable>(
             }
         })
         .collect::<Vec<_>>();
+
+    instances.extend(events.iter().map(|e| (e.render_key, e.instance)));
 
     if !instances.is_empty() {
         commands.spawn(InstanceData::<T>(instances));

@@ -30,11 +30,6 @@ pub struct Rectangle {
 
 impl Rectangle {
     pub fn new(config: &ShapeConfig, size: Vec2) -> Self {
-        let mut flags = Flags(0);
-        flags.set_alignment(config.alignment);
-        flags.set_thickness_type(config.thickness_type);
-        flags.set_hollow(config.hollow as u32);
-
         Self {
             color: config.color,
             thickness: config.thickness,
@@ -95,6 +90,26 @@ pub struct RectInstance {
 
     size: [f32; 2],
     corner_radii: [f32; 4],
+}
+
+impl RectInstance {
+    pub fn new(config: &ShapeConfig, size: Vec2) -> Self {
+        let mut flags = Flags(0);
+        flags.set_alignment(config.alignment);
+        flags.set_thickness_type(config.thickness_type);
+        flags.set_hollow(config.hollow as u32);
+
+        Self {
+            transform: config.transform.compute_matrix().to_cols_array_2d(),
+
+            color: config.color.as_rgba_f32(),
+            thickness: config.thickness,
+            flags: flags.0,
+
+            size: size.into(),
+            corner_radii: config.corner_radii.into(),
+        }
+    }
 }
 
 impl Instanceable for RectInstance {

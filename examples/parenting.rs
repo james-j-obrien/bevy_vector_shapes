@@ -1,4 +1,4 @@
-// Demonstrates spawning child shapes using the ChildPainter API
+// Demonstrates spawning child shapes using with_children
 
 use bevy::prelude::*;
 use bevy_vector_shapes::prelude::*;
@@ -6,7 +6,7 @@ use bevy_vector_shapes::prelude::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(ShapePlugin::immediate())
+        .add_plugin(ShapePlugin::default())
         .insert_resource(ClearColor(Color::DARK_GRAY))
         .insert_resource(Msaa::Off)
         .add_startup_system(setup)
@@ -21,7 +21,7 @@ fn setup(mut commands: Commands) {
     });
 }
 
-fn draw_tree(time: f32, painter: &mut ChildPainter, depth: u32) {
+fn draw_tree(time: f32, painter: &mut ShapePainter, depth: u32) {
     if depth == 0 {
         return;
     }

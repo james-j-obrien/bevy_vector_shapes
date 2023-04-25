@@ -121,6 +121,16 @@ impl RenderKey {
     }
 }
 
+impl From<&ShapeConfig> for RenderKey {
+    fn from(config: &ShapeConfig) -> Self {
+        Self {
+            render_layers: config.render_layers.unwrap_or_default(),
+            alpha_mode: AlphaModeOrd(config.alpha_mode),
+            disable_laa: config.disable_laa || config.alpha_mode == AlphaMode::Opaque,
+        }
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct AlphaModeOrd(AlphaMode);
 
@@ -164,6 +174,7 @@ pub fn extract_render_layers(
 
 /// Sets up the pipeline for the specified instanceable shape in the given app;
 pub fn setup_instanced_pipeline<T: Instanceable>(app: &mut App) {
+    app.add_event::<ShapeEvent<T>>();
     app.sub_app_mut(RenderApp)
         .add_render_command::<Opaque3d, DrawInstancedCommand<T>>()
         .add_render_command::<Transparent3d, DrawInstancedCommand<T>>()
@@ -179,6 +190,7 @@ pub fn setup_instanced_pipeline<T: Instanceable>(app: &mut App) {
 
 /// Sets up the pipeline for the specified instanceable shape in the given app;
 pub fn setup_instanced_pipeline_2d<T: Instanceable>(app: &mut App) {
+    app.add_event::<ShapeEvent<T>>();
     app.sub_app_mut(RenderApp)
         .add_render_command::<Transparent2d, DrawInstancedCommand<T>>()
         .init_resource::<InstancedPipeline<T>>()

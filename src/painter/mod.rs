@@ -1,46 +1,41 @@
+use std::ops::DerefMut;
+
 use crate::prelude::*;
 use bevy::prelude::*;
 
 mod config;
 pub use config::*;
 
-mod system_param;
-pub use system_param::*;
+mod shape_commands;
+pub use shape_commands::*;
 
-mod child_painter;
-pub use child_painter::*;
+mod child_commands;
+pub use child_commands::*;
 
-pub(crate) struct PainterPlugin;
+mod shape_painter;
+pub use shape_painter::*;
 
-impl Plugin for PainterPlugin {
-    fn build(&self, app: &mut App) {
-        app.register_type::<BaseShapeConfig>()
-            .add_system(clear_immediate_shapes.in_base_set(CoreSet::PreUpdate));
+#[derive(Deref, DerefMut)]
+struct LocalShapeConfig(pub ShapeConfig);
+
+impl FromWorld for LocalShapeConfig {
+    fn from_world(world: &mut World) -> Self {
+        let config = world
+            .get_resource::<BaseShapeConfig>()
+            .cloned()
+            .unwrap_or_default();
+
+        Self(config.0)
     }
-}
-
-pub(crate) struct Painter2dPlugin;
-
-impl Plugin for Painter2dPlugin {
-    fn build(&self, app: &mut App) {
-        app.register_type::<BaseShapeConfig>()
-            .add_system(clear_immediate_shapes.in_base_set(CoreSet::PreUpdate));
-    }
-}
-
-/// Marker component attached to shapes spawned in immediate mode.
-#[derive(Component)]
-pub struct Immediate;
-
-fn clear_immediate_shapes(mut commands: Commands, shapes: Query<Entity, With<Immediate>>) {
-    shapes.for_each(|s| commands.entity(s).despawn());
 }
 
 /// Trait that contains logic for drawing each shape type.
 ///
 /// Implemented by [`ShapePainter`] and [`ChildPainter`].
-pub trait ShapeSpawner<'w, 's> {
+pub trait ShapeSpawner<'w, 's>: DerefMut<Target = ShapeConfig> {
     fn config(&self) -> &ShapeConfig;
+
+    fn set_config(&mut self, config: &ShapeConfig);
 
     fn spawn_shape(&mut self, bundle: impl Bundle) -> ShapeEntityCommands<'w, 's, '_>;
 

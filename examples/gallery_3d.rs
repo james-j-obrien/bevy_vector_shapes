@@ -136,7 +136,7 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
                 painter.circle(1.5 * circle_fill);
             }
             12 => {
-                fn draw_bubble(
+                fn draw_bubble<'w, 's, 'a>(
                     painter: &mut ShapePainter,
                     seconds: f32,
                     position: Vec3,
@@ -317,7 +317,7 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(ShapePlugin::immediate())
+        .add_plugin(ShapePlugin::default())
         .insert_resource(ClearColor(Color::DARK_GRAY))
         .insert_resource(Msaa::Off)
         .add_startup_system(setup)
