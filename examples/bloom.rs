@@ -10,7 +10,7 @@ use gallery_3d::gallery;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(ShapePlugin::immediate())
+        .add_plugin(ShapePlugin::default())
         .insert_resource(ClearColor(Color::BLACK))
         .insert_resource(Msaa::Off)
         .add_startup_system(setup)

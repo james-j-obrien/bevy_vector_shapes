@@ -24,8 +24,6 @@ pub struct ShapeConfig {
     pub alpha_mode: AlphaMode,
     /// Forcibly disables local anti-aliasing for all shapes
     pub disable_laa: bool,
-    /// If true spawned shapes will be despawned in [`CoreSet::PreUpdate`] each frame
-    pub immediate: bool,
 }
 
 impl ShapeConfig {
@@ -98,7 +96,6 @@ impl Default for ShapeConfig {
             render_layers: default(),
             alpha_mode: AlphaMode::Blend,
             disable_laa: false,
-            immediate: true,
         }
     }
 }

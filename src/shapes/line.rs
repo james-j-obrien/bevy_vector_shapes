@@ -92,6 +92,26 @@ pub struct LineInstance {
     end: Vec3,
 }
 
+impl LineInstance {
+    pub fn new(config: &ShapeConfig, start: Vec3, end: Vec3) -> Self {
+        let mut flags = Flags(0);
+        flags.set_thickness_type(config.thickness_type);
+        flags.set_alignment(config.alignment);
+        flags.set_cap(config.cap);
+
+        LineInstance {
+            transform: config.transform.compute_matrix().to_cols_array_2d(),
+
+            color: config.color.as_rgba_f32(),
+            thickness: config.thickness,
+            flags: flags.0,
+
+            start,
+            end,
+        }
+    }
+}
+
 impl Instanceable for LineInstance {
     type Component = Line;
 

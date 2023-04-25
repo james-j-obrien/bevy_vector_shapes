@@ -6,7 +6,7 @@ use bevy::{
 };
 use smallvec::SmallVec;
 
-use crate::{prelude::*, Immediate};
+use crate::prelude::*;
 
 /// Command that pushes children to the end of the entity's [`Children`].
 ///
@@ -30,11 +30,14 @@ pub struct ShapeEntityCommands<'w, 's, 'a> {
 }
 
 impl<'w, 's, 'a> ShapeEntityCommands<'w, 's, 'a> {
-    /// Takes a closure which builds children for this entity using [`ChildPainter`].
-    pub fn with_children(&mut self, spawn_children: impl FnOnce(&mut ChildPainter)) -> &mut Self {
+    /// Takes a closure which builds children for this entity using [`ShapeChildBuilder`].
+    pub fn with_children(
+        &mut self,
+        spawn_children: impl FnOnce(&mut ShapeChildBuilder),
+    ) -> &mut Self {
         let config = self.config.without_transform();
         let parent = self.id();
-        let mut painter = ChildPainter {
+        let mut painter = ShapeChildBuilder {
             commands: self.commands(),
             push_children: PushChildren {
                 children: SmallVec::default(),
@@ -64,14 +67,14 @@ impl<'w, 's, 'a> DerefMut for ShapeEntityCommands<'w, 's, 'a> {
     }
 }
 
-/// [`ChildBuilder`] that also exposes shape spawning methods from [`ShapePainter`].
-pub struct ChildPainter<'w, 's, 'a> {
+/// [`ChildBuilder`] that also exposes shape spawning methods from [`ShapeCommands`].
+pub struct ShapeChildBuilder<'w, 's, 'a> {
     commands: &'a mut Commands<'w, 's>,
     config: ShapeConfig,
     push_children: PushChildren,
 }
 
-impl<'w, 's, 'a> ChildPainter<'w, 's, 'a> {
+impl<'w, 's, 'a> ShapeChildBuilder<'w, 's, 'a> {
     /// Spawns an entity with the given bundle and inserts it into the parent entity's [`Children`].
     /// Also adds [`Parent`] component to the created entity.
     pub fn spawn(&mut self, bundle: impl Bundle) -> EntityCommands<'w, 's, '_> {
@@ -100,13 +103,8 @@ impl<'w, 's, 'a> ChildPainter<'w, 's, 'a> {
     }
 }
 
-impl<'w, 's, 'a> ShapeSpawner<'w, 's> for ChildPainter<'w, 's, 'a> {
-    fn config(&self) -> &ShapeConfig {
-        &self.config
-    }
-
+impl<'w, 's, 'a> ShapeSpawner<'w, 's> for ShapeChildBuilder<'w, 's, 'a> {
     fn spawn_shape(&mut self, bundle: impl Bundle) -> ShapeEntityCommands<'w, 's, '_> {
-        let immediate = self.immediate;
         let Self {
             commands, config, ..
         } = self;
@@ -115,17 +113,22 @@ impl<'w, 's, 'a> ShapeSpawner<'w, 's> for ChildPainter<'w, 's, 'a> {
         if let Some(layers) = config.render_layers {
             e.insert(layers);
         }
-        if immediate {
-            e.insert(Immediate);
-        }
         ShapeEntityCommands {
             commands: e,
             config,
         }
     }
+
+    fn config(&self) -> &ShapeConfig {
+        &self.config
+    }
+
+    fn set_config(&mut self, config: &ShapeConfig) {
+        self.config = config.clone();
+    }
 }
 
-impl<'w, 's, 'a> Deref for ChildPainter<'w, 's, 'a> {
+impl<'w, 's, 'a> Deref for ShapeChildBuilder<'w, 's, 'a> {
     type Target = ShapeConfig;
 
     fn deref(&self) -> &Self::Target {
@@ -133,7 +136,7 @@ impl<'w, 's, 'a> Deref for ChildPainter<'w, 's, 'a> {
     }
 }
 
-impl<'w, 's, 'a> DerefMut for ChildPainter<'w, 's, 'a> {
+impl<'w, 's, 'a> DerefMut for ShapeChildBuilder<'w, 's, 'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.config
     }
@@ -143,20 +146,20 @@ trait BuildShapeChildren {
     fn with_shape_children(
         &mut self,
         config: &ShapeConfig,
-        f: impl FnOnce(&mut ChildPainter),
+        f: impl FnOnce(&mut ShapeChildBuilder),
     ) -> &mut Self;
 }
 
 impl<'w, 's, 'a> BuildShapeChildren for EntityCommands<'w, 's, 'a> {
-    /// Similar to `with_children` on [`ShapeEntityCommands::with_children`] except is available on non-shape entities, takes in config to pass along to the [`ChildPainter`]
+    /// Similar to `with_children` on [`ShapeEntityCommands::with_children`] except is available on non-shape entities, takes in config to pass along to the [`ShapeChildBuilder`]
     fn with_shape_children(
         &mut self,
         config: &ShapeConfig,
-        spawn_children: impl FnOnce(&mut ChildPainter),
+        spawn_children: impl FnOnce(&mut ShapeChildBuilder),
     ) -> &mut Self {
         let config = config.without_transform();
         let parent = self.id();
-        let mut painter = ChildPainter {
+        let mut painter = ShapeChildBuilder {
             commands: self.commands(),
             push_children: PushChildren {
                 children: SmallVec::default(),

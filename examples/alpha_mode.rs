@@ -9,7 +9,7 @@ use bevy_vector_shapes::prelude::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(Shape2dPlugin::immediate())
+        .add_plugin(Shape2dPlugin::default())
         .insert_resource(ClearColor(Color::DARK_GRAY))
         .insert_resource(Msaa::Off)
         .add_startup_system(setup)

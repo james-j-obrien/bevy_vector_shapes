@@ -125,6 +125,56 @@ pub struct DiscInstance {
     end_angle: f32,
 }
 
+impl DiscInstance {
+    pub fn circle(config: &ShapeConfig, radius: f32) -> DiscInstance {
+        let mut flags = Flags(0);
+        flags.set_thickness_type(config.thickness_type);
+        flags.set_alignment(config.alignment);
+        flags.set_hollow(config.hollow as u32);
+        flags.set_arc(false as u32);
+
+        DiscInstance {
+            transform: config.transform.compute_matrix().to_cols_array_2d(),
+
+            color: config.color.as_rgba_f32(),
+            thickness: config.thickness,
+            flags: flags.0,
+
+            radius,
+
+            start_angle: 0.0,
+            end_angle: 0.0,
+        }
+    }
+
+    pub fn arc(
+        config: &ShapeConfig,
+        radius: f32,
+        start_angle: f32,
+        end_angle: f32,
+    ) -> DiscInstance {
+        let mut flags = Flags(0);
+        flags.set_thickness_type(config.thickness_type);
+        flags.set_alignment(config.alignment);
+        flags.set_hollow(config.hollow as u32);
+        flags.set_cap(config.cap);
+        flags.set_arc(true as u32);
+
+        DiscInstance {
+            transform: config.transform.compute_matrix().to_cols_array_2d(),
+
+            color: config.color.as_rgba_f32(),
+            thickness: config.thickness,
+            flags: flags.0,
+
+            radius,
+
+            start_angle,
+            end_angle,
+        }
+    }
+}
+
 impl Instanceable for DiscInstance {
     type Component = Disc;
 

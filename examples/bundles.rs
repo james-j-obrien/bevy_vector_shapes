@@ -1,4 +1,4 @@
-// Demonstrates use of the library without using the ShapePainter abstraction
+// Demonstrates use of the shape bundles directly rather than go through the ShapeCommands or ShapePainter abstractions
 
 use bevy::prelude::*;
 use bevy_vector_shapes::prelude::*;

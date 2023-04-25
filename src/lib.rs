@@ -17,7 +17,8 @@ use painter::*;
 /// `use bevy_vector_shapes::prelude::*` to import commonly used items.
 pub mod prelude {
     pub use crate::painter::{
-        ChildPainter, ShapeConfig, ShapeEntityCommands, ShapePainter, ShapeSpawner,
+        ShapeChildBuilder, ShapeCommands, ShapeConfig, ShapeEntityCommands, ShapeEvent,
+        ShapePainter, ShapeSpawner,
     };
     pub use crate::{
         shapes::{
@@ -44,28 +45,14 @@ pub struct ShapePlugin {
     pub base_config: ShapeConfig,
 }
 
-impl ShapePlugin {
-    /// Creates a shape plugin where the default config is in retained mode.
-    pub fn retained() -> Self {
-        let mut s = Self::default();
-        s.base_config.immediate = false;
-        s
-    }
-
-    /// Creates a shape plugin where the default config is in immediate mode.
-    pub fn immediate() -> Self {
-        Self::default()
-    }
-}
-
 impl Plugin for ShapePlugin {
     fn build(&self, app: &mut App) {
         load_shaders(app);
-        app.add_plugin(LinePlugin)
+        app.register_type::<BaseShapeConfig>()
+            .add_plugin(LinePlugin)
             .add_plugin(RectPlugin)
             .add_plugin(RegularPolygonPlugin)
             .add_plugin(DiscPlugin)
-            .add_plugin(PainterPlugin)
             .insert_resource(BaseShapeConfig(self.base_config));
     }
 }
@@ -79,28 +66,14 @@ pub struct Shape2dPlugin {
     pub base_config: ShapeConfig,
 }
 
-impl Shape2dPlugin {
-    /// Creates a shape plugin where the default config is in retained mode.
-    pub fn retained() -> Self {
-        let mut s = Self::default();
-        s.base_config.immediate = false;
-        s
-    }
-
-    /// Creates a shape plugin where the default config is in immediate mode.
-    pub fn immediate() -> Self {
-        Self::default()
-    }
-}
-
 impl Plugin for Shape2dPlugin {
     fn build(&self, app: &mut App) {
         load_shaders(app);
-        app.add_plugin(Line2dPlugin)
+        app.register_type::<BaseShapeConfig>()
+            .add_plugin(Line2dPlugin)
             .add_plugin(Rect2dPlugin)
             .add_plugin(RegularPolygon2dPlugin)
             .add_plugin(Disc2dPlugin)
-            .add_plugin(Painter2dPlugin)
             .insert_resource(BaseShapeConfig(self.base_config));
     }
 }
