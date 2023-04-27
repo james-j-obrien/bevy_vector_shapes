@@ -142,6 +142,11 @@ impl Instanceable for RectInstance {
     fn transform(&self) -> Mat4 {
         Mat4::from_cols_array_2d(&self.transform)
     }
+
+    fn null_instance() -> Self {
+        let config = ShapeConfig::default();
+        Self::new(&config, Vec2::ZERO)
+    }
 }
 
 pub(crate) struct RectPlugin;

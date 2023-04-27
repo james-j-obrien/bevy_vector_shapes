@@ -142,6 +142,12 @@ impl Instanceable for LineInstance {
     fn transform(&self) -> Mat4 {
         Mat4::from_cols_array_2d(&self.transform)
     }
+
+    fn null_instance() -> Self {
+        let mut config = ShapeConfig::default();
+        config.thickness = 0.0;
+        Self::new(&config, Vec3::ZERO, Vec3::ZERO)
+    }
 }
 
 pub(crate) struct LinePlugin;

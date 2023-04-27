@@ -29,6 +29,32 @@ Bevy Vector Shapes is in the very early stages of development. There may be issu
 ## Usage
 See the `minimal_2d` or `minimal_3d` examples for basic usage and the remaining examples for explorations of supported features.
 
+```rust
+use bevy::prelude::*;
+// Import commonly used items
+use bevy_vector_shapes::prelude::*;
+
+fn main() {
+    App::new()
+        .add_plugins(DefaultPlugins)
+        // Add the shape plugin, ShapePlugin for 3D cameras and Shape2dPlugin for 2D cameras
+        .add_plugin(Shape2dPlugin::default())
+        .add_startup_system(setup)
+        .add_system(draw)
+        .run();
+}
+
+fn setup(mut commands: Commands) {
+    // Spawn the camera
+    commands.spawn(Camera2dBundle::default());
+}
+
+fn draw(mut painter: ShapePainter) {
+    // Draw a circle
+    painter.circle(100.0);
+}
+```
+
 | bevy | bevy_vector_shapes |
 | ---- | ------------------ |
 | 0.10 | 0.3.1              |

@@ -69,6 +69,12 @@ fn spawn_buffers<T: Instanceable>(
         let rangefinder = view.rangefinder3d();
         instances.sort_by_cached_key(|i| FloatOrd(rangefinder.distance(&i.transform())));
 
+        // Workaround for an issue in the implementation of Chromes webgl ANGLE D3D11 backend
+        #[cfg(target_arch = "wasm32")]
+        if instances.len() == 1 {
+            instances.push(T::null_instance());
+        }
+
         let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
             label: Some("instance data buffer"),
             contents: bytemuck::cast_slice(instances.as_slice()),

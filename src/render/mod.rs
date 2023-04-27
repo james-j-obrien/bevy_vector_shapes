@@ -74,6 +74,7 @@ pub trait Instanceable: Send + Sync + Pod {
     fn shader() -> Handle<Shader>;
     fn distance(&self) -> f32;
     fn transform(&self) -> Mat4;
+    fn null_instance() -> Self;
 }
 
 /// Trait implemented by the corresponding component for each shape type.

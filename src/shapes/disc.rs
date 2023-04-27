@@ -206,6 +206,11 @@ impl Instanceable for DiscInstance {
     fn transform(&self) -> Mat4 {
         Mat4::from_cols_array_2d(&self.transform)
     }
+
+    fn null_instance() -> Self {
+        let config = ShapeConfig::default();
+        Self::circle(&config, 0.0)
+    }
 }
 
 pub(crate) struct DiscPlugin;

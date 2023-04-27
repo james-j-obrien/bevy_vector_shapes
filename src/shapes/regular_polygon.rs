@@ -150,6 +150,11 @@ impl Instanceable for NgonInstance {
     fn transform(&self) -> Mat4 {
         Mat4::from_cols_array_2d(&self.transform)
     }
+
+    fn null_instance() -> Self {
+        let config = ShapeConfig::default();
+        Self::new(&config, 3.0, 0.0)
+    }
 }
 
 pub(crate) struct RegularPolygonPlugin;
