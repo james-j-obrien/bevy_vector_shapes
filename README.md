@@ -31,4 +31,4 @@ See the `minimal_2d` or `minimal_3d` examples for basic usage and the remaining 
 
 | bevy | bevy_vector_shapes |
 | ---- | ------------------ |
-| 0.10 | 0.1                |
+| 0.10 | 0.3.1              |
