@@ -213,6 +213,7 @@ struct VertexData {
     clip_pos: vec4<f32>,
     local_pos: vec2<f32>,
     uv_ratio: vec2<f32>,
+    scale: vec2<f32>
 };
 
 // Calculate the full set of vertex data shared betwen each shape type
@@ -228,7 +229,8 @@ fn get_vertex_data(matrix: mat4x4<f32>, vertex: vec2<f32>, thickness: f32, flags
     out.thickness_data = get_thickness_data(thickness, thickness_type, origin, basis_vectors[1]);
 
     // Calculate the local position of our vertex by scaling it
-    out.local_pos = vertex.xy * get_scale(matrix);
+    out.scale = get_scale(matrix);
+    out.local_pos = vertex.xy * out.scale;
 
     // Convert our padding into world space and match direction of our vertex
     var aa_padding_u = AA_PADDING / out.thickness_data.pixels_per_u;

@@ -72,7 +72,7 @@ fn vertex(v: Vertex) -> VertexOutput {
 
     // We want 1 unit in uv space to be the length of the apothem of our polygon 
     // so scale world to uv space using the world space apothem
-    out.uv = vertex_data.local_pos / apothem * vertex_data.uv_ratio;
+    out.uv = vertex_data.local_pos / (apothem * vertex_data.scale) * vertex_data.uv_ratio;
     out.thickness = calculate_thickness(vertex_data.thickness_data, apothem, v.flags);
     out.roundness = min(v.roundness / apothem, 1.0);
 

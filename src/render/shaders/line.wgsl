@@ -79,9 +79,6 @@ fn vertex(v: Vertex) -> VertexOutput {
     var thickness_u = thickness_data.thickness_p / thickness_data.pixels_per_u;
     var radius_u = thickness_u / 2.;
 
-    // Calculate XY sacle
-    var scale = get_scale(matrix);
-
     var cap_type = f_cap(v.flags);
     var cap_length = 0.0;
 
@@ -92,9 +89,9 @@ fn vertex(v: Vertex) -> VertexOutput {
 
     // If our caps are round store the ratio of the length of our caps to the entire length of the line
     if cap_type == 2u {
-        out.cap_ratio = thickness_u / (line_length + thickness_u);
+        let thickness = thickness_u * line_length / length(v.start - v.end);
+        out.cap_ratio = thickness / (line_length + thickness);
     }
-
 
     // Calculate the local positioning of the vertex by multiplying by our basis vectors
     var local_pos = vertex.x * basis_vectors[0] * radius_u + cap_length * vertex.y * basis_vectors[1];
@@ -107,14 +104,17 @@ fn vertex(v: Vertex) -> VertexOutput {
     var world_aa_padding = aa_padding.x * basis_vectors[0] + aa_padding.y * basis_vectors[1];
 
     // In order to scale our padding into uv space we need to know the 2d local space coordinate of our vertex
-    var local_pos_xy = vertex.xy * vec2<f32>(radius_u, line_length / 2.0 + cap_length);
+    var local_pos_xy = vertex.xy * vec2<f32>(radius_u, line_length / 2.0 + cap_length);// * scale.xy;
 
     // Pad our position and determine the ratio by which to scale uv such that uvs ignore the padding
     var padded_pos = local_pos + world_aa_padding;
     var uv_ratio = (local_pos_xy + aa_padding) / local_pos_xy;
 
-    // Determine final world position by offsetting by the origin we chose
-    var world_pos = origin + padded_pos;
+    // Calculate our scale in world space
+    let scale = (matrix * vec4<f32>(1.0, 1.0, 1.0, 0.0)).xyz;
+
+    // Determine final world position by offsetting by the origin we chose and scaling
+    var world_pos = origin + padded_pos * scale;
 
     // Multiply the world space position by the view projection matrix to convert to our clip position
     out.clip_position = view.view_proj * vec4<f32>(world_pos, 1.0);
