@@ -81,7 +81,7 @@ impl InstanceComponent<LineInstance> for Line {
 
 /// Raw data sent to the line shader to draw a line
 #[derive(Component, ShaderType, Clone, Copy, Pod, Zeroable)]
-#[repr(C)]
+#[repr(C, align(16))]
 pub struct LineInstance {
     transform: [[f32; 4]; 4],
 

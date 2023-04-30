@@ -2,6 +2,10 @@
 
 struct Vertex {
     @builtin(vertex_index) index: u32,
+    @location(0) instance_index: u32,
+}
+
+struct Ngon {
     @location(0) matrix_0: vec4<f32>,
     @location(1) matrix_1: vec4<f32>,
     @location(2) matrix_2: vec4<f32>,
@@ -15,6 +19,14 @@ struct Vertex {
     @location(8) radius: f32,
     @location(9) roundness: f32
 };
+
+@group(1) @binding(0)
+#ifdef BATCH_SIZE
+var<uniform> shapes: array<Ngon, #{BATCH_SIZE}u>;
+#else
+var<storage> shapes: array<Ngon>;
+#endif
+
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -40,24 +52,25 @@ fn vertex(v: Vertex) -> VertexOutput {
         vec3<f32>(-1.0, 1.0, 0.0),
     );
     let vertex = vertexes[v.index % 6u];
+    let shape = shapes[v.instance_index];
 
     // Reconstruct our transformation matrix
     let matrix = mat4x4<f32>(
-        v.matrix_0,
-        v.matrix_1,
-        v.matrix_2,
-        v.matrix_3
+        shape.matrix_0,
+        shape.matrix_1,
+        shape.matrix_2,
+        shape.matrix_3
     );
 
     // Calculate vertex data shared between most shapes
-    var vertex_data = get_vertex_data(matrix, vertex.xy * v.radius, v.thickness, v.flags);
+    var vertex_data = get_vertex_data(matrix, vertex.xy * shape.radius, shape.thickness, shape.flags);
     out.clip_position = vertex_data.clip_pos;
 
     // Here we precompute several values related to our polygon
 
     // The central angle is the angle at the center of the polygon between two adjacent vertices
     // https://en.wikipedia.org/wiki/Central_angle
-    out.central_angle = TAU / v.sides; 
+    out.central_angle = TAU / shape.sides; 
 
     // Calculate the apothem for a radius 1 polygon
     // The apothem is the length between the center of the polygon and a side at a right angle
@@ -68,19 +81,19 @@ fn vertex(v: Vertex) -> VertexOutput {
     var half_side_length = sin(out.central_angle / 2.);
 
     // Calculate our world space apothem for a polygon with the given radius
-    var apothem = unit_apothem * v.radius;
+    var apothem = unit_apothem * shape.radius;
 
     // We want 1 unit in uv space to be the length of the apothem of our polygon 
     // so scale world to uv space using the world space apothem
     out.uv = vertex_data.local_pos / (apothem * vertex_data.scale) * vertex_data.uv_ratio;
-    out.thickness = calculate_thickness(vertex_data.thickness_data, apothem, v.flags);
-    out.roundness = min(v.roundness / apothem, 1.0);
+    out.thickness = calculate_thickness(vertex_data.thickness_data, apothem, shape.flags);
+    out.roundness = min(shape.roundness / apothem, 1.0);
 
     // Scale our half side length to match our uv space of 1 unit per apothem
     // Precalculate our scaling by the inverse of roundness for our sdf
     out.half_side_length = half_side_length / unit_apothem * (1.0 - out.roundness);
 
-    out.color = v.color;
+    out.color = shape.color;
     return out;
 }
 

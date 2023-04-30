@@ -64,6 +64,8 @@ impl InstanceComponent<NgonInstance> for RegularPolygon {
             sides: self.sides,
             radius: self.radius,
             roundness: self.roundness,
+
+            padding: default(),
         }
     }
 }
@@ -86,7 +88,7 @@ impl Default for RegularPolygon {
 
 /// Raw data sent to the regular polygon shader to draw a regular polygon
 #[derive(Component, ShaderType, Clone, Copy, Pod, Zeroable)]
-#[repr(C)]
+#[repr(C, align(16))]
 pub struct NgonInstance {
     transform: [[f32; 4]; 4],
 
@@ -97,6 +99,8 @@ pub struct NgonInstance {
     sides: f32,
     radius: f32,
     roundness: f32,
+
+    padding: [f32; 3],
 }
 
 impl NgonInstance {
@@ -116,6 +120,8 @@ impl NgonInstance {
             sides,
             radius,
             roundness: config.roundness,
+
+            padding: default(),
         }
     }
 }

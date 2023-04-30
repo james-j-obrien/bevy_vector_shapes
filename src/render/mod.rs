@@ -14,6 +14,7 @@ use bevy::{
         render_resource::{
             encase::private::WriteInto, Buffer, ShaderType, SpecializedRenderPipelines,
         },
+        renderer::RenderDevice,
         view::RenderLayers,
         Extract, RenderApp, RenderSet,
     },
@@ -39,6 +40,9 @@ use instanced_3d::*;
 
 pub(crate) mod batched_pipeline;
 use batched_pipeline::*;
+
+pub(crate) mod render_resource;
+use render_resource::*;
 
 /// Handler to shader containing shared functionality.
 pub const CORE_HANDLE: HandleUntyped =
@@ -74,7 +78,7 @@ pub fn load_shaders(app: &mut App) {
 pub struct InstanceData<T>(pub Vec<(RenderKey, T)>);
 
 /// Trait implemented by each type of shape, defines common methods used in the rendering pipeline for instancing.
-pub trait Instanceable: Component + ShaderType + Clone + WriteInto + Pod {
+pub trait Instanceable: Component + GpuListable + Pod {
     type Component: InstanceComponent<Self>;
     fn vertex_layout() -> Vec<VertexAttribute>;
     fn shader() -> Handle<Shader>;
@@ -204,7 +208,10 @@ pub fn setup_instanced_pipeline<T: Instanceable>(app: &mut App) {
 /// Sets up the pipeline for the specified instanceable shape in the given app;
 pub fn setup_instanced_pipeline_2d<T: Instanceable>(app: &mut App) {
     app.add_event::<ShapeEvent<T>>();
-    app.sub_app_mut(RenderApp)
+    let render_app = app.sub_app_mut(RenderApp);
+    let render_device = render_app.world.resource::<RenderDevice>();
+    render_app.insert_resource(GpuList::<T>::new(render_device));
+    render_app
         .add_render_command::<Transparent2d, DrawShape<T>>()
         .init_resource::<ShapeMeta<T>>()
         .init_resource::<ExtractedShapes<T>>()

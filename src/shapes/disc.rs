@@ -89,6 +89,8 @@ impl InstanceComponent<DiscInstance> for Disc {
             radius: self.radius,
             start_angle: self.start_angle,
             end_angle: self.end_angle,
+
+            padding: default(),
         }
     }
 }
@@ -113,7 +115,7 @@ impl Default for Disc {
 
 /// Raw data sent to the disc shader to draw a disc
 #[derive(Component, ShaderType, Clone, Copy, Pod, Zeroable)]
-#[repr(C)]
+#[repr(C, align(16))]
 pub struct DiscInstance {
     transform: [[f32; 4]; 4],
 
@@ -124,6 +126,8 @@ pub struct DiscInstance {
     radius: f32,
     start_angle: f32,
     end_angle: f32,
+
+    padding: [f32; 3],
 }
 
 impl DiscInstance {
@@ -145,6 +149,8 @@ impl DiscInstance {
 
             start_angle: 0.0,
             end_angle: 0.0,
+
+            padding: default(),
         }
     }
 
@@ -172,6 +178,8 @@ impl DiscInstance {
 
             start_angle,
             end_angle,
+
+            padding: default(),
         }
     }
 }

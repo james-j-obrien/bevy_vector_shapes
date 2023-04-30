@@ -2,6 +2,10 @@
 
 struct Vertex {
     @builtin(vertex_index) index: u32,
+    @location(0) instance_index: u32,
+}
+
+struct Line {
     @location(0) matrix_0: vec4<f32>,
     @location(1) matrix_1: vec4<f32>,
     @location(2) matrix_2: vec4<f32>,
@@ -14,6 +18,13 @@ struct Vertex {
     @location(7) start: vec3<f32>,
     @location(8) end: vec3<f32>,
 };
+
+@group(1) @binding(0)
+#ifdef BATCH_SIZE
+var<uniform> shapes: array<Line, #{BATCH_SIZE}u>;
+#else
+var<storage> shapes: array<Line>;
+#endif
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -36,16 +47,17 @@ fn vertex(v: Vertex) -> VertexOutput {
         vec3<f32>(-1.0, 1.0, 0.0),
     );
     let vertex = vertexes[v.index % 6u];
+    let shape = shapes[v.instance_index];
 
     let matrix = mat4x4<f32>(
-        v.matrix_0,
-        v.matrix_1,
-        v.matrix_2,
-        v.matrix_3
+        shape.matrix_0,
+        shape.matrix_1,
+        shape.matrix_2,
+        shape.matrix_3
     );
 
-    let a = (matrix * vec4<f32>(v.start, 1.0)).xyz;
-    let b = (matrix * vec4<f32>(v.end, 1.0)).xyz;
+    let a = (matrix * vec4<f32>(shape.start, 1.0)).xyz;
+    let b = (matrix * vec4<f32>(shape.end, 1.0)).xyz;
 
     // Vector from A -> B
     var line_vec = b - a;
@@ -62,14 +74,14 @@ fn vertex(v: Vertex) -> VertexOutput {
     var origin = select(b, a, vertex.y < 0.0);
 
     // Calculate the remainder of our basis vectors
-    var basis_vectors = get_basis_vectors_from_up(matrix, origin, y_basis, v.flags);
+    var basis_vectors = get_basis_vectors_from_up(matrix, origin, y_basis, shape.flags);
 
     // Calculate thickness data
-    var thickness_type = f_thickness_type(v.flags);
-    var thickness_data = get_thickness_data(v.thickness, thickness_type, origin, basis_vectors[1]);
+    var thickness_type = f_thickness_type(shape.flags);
+    var thickness_data = get_thickness_data(shape.thickness, thickness_type, origin, basis_vectors[1]);
 
     // If our thickness in pixels is less than 1, clamp to 1 and reduce the alpha instead
-    var out_color = v.color;
+    var out_color = shape.color;
     if thickness_data.thickness_p < 1.0 {
         out_color.a = out_color.a * thickness_data.thickness_p;
         thickness_data.thickness_p = 1.;
@@ -79,7 +91,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     var thickness_u = thickness_data.thickness_p / thickness_data.pixels_per_u;
     var radius_u = thickness_u / 2.;
 
-    var cap_type = f_cap(v.flags);
+    var cap_type = f_cap(shape.flags);
     var cap_length = 0.0;
 
     // If we have caps increase the cap length to our radius
@@ -89,7 +101,7 @@ fn vertex(v: Vertex) -> VertexOutput {
 
     // If our caps are round store the ratio of the length of our caps to the entire length of the line
     if cap_type == 2u {
-        let thickness = thickness_u * line_length / length(v.start - v.end);
+        let thickness = thickness_u * line_length / length(shape.start - shape.end);
         out.cap_ratio = thickness / (line_length + thickness);
     }
 

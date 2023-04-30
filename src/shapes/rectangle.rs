@@ -81,7 +81,7 @@ impl Default for Rectangle {
 
 /// Raw data sent to the rectangle shader to draw a rectangle
 #[derive(Component, ShaderType, Clone, Copy, Pod, Zeroable)]
-#[repr(C)]
+#[repr(C, align(16))]
 pub struct RectInstance {
     transform: [[f32; 4]; 4],
 

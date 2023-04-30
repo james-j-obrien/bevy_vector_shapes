@@ -17,7 +17,7 @@ use bevy::{
         },
         render_resource::{
             BindGroup, BindGroupLayout, BufferVec, FragmentState, PipelineCache,
-            RenderPipelineDescriptor, ShaderType, SpecializedRenderPipeline,
+            RenderPipelineDescriptor, ShaderDefVal, ShaderType, SpecializedRenderPipeline,
             SpecializedRenderPipelines, VertexBufferLayout, VertexState,
         },
         renderer::{RenderDevice, RenderQueue},
@@ -27,21 +27,28 @@ use bevy::{
     },
     utils::FloatOrd,
 };
+use bytemuck::{Pod, Zeroable};
 use wgpu::{
-    BindGroupDescriptor, BindGroupEntry, BindGroupLayoutDescriptor, BindGroupLayoutEntry,
-    BindingType, BlendComponent, BlendFactor, BlendOperation, BlendState, BufferBindingType,
-    BufferUsages, ColorTargetState, ColorWrites, CompareFunction, DepthBiasState,
-    DepthStencilState, FrontFace, MultisampleState, PolygonMode, PrimitiveState, PrimitiveTopology,
-    ShaderStages, StencilFaceState, StencilState, TextureFormat, VertexStepMode,
+    vertex_attr_array, BindGroupDescriptor, BindGroupEntry, BindGroupLayoutDescriptor,
+    BindGroupLayoutEntry, BindingType, BlendComponent, BlendFactor, BlendOperation, BlendState,
+    BufferBindingType, BufferUsages, ColorTargetState, ColorWrites, CompareFunction,
+    DepthBiasState, DepthStencilState, FrontFace, MultisampleState, PolygonMode, PrimitiveState,
+    PrimitiveTopology, ShaderStages, StencilFaceState, StencilState, TextureFormat, VertexStepMode,
 };
 
 use crate::prelude::{Shape, ShapeEvent};
 
-use super::{pipeline::InstancedPipelineKey, InstanceComponent, Instanceable, RenderKey};
+use super::{
+    pipeline::InstancedPipelineKey,
+    render_resource::{GpuList, GpuListIndex},
+    InstanceComponent, Instanceable, RenderKey,
+};
 
 #[derive(Resource)]
 pub struct ShapePipeline<T: Instanceable> {
     view_layout: BindGroupLayout,
+    shape_layout: BindGroupLayout,
+    shape_buffer_batch_size: Option<u32>,
     shader: Handle<Shader>,
     _marker: PhantomData<T>,
 }
@@ -63,8 +70,18 @@ impl<T: Instanceable> FromWorld for ShapePipeline<T> {
             label: Some("sprite_view_layout"),
         });
 
+        let shape_binding =
+            GpuList::<T>::binding_layout(0, ShaderStages::VERTEX_FRAGMENT, render_device);
+
+        let shape_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            entries: &[shape_binding],
+            label: Some("shape_layout"),
+        });
+
         Self {
             view_layout,
+            shape_layout,
+            shape_buffer_batch_size: GpuList::<T>::batch_size(&render_device),
             shader: T::shader(),
             _marker: default(),
         }
@@ -77,6 +94,10 @@ impl<T: Instanceable> SpecializedRenderPipeline for ShapePipeline<T> {
     fn specialize(&self, key: Self::Key) -> RenderPipelineDescriptor {
         let mut shader_defs = Vec::new();
         let (label, blend, depth_stencil, depth_write_enabled);
+
+        if let Some(batch_size) = self.shape_buffer_batch_size {
+            shader_defs.push(ShaderDefVal::UInt("BATCH_SIZE".into(), batch_size));
+        }
 
         let pass = key.intersection(InstancedPipelineKey::BLEND_RESERVED_BITS);
 
@@ -163,9 +184,12 @@ impl<T: Instanceable> SpecializedRenderPipeline for ShapePipeline<T> {
                 entry_point: "vertex".into(),
                 shader_defs: shader_defs.clone(),
                 buffers: vec![VertexBufferLayout {
-                    array_stride: std::mem::size_of::<T>() as u64,
+                    array_stride: std::mem::size_of::<u32>() as u64,
                     step_mode: VertexStepMode::Vertex,
-                    attributes: T::vertex_layout(),
+                    attributes: vertex_attr_array![
+                        0 => Uint32
+                    ]
+                    .to_vec(),
                 }],
             },
             fragment: Some(FragmentState {
@@ -178,7 +202,7 @@ impl<T: Instanceable> SpecializedRenderPipeline for ShapePipeline<T> {
                     write_mask: ColorWrites::ALL,
                 })],
             }),
-            layout: vec![self.view_layout.clone()],
+            layout: vec![self.view_layout.clone(), self.shape_layout.clone()],
             primitive: PrimitiveState {
                 front_face: FrontFace::Ccw,
                 cull_mode: None,
@@ -200,10 +224,18 @@ impl<T: Instanceable> SpecializedRenderPipeline for ShapePipeline<T> {
     }
 }
 
+#[repr(C)]
+#[derive(Copy, Clone, Pod, Zeroable)]
+struct ShapeVertex {
+    shape_index: u32,
+}
+
 #[derive(Resource)]
 pub struct ShapeMeta<T: Instanceable> {
     view_bind_group: Option<BindGroup>,
-    vertices: BufferVec<T>,
+    shape_bind_group: Option<BindGroup>,
+    vertices: BufferVec<ShapeVertex>,
+    _marker: PhantomData<T>,
 }
 
 impl<T: Instanceable> Default for ShapeMeta<T> {
@@ -211,6 +243,8 @@ impl<T: Instanceable> Default for ShapeMeta<T> {
         Self {
             vertices: BufferVec::new(BufferUsages::VERTEX),
             view_bind_group: None,
+            shape_bind_group: None,
+            _marker: default(),
         }
     }
 }
@@ -269,6 +303,7 @@ pub fn queue_shapes<T: Instanceable>(
     pipeline_cache: Res<PipelineCache>,
     mut pipelines: ResMut<SpecializedRenderPipelines<ShapePipeline<T>>>,
     msaa: Res<Msaa>,
+    mut shape_uniforms: ResMut<GpuList<T>>,
     mut extracted_shapes: ResMut<ExtractedShapes<T>>,
     mut views: Query<(
         &ExtractedView,
@@ -276,6 +311,13 @@ pub fn queue_shapes<T: Instanceable>(
         Option<&RenderLayers>,
     )>,
 ) {
+    shape_meta.vertices.clear();
+    shape_uniforms.clear();
+
+    if extracted_shapes.shapes.is_empty() {
+        return;
+    }
+
     let draw_function = draw_functions.read().id::<DrawShape<T>>();
 
     if let Some(view_binding) = view_uniforms.uniforms.binding() {
@@ -288,14 +330,12 @@ pub fn queue_shapes<T: Instanceable>(
             layout: &shape_pipeline.view_layout,
         }));
 
-        shape_meta.vertices.clear();
-
         let msaa_key = InstancedPipelineKey::from_msaa_samples(msaa.samples())
             | InstancedPipelineKey::PIPELINE_2D;
         let extracted_shapes = &mut extracted_shapes.shapes;
         extracted_shapes.sort_unstable_by_key(|(k, i)| (*k, FloatOrd(i.distance())));
 
-        let mut index = 0;
+        let mut vertex_index = 0;
 
         for (view, mut transparent_phase, render_layers) in &mut views {
             let view_key = InstancedPipelineKey::from_hdr(view.hdr) | msaa_key;
@@ -310,24 +350,28 @@ pub fn queue_shapes<T: Instanceable>(
                 }
 
                 let new_batch = ShapeBatch::new(*key);
-
-                if current_batch != new_batch {
-                    current_batch = new_batch;
-                    current_batch_entity = commands.spawn(current_batch).id();
-                }
-
-                let mut key = InstancedPipelineKey::from_alpha_mode(current_batch.key.alpha_mode.0)
-                    | view_key;
-                if !current_batch.key.disable_laa {
+                let mut key =
+                    InstancedPipelineKey::from_alpha_mode(new_batch.key.alpha_mode.0) | view_key;
+                if !new_batch.key.disable_laa {
                     key |= InstancedPipelineKey::LOCAL_AA;
                 }
 
-                let item_start = index;
-                index += 6;
-                let item_end = index;
+                let item_start = vertex_index;
+                vertex_index += 6;
+                let item_end = vertex_index;
+
+                let index = shape_uniforms.push(shape.clone());
+                let vertex = ShapeVertex {
+                    shape_index: index.index,
+                };
 
                 for _ in 0..6 {
-                    shape_meta.vertices.push(shape.clone());
+                    shape_meta.vertices.push(vertex.clone());
+                }
+
+                if current_batch != new_batch {
+                    current_batch = new_batch;
+                    current_batch_entity = commands.spawn((current_batch, index)).id();
                 }
 
                 let pipeline = pipelines.specialize(&pipeline_cache, &shape_pipeline, key);
@@ -340,16 +384,27 @@ pub fn queue_shapes<T: Instanceable>(
                 });
             }
         }
-
         shape_meta
             .vertices
             .write_buffer(&render_device, &render_queue);
+
+        shape_uniforms.write_buffer(&render_device, &render_queue);
+
+        shape_meta.shape_bind_group = Some(render_device.create_bind_group(&BindGroupDescriptor {
+            entries: &[BindGroupEntry {
+                binding: 0,
+                resource: shape_uniforms.binding().unwrap(),
+            }],
+            label: Some("shape_bind_group"),
+            layout: &shape_pipeline.shape_layout,
+        }));
     }
 }
 
 pub type DrawShape<T> = (
     SetItemPipeline,
     SetShapeViewBindGroup<T, 0>,
+    SetShapeBindGroup<T, 1>,
     DrawShapeBatch<T>,
 );
 
@@ -373,6 +428,34 @@ impl<T: Instanceable, const I: usize, P: PhaseItem> RenderCommand<P>
             I,
             shape_meta.into_inner().view_bind_group.as_ref().unwrap(),
             &[view_uniform.offset],
+        );
+        RenderCommandResult::Success
+    }
+}
+
+pub struct SetShapeBindGroup<T: Instanceable, const I: usize>(PhantomData<T>);
+impl<T: Instanceable, const I: usize, P: PhaseItem> RenderCommand<P> for SetShapeBindGroup<T, I> {
+    type Param = SRes<ShapeMeta<T>>;
+    type ViewWorldQuery = ();
+    type ItemWorldQuery = Read<GpuListIndex<T>>;
+
+    #[inline]
+    fn render<'w>(
+        _item: &P,
+        _view: (),
+        index: &'_ GpuListIndex<T>,
+        shape_meta: SystemParamItem<'w, '_, Self::Param>,
+        pass: &mut TrackedRenderPass<'w>,
+    ) -> RenderCommandResult {
+        let mut indices = Vec::new();
+        if let Some(offset) = index.dynamic_offset {
+            indices.push(offset);
+        }
+
+        pass.set_bind_group(
+            I,
+            &shape_meta.into_inner().shape_bind_group.as_ref().unwrap(),
+            &indices,
         );
         RenderCommandResult::Success
     }
@@ -405,12 +488,12 @@ pub struct DrawShapeBatch<T: Instanceable>(PhantomData<T>);
 impl<P: BatchedPhaseItem, T: Instanceable> RenderCommand<P> for DrawShapeBatch<T> {
     type Param = SRes<ShapeMeta<T>>;
     type ViewWorldQuery = ();
-    type ItemWorldQuery = Read<ShapeBatch<T>>;
+    type ItemWorldQuery = ();
 
     fn render<'w>(
         item: &P,
         _view: (),
-        _batch: &'_ ShapeBatch<T>,
+        _item: (),
         shape_meta: SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
