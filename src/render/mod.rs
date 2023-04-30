@@ -9,8 +9,11 @@ use bevy::{
     prelude::*,
     reflect::TypeUuid,
     render::{
+        extract_component::{ComponentUniforms, UniformComponentPlugin},
         render_phase::AddRenderCommand,
-        render_resource::{Buffer, SpecializedRenderPipelines},
+        render_resource::{
+            encase::private::WriteInto, Buffer, ShaderType, SpecializedRenderPipelines,
+        },
         view::RenderLayers,
         Extract, RenderApp, RenderSet,
     },
@@ -33,6 +36,9 @@ use instanced_2d::*;
 
 pub(crate) mod instanced_3d;
 use instanced_3d::*;
+
+pub(crate) mod batched_pipeline;
+use batched_pipeline::*;
 
 /// Handler to shader containing shared functionality.
 pub const CORE_HANDLE: HandleUntyped =
@@ -68,7 +74,7 @@ pub fn load_shaders(app: &mut App) {
 pub struct InstanceData<T>(pub Vec<(RenderKey, T)>);
 
 /// Trait implemented by each type of shape, defines common methods used in the rendering pipeline for instancing.
-pub trait Instanceable: Send + Sync + Pod {
+pub trait Instanceable: Component + ShaderType + Clone + WriteInto + Pod {
     type Component: InstanceComponent<Self>;
     fn vertex_layout() -> Vec<VertexAttribute>;
     fn shader() -> Handle<Shader>;
@@ -104,7 +110,7 @@ bitfield! {
 }
 
 /// Properties attached to a batch of shapes that are needed for pipeline specialization
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Component, Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub struct RenderKey {
     render_layers: RenderLayers,
     alpha_mode: AlphaModeOrd,
@@ -112,6 +118,12 @@ pub struct RenderKey {
 }
 
 impl RenderKey {
+    pub const PLACE_HOLDER: Self = Self {
+        render_layers: RenderLayers::none(),
+        alpha_mode: AlphaModeOrd(AlphaMode::Add),
+        disable_laa: false,
+    };
+
     pub fn new(flags: Option<&Shape>, render_layers: Option<&RenderLayers>) -> Self {
         let flags = flags.cloned().unwrap_or_default();
         Self {
@@ -193,12 +205,13 @@ pub fn setup_instanced_pipeline<T: Instanceable>(app: &mut App) {
 pub fn setup_instanced_pipeline_2d<T: Instanceable>(app: &mut App) {
     app.add_event::<ShapeEvent<T>>();
     app.sub_app_mut(RenderApp)
-        .add_render_command::<Transparent2d, DrawInstancedCommand<T>>()
-        .init_resource::<InstancedPipeline<T>>()
-        .init_resource::<SpecializedRenderPipelines<InstancedPipeline<T>>>()
-        .add_system(extract_instances_2d::<T>.in_schedule(ExtractSchedule))
+        .add_render_command::<Transparent2d, DrawShape<T>>()
+        .init_resource::<ShapeMeta<T>>()
+        .init_resource::<ExtractedShapes<T>>()
+        .init_resource::<ShapePipeline<T>>()
+        .init_resource::<SpecializedRenderPipelines<ShapePipeline<T>>>()
+        .add_system(extract_shapes::<T>.in_schedule(ExtractSchedule))
         .add_system(extract_render_layers.in_schedule(ExtractSchedule))
         .add_system(prepare_instance_buffers_2d::<T>.in_set(RenderSet::Prepare))
-        .add_system(queue_instances_2d::<T>.in_set(RenderSet::Queue))
-        .add_system(queue_instance_view_bind_groups::<T>.in_set(RenderSet::Queue));
+        .add_system(queue_shapes::<T>.in_set(RenderSet::Queue));
 }

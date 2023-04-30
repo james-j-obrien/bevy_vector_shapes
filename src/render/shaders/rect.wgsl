@@ -37,7 +37,7 @@ fn vertex(v: Vertex) -> VertexOutput {
         vec3<f32>(-1.0, -1.0, 0.0),
         vec3<f32>(-1.0, 1.0, 0.0),
     );
-    let vertex = vertexes[v.index];
+    let vertex = vertexes[v.index % 6u];
 
     // Reconstruct our transformation matrix
     let matrix = mat4x4<f32>(

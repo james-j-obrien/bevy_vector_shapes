@@ -2,6 +2,7 @@ use bevy::{
     core::{Pod, Zeroable},
     prelude::*,
     reflect::Reflect,
+    render::render_resource::ShaderType,
 };
 use wgpu::vertex_attr_array;
 
@@ -111,7 +112,7 @@ impl Default for Disc {
 }
 
 /// Raw data sent to the disc shader to draw a disc
-#[derive(Clone, Copy, Reflect, FromReflect, Pod, Zeroable)]
+#[derive(Component, ShaderType, Clone, Copy, Pod, Zeroable)]
 #[repr(C)]
 pub struct DiscInstance {
     transform: [[f32; 4]; 4],

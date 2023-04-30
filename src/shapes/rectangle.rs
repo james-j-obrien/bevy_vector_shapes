@@ -2,6 +2,7 @@ use bevy::{
     core::{Pod, Zeroable},
     prelude::*,
     reflect::{FromReflect, Reflect},
+    render::render_resource::ShaderType,
 };
 use wgpu::vertex_attr_array;
 
@@ -79,7 +80,7 @@ impl Default for Rectangle {
 }
 
 /// Raw data sent to the rectangle shader to draw a rectangle
-#[derive(Clone, Copy, Reflect, FromReflect, Pod, Zeroable)]
+#[derive(Component, ShaderType, Clone, Copy, Pod, Zeroable)]
 #[repr(C)]
 pub struct RectInstance {
     transform: [[f32; 4]; 4],
