@@ -6,9 +6,7 @@ use bevy::{
     },
 };
 use std::{marker::PhantomData, mem};
-use wgpu::{
-    BindGroupLayoutEntry, BindingResource, BindingType, BufferBindingType, Limits, ShaderStages,
-};
+use wgpu::{BindGroupLayoutEntry, BindingResource, BindingType, BufferBindingType, ShaderStages};
 
 use super::BatchedUniformBuffer;
 
@@ -19,14 +17,14 @@ impl<T: ShaderType + ShaderSize + WriteInto + Clone> GpuListable for T {}
 /// Stores a list of elements to be transferred to the GPU and made accessible to shaders as a read-only array.
 ///
 /// On platforms that support storage buffers, this is equivalent to [`StorageBuffer<Vec<T>>`].
-/// Otherwise, this falls back to batched uniforms.
+/// Otherwise, this falls back to a dynamic offset uniform buffer with the largest
+/// array of T that fits within a uniform buffer binding.
 ///
 /// Other options for storing GPU-accessible data are:
 /// * [`StorageBuffer`](crate::render_resource::StorageBuffer)
 /// * [`DynamicStorageBuffer`](crate::render_resource::DynamicStorageBuffer)
 /// * [`UniformBuffer`](crate::render_resource::UniformBuffer)
 /// * [`DynamicUniformBuffer`](crate::render_resource::DynamicUniformBuffer)
-/// * [`GpuList`](crate::render_resource::GpuList)
 /// * [`BufferVec`](crate::render_resource::BufferVec)
 /// * [`Texture`](crate::render_resource::Texture)
 #[derive(Resource)]
@@ -38,7 +36,7 @@ pub enum GpuList<T: GpuListable> {
 impl<T: GpuListable> GpuList<T> {
     pub fn new(device: &RenderDevice) -> Self {
         let limits = device.limits();
-        if Self::use_fallback(&limits) {
+        if limits.max_storage_buffers_per_shader_stage > 0 {
             GpuList::Uniform(BatchedUniformBuffer::new(&limits))
         } else {
             GpuList::Storage((StorageBuffer::default(), Vec::new()))
@@ -85,11 +83,13 @@ impl<T: GpuListable> GpuList<T> {
         BindGroupLayoutEntry {
             binding,
             visibility,
-            ty: if Self::use_fallback(&device.limits()) {
+            ty: if device.limits().max_storage_buffers_per_shader_stage > 0 {
                 BindingType::Buffer {
                     ty: BufferBindingType::Uniform,
                     has_dynamic_offset: true,
-                    min_binding_size: Some(T::min_size()),
+                    // BatchedUniformBuffer uses a MaxCapacityArray that is runtime-sized, so we use
+                    // None here and let wgpu figure out the size.
+                    min_binding_size: None,
                 }
             } else {
                 BindingType::Buffer {
@@ -111,24 +111,20 @@ impl<T: GpuListable> GpuList<T> {
 
     pub fn batch_size(device: &RenderDevice) -> Option<u32> {
         let limits = device.limits();
-        if Self::use_fallback(&limits) {
+        if limits.max_storage_buffers_per_shader_stage > 0 {
             Some(BatchedUniformBuffer::<T>::batch_size(&limits) as u32)
         } else {
             None
         }
-    }
-
-    fn use_fallback(limits: &Limits) -> bool {
-        return limits.max_storage_buffers_per_shader_stage > 0;
     }
 }
 
 /// An index into a [`GpuList`] for a given element.
 #[derive(Component)]
 pub struct GpuListIndex<T: GpuListable> {
-    /// The index to use in a shader on the array.
+    /// The index to use in a shader into the array.
     pub index: u32,
-    /// The dynamic offset to use when binding the list from Rust.
+    /// The dynamic offset to use when setting the bind group in a pass.
     /// Only used on platforms that don't support storage buffers.
     pub dynamic_offset: Option<u32>,
     pub element_type: PhantomData<T>,
