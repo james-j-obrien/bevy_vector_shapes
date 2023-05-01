@@ -1,7 +1,6 @@
 use bevy::{
-    core::{Pod, Zeroable},
     prelude::*,
-    reflect::{FromReflect, Reflect},
+    reflect::{Reflect},
     render::render_resource::ShaderType,
 };
 use wgpu::vertex_attr_array;
@@ -80,7 +79,7 @@ impl InstanceComponent<LineInstance> for Line {
 }
 
 /// Raw data sent to the line shader to draw a line
-#[derive(Component, ShaderType, Clone, Copy, Pod, Zeroable)]
+#[derive(Component, ShaderType, Clone, Copy)]
 #[repr(C, align(16))]
 pub struct LineInstance {
     transform: [[f32; 4]; 4],

@@ -371,7 +371,7 @@ pub fn queue_shapes<T: Instanceable>(
 
                 if current_batch != new_batch {
                     current_batch = new_batch;
-                    current_batch_entity = commands.spawn((current_batch, index)).id();
+                    current_batch_entity = commands.spawn((current_batch.clone(), index)).id();
                 }
 
                 let pipeline = pipelines.specialize(&pipeline_cache, &shape_pipeline, key);

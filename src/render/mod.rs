@@ -4,15 +4,13 @@ use bevy::{
     asset::load_internal_asset,
     core_pipeline::{
         core_2d::Transparent2d,
-        core_3d::{AlphaMask3d, Opaque3d, Transparent3d},
     },
     prelude::*,
     reflect::TypeUuid,
     render::{
-        extract_component::{ComponentUniforms, UniformComponentPlugin},
         render_phase::AddRenderCommand,
         render_resource::{
-            encase::private::WriteInto, Buffer, ShaderType, SpecializedRenderPipelines,
+            Buffer, SpecializedRenderPipelines,
         },
         renderer::RenderDevice,
         view::RenderLayers,
@@ -21,7 +19,7 @@ use bevy::{
     utils::FloatOrd,
 };
 use bitfield::bitfield;
-use bytemuck::Pod;
+
 use wgpu::VertexAttribute;
 
 use crate::prelude::*;
@@ -30,13 +28,13 @@ pub(crate) mod pipeline;
 use pipeline::*;
 
 pub(crate) mod commands;
-use commands::*;
 
-pub(crate) mod instanced_2d;
-use instanced_2d::*;
 
-pub(crate) mod instanced_3d;
-use instanced_3d::*;
+// pub(crate) mod instanced_2d;
+// use instanced_2d::*;
+
+// pub(crate) mod instanced_3d;
+// use instanced_3d::*;
 
 pub(crate) mod batched_pipeline;
 use batched_pipeline::*;
@@ -78,7 +76,7 @@ pub fn load_shaders(app: &mut App) {
 pub struct InstanceData<T>(pub Vec<(RenderKey, T)>);
 
 /// Trait implemented by each type of shape, defines common methods used in the rendering pipeline for instancing.
-pub trait Instanceable: Component + GpuListable + Pod {
+pub trait Instanceable: Component + GpuListable + Copy {
     type Component: InstanceComponent<Self>;
     fn vertex_layout() -> Vec<VertexAttribute>;
     fn shader() -> Handle<Shader>;
@@ -190,19 +188,19 @@ pub fn extract_render_layers(
 }
 
 /// Sets up the pipeline for the specified instanceable shape in the given app;
-pub fn setup_instanced_pipeline<T: Instanceable>(app: &mut App) {
-    app.add_event::<ShapeEvent<T>>();
-    app.sub_app_mut(RenderApp)
-        .add_render_command::<Opaque3d, DrawInstancedCommand<T>>()
-        .add_render_command::<Transparent3d, DrawInstancedCommand<T>>()
-        .add_render_command::<AlphaMask3d, DrawInstancedCommand<T>>()
-        .init_resource::<InstancedPipeline<T>>()
-        .init_resource::<SpecializedRenderPipelines<InstancedPipeline<T>>>()
-        .add_system(extract_instances::<T>.in_schedule(ExtractSchedule))
-        .add_system(extract_render_layers.in_schedule(ExtractSchedule))
-        .add_system(prepare_instance_buffers::<T>.in_set(RenderSet::Prepare))
-        .add_system(queue_instances::<T>.in_set(RenderSet::Queue))
-        .add_system(queue_instance_view_bind_groups::<T>.in_set(RenderSet::Queue));
+pub fn setup_instanced_pipeline<T: Instanceable>(_app: &mut App) {
+    // app.add_event::<ShapeEvent<T>>();
+    // app.sub_app_mut(RenderApp)
+    //     .add_render_command::<Opaque3d, DrawInstancedCommand<T>>()
+    //     .add_render_command::<Transparent3d, DrawInstancedCommand<T>>()
+    //     .add_render_command::<AlphaMask3d, DrawInstancedCommand<T>>()
+    //     .init_resource::<InstancedPipeline<T>>()
+    //     .init_resource::<SpecializedRenderPipelines<InstancedPipeline<T>>>()
+    //     .add_system(extract_instances::<T>.in_schedule(ExtractSchedule))
+    //     .add_system(extract_render_layers.in_schedule(ExtractSchedule))
+    //     .add_system(prepare_instance_buffers::<T>.in_set(RenderSet::Prepare))
+    //     .add_system(queue_instances::<T>.in_set(RenderSet::Queue))
+    //     .add_system(queue_instance_view_bind_groups::<T>.in_set(RenderSet::Queue));
 }
 
 /// Sets up the pipeline for the specified instanceable shape in the given app;
@@ -219,6 +217,5 @@ pub fn setup_instanced_pipeline_2d<T: Instanceable>(app: &mut App) {
         .init_resource::<SpecializedRenderPipelines<ShapePipeline<T>>>()
         .add_system(extract_shapes::<T>.in_schedule(ExtractSchedule))
         .add_system(extract_render_layers.in_schedule(ExtractSchedule))
-        .add_system(prepare_instance_buffers_2d::<T>.in_set(RenderSet::Prepare))
         .add_system(queue_shapes::<T>.in_set(RenderSet::Queue));
 }

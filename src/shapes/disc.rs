@@ -1,5 +1,4 @@
 use bevy::{
-    core::{Pod, Zeroable},
     prelude::*,
     reflect::Reflect,
     render::render_resource::ShaderType,
@@ -114,7 +113,7 @@ impl Default for Disc {
 }
 
 /// Raw data sent to the disc shader to draw a disc
-#[derive(Component, ShaderType, Clone, Copy, Pod, Zeroable)]
+#[derive(Component, ShaderType, Clone, Copy)]
 #[repr(C, align(16))]
 pub struct DiscInstance {
     transform: [[f32; 4]; 4],
@@ -126,7 +125,6 @@ pub struct DiscInstance {
     radius: f32,
     start_angle: f32,
     end_angle: f32,
-
     padding: [f32; 3],
 }
 
@@ -178,7 +176,6 @@ impl DiscInstance {
 
             start_angle,
             end_angle,
-
             padding: default(),
         }
     }

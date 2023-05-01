@@ -1,7 +1,6 @@
 use bevy::{
-    core::{Pod, Zeroable},
     prelude::*,
-    reflect::{FromReflect, Reflect},
+    reflect::{Reflect},
     render::render_resource::ShaderType,
 };
 use wgpu::vertex_attr_array;
@@ -87,7 +86,7 @@ impl Default for RegularPolygon {
 }
 
 /// Raw data sent to the regular polygon shader to draw a regular polygon
-#[derive(Component, ShaderType, Clone, Copy, Pod, Zeroable)]
+#[derive(Component, ShaderType, Clone, Copy)]
 #[repr(C, align(16))]
 pub struct NgonInstance {
     transform: [[f32; 4]; 4],

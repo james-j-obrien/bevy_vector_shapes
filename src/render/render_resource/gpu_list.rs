@@ -119,7 +119,7 @@ impl<T: GpuListable> GpuList<T> {
     }
 
     fn use_fallback(limits: &Limits) -> bool {
-        return limits.max_storage_buffers_per_shader_stage == 0;
+        return limits.max_storage_buffers_per_shader_stage > 0;
     }
 }
 
