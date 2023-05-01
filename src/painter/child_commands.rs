@@ -142,7 +142,7 @@ impl<'w, 's, 'a> DerefMut for ShapeChildBuilder<'w, 's, 'a> {
     }
 }
 
-trait BuildShapeChildren {
+pub trait BuildShapeChildren {
     fn with_shape_children(
         &mut self,
         config: &ShapeConfig,

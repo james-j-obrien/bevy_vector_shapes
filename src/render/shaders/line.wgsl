@@ -104,7 +104,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     var world_aa_padding = aa_padding.x * basis_vectors[0] + aa_padding.y * basis_vectors[1];
 
     // In order to scale our padding into uv space we need to know the 2d local space coordinate of our vertex
-    var local_pos_xy = vertex.xy * vec2<f32>(radius_u, line_length / 2.0 + cap_length);// * scale.xy;
+    var local_pos_xy = vertex.xy * vec2<f32>(radius_u, line_length / 2.0 + cap_length);
 
     // Pad our position and determine the ratio by which to scale uv such that uvs ignore the padding
     var padded_pos = local_pos + world_aa_padding;

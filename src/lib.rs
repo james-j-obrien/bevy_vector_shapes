@@ -17,8 +17,8 @@ use painter::*;
 /// `use bevy_vector_shapes::prelude::*` to import commonly used items.
 pub mod prelude {
     pub use crate::painter::{
-        ShapeChildBuilder, ShapeCommands, ShapeConfig, ShapeEntityCommands, ShapeEvent,
-        ShapePainter, ShapeSpawner,
+        BuildShapeChildren, ShapeChildBuilder, ShapeCommands, ShapeConfig, ShapeEntityCommands,
+        ShapeEvent, ShapePainter, ShapeSpawner,
     };
     pub use crate::{
         shapes::{
