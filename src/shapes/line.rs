@@ -2,15 +2,13 @@ use bevy::{
     core::{Pod, Zeroable},
     prelude::*,
     reflect::{FromReflect, Reflect},
+    render::render_resource::ShaderRef,
 };
 use wgpu::vertex_attr_array;
 
 use crate::{
     prelude::*,
-    render::{
-        setup_instanced_pipeline, setup_instanced_pipeline_2d, Flags, InstanceComponent,
-        Instanceable, LINE_HANDLE,
-    },
+    render::{Flags, ShapeComponent, ShapeData, LINE_HANDLE},
 };
 
 /// Component containing the data for drawing a line.
@@ -58,14 +56,14 @@ impl Default for Line {
     }
 }
 
-impl InstanceComponent<LineInstance> for Line {
-    fn instance(&self, tf: &GlobalTransform) -> LineInstance {
+impl ShapeComponent<LineData> for Line {
+    fn into_data(&self, tf: &GlobalTransform) -> LineData {
         let mut flags = Flags(0);
         flags.set_thickness_type(self.thickness_type);
         flags.set_alignment(self.alignment);
         flags.set_cap(self.cap);
 
-        LineInstance {
+        LineData {
             transform: tf.compute_matrix().to_cols_array_2d(),
 
             color: self.color.as_rgba_f32(),
@@ -79,9 +77,9 @@ impl InstanceComponent<LineInstance> for Line {
 }
 
 /// Raw data sent to the line shader to draw a line
-#[derive(Clone, Copy, Reflect, FromReflect, Pod, Zeroable)]
+#[derive(Clone, Copy, Reflect, FromReflect, Pod, Zeroable, Default, Debug)]
 #[repr(C)]
-pub struct LineInstance {
+pub struct LineData {
     transform: [[f32; 4]; 4],
 
     color: [f32; 4],
@@ -92,14 +90,14 @@ pub struct LineInstance {
     end: Vec3,
 }
 
-impl LineInstance {
+impl LineData {
     pub fn new(config: &ShapeConfig, start: Vec3, end: Vec3) -> Self {
         let mut flags = Flags(0);
         flags.set_thickness_type(config.thickness_type);
         flags.set_alignment(config.alignment);
         flags.set_cap(config.cap);
 
-        LineInstance {
+        LineData {
             transform: config.transform.compute_matrix().to_cols_array_2d(),
 
             color: config.color.as_rgba_f32(),
@@ -112,7 +110,7 @@ impl LineInstance {
     }
 }
 
-impl Instanceable for LineInstance {
+impl ShapeData for LineData {
     type Component = Line;
 
     fn vertex_layout() -> Vec<wgpu::VertexAttribute> {
@@ -131,39 +129,44 @@ impl Instanceable for LineInstance {
         .to_vec()
     }
 
-    fn shader() -> Handle<Shader> {
-        LINE_HANDLE.typed::<Shader>()
-    }
-
-    fn distance(&self) -> f32 {
-        self.transform().transform_point3(Vec3::ZERO).z
+    fn shader() -> ShaderRef {
+        LINE_HANDLE.typed::<Shader>().into()
     }
 
     fn transform(&self) -> Mat4 {
         Mat4::from_cols_array_2d(&self.transform)
     }
+}
 
-    fn null_instance() -> Self {
-        let mut config = ShapeConfig::default();
-        config.thickness = 0.0;
-        Self::new(&config, Vec3::ZERO, Vec3::ZERO)
+/// Extension trait for [`ShapePainter`] to enable it to draw lines.
+pub trait LinePainter {
+    fn line(&mut self, start: Vec3, end: Vec3) -> &mut Self;
+}
+
+impl<'w, 's> LinePainter for ShapePainter<'w, 's> {
+    fn line(&mut self, start: Vec3, end: Vec3) -> &mut Self {
+        self.send(LineData::new(self.config(), start, end))
     }
 }
 
-pub(crate) struct LinePlugin;
+/// Extension trait for [`ShapeBundle`] to enable creation of line bundles.
+pub trait LineBundle {
+    fn line(config: &ShapeConfig, start: Vec3, end: Vec3) -> Self;
+}
 
-impl Plugin for LinePlugin {
-    fn build(&self, app: &mut App) {
-        app.register_type::<Line>();
-        setup_instanced_pipeline::<LineInstance>(app)
+impl LineBundle for ShapeBundle<Line> {
+    fn line(config: &ShapeConfig, start: Vec3, end: Vec3) -> Self {
+        Self::new(config, Line::new(config, start, end))
     }
 }
 
-pub(crate) struct Line2dPlugin;
+/// Extension trait for [`ShapeCommands`] and [`ShapeChildBuilder`] to enable spawning of line entities.
+pub trait LineSpawner<'w, 's>: ShapeSpawner<'w, 's> {
+    fn line(&mut self, start: Vec3, end: Vec3) -> ShapeEntityCommands<'w, 's, '_>;
+}
 
-impl Plugin for Line2dPlugin {
-    fn build(&self, app: &mut App) {
-        app.register_type::<Line>();
-        setup_instanced_pipeline_2d::<LineInstance>(app)
+impl<'w, 's, T: ShapeSpawner<'w, 's>> LineSpawner<'w, 's> for T {
+    fn line(&mut self, start: Vec3, end: Vec3) -> ShapeEntityCommands<'w, 's, '_> {
+        self.spawn_shape(ShapeBundle::line(self.config(), start, end))
     }
 }

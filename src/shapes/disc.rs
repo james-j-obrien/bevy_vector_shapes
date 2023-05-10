@@ -2,15 +2,13 @@ use bevy::{
     core::{Pod, Zeroable},
     prelude::*,
     reflect::Reflect,
+    render::render_resource::ShaderRef,
 };
 use wgpu::vertex_attr_array;
 
 use crate::{
     prelude::*,
-    render::{
-        setup_instanced_pipeline, setup_instanced_pipeline_2d, Flags, InstanceComponent,
-        Instanceable, DISC_HANDLE,
-    },
+    render::{Flags, ShapeComponent, ShapeData, DISC_HANDLE},
 };
 
 /// Component containing the data for drawing a disc.
@@ -69,8 +67,8 @@ impl Disc {
     }
 }
 
-impl InstanceComponent<DiscInstance> for Disc {
-    fn instance(&self, tf: &GlobalTransform) -> DiscInstance {
+impl ShapeComponent<DiscData> for Disc {
+    fn into_data(&self, tf: &GlobalTransform) -> DiscData {
         let mut flags = Flags(0);
         flags.set_thickness_type(self.thickness_type);
         flags.set_alignment(self.alignment);
@@ -78,7 +76,7 @@ impl InstanceComponent<DiscInstance> for Disc {
         flags.set_cap(self.cap);
         flags.set_arc(self.arc as u32);
 
-        DiscInstance {
+        DiscData {
             transform: tf.compute_matrix().to_cols_array_2d(),
 
             color: self.color.as_rgba_f32(),
@@ -111,9 +109,9 @@ impl Default for Disc {
 }
 
 /// Raw data sent to the disc shader to draw a disc
-#[derive(Clone, Copy, Reflect, FromReflect, Pod, Zeroable)]
+#[derive(Clone, Copy, Reflect, FromReflect, Pod, Zeroable, Default, Debug)]
 #[repr(C)]
-pub struct DiscInstance {
+pub struct DiscData {
     transform: [[f32; 4]; 4],
 
     color: [f32; 4],
@@ -125,15 +123,15 @@ pub struct DiscInstance {
     end_angle: f32,
 }
 
-impl DiscInstance {
-    pub fn circle(config: &ShapeConfig, radius: f32) -> DiscInstance {
+impl DiscData {
+    pub fn circle(config: &ShapeConfig, radius: f32) -> DiscData {
         let mut flags = Flags(0);
         flags.set_thickness_type(config.thickness_type);
         flags.set_alignment(config.alignment);
         flags.set_hollow(config.hollow as u32);
         flags.set_arc(false as u32);
 
-        DiscInstance {
+        DiscData {
             transform: config.transform.compute_matrix().to_cols_array_2d(),
 
             color: config.color.as_rgba_f32(),
@@ -147,12 +145,7 @@ impl DiscInstance {
         }
     }
 
-    pub fn arc(
-        config: &ShapeConfig,
-        radius: f32,
-        start_angle: f32,
-        end_angle: f32,
-    ) -> DiscInstance {
+    pub fn arc(config: &ShapeConfig, radius: f32, start_angle: f32, end_angle: f32) -> DiscData {
         let mut flags = Flags(0);
         flags.set_thickness_type(config.thickness_type);
         flags.set_alignment(config.alignment);
@@ -160,7 +153,7 @@ impl DiscInstance {
         flags.set_cap(config.cap);
         flags.set_arc(true as u32);
 
-        DiscInstance {
+        DiscData {
             transform: config.transform.compute_matrix().to_cols_array_2d(),
 
             color: config.color.as_rgba_f32(),
@@ -175,7 +168,7 @@ impl DiscInstance {
     }
 }
 
-impl Instanceable for DiscInstance {
+impl ShapeData for DiscData {
     type Component = Disc;
 
     fn vertex_layout() -> Vec<wgpu::VertexAttribute> {
@@ -195,38 +188,75 @@ impl Instanceable for DiscInstance {
         .to_vec()
     }
 
-    fn shader() -> Handle<Shader> {
-        DISC_HANDLE.typed::<Shader>()
-    }
-
-    fn distance(&self) -> f32 {
-        self.transform().transform_point3(Vec3::ZERO).z
+    fn shader() -> ShaderRef {
+        DISC_HANDLE.typed::<Shader>().into()
     }
 
     fn transform(&self) -> Mat4 {
         Mat4::from_cols_array_2d(&self.transform)
     }
+}
 
-    fn null_instance() -> Self {
-        let config = ShapeConfig::default();
-        Self::circle(&config, 0.0)
+/// Extension trait for [`ShapePainter`] to enable it to draw disc type shapes.
+pub trait DiscPainter {
+    fn circle(&mut self, radius: f32) -> &mut Self;
+    fn arc(&mut self, radius: f32, start_angle: f32, end_angle: f32) -> &mut Self;
+}
+
+impl<'w, 's> DiscPainter for ShapePainter<'w, 's> {
+    fn circle(&mut self, radius: f32) -> &mut Self {
+        self.send(DiscData::circle(self.config(), radius))
+    }
+
+    fn arc(&mut self, radius: f32, start_angle: f32, end_angle: f32) -> &mut Self {
+        self.send(DiscData::arc(self.config(), radius, start_angle, end_angle));
+        self
     }
 }
 
-pub(crate) struct DiscPlugin;
+/// Extension trait for [`ShapeBundle`] to enable creation of bundles for disc type shapes.
+pub trait DiscBundle {
+    fn circle(config: &ShapeConfig, radius: f32) -> Self;
+    fn arc(config: &ShapeConfig, radius: f32, start_angle: f32, end_angle: f32) -> Self;
+}
 
-impl Plugin for DiscPlugin {
-    fn build(&self, app: &mut App) {
-        app.register_type::<Disc>();
-        setup_instanced_pipeline::<DiscInstance>(app);
+impl DiscBundle for ShapeBundle<Disc> {
+    fn circle(config: &ShapeConfig, radius: f32) -> Self {
+        Self::new(config, Disc::circle(config, radius))
+    }
+
+    fn arc(config: &ShapeConfig, radius: f32, start_angle: f32, end_angle: f32) -> Self {
+        Self::new(config, Disc::arc(config, radius, start_angle, end_angle))
     }
 }
 
-pub(crate) struct Disc2dPlugin;
+/// Extension trait for [`ShapeCommands`] and [`ShapeChildBuilder`] to enable spawning of entities for disc type shapes.
+pub trait DiscSpawner<'w, 's> {
+    fn circle(&mut self, radius: f32) -> ShapeEntityCommands<'w, 's, '_>;
+    fn arc(
+        &mut self,
+        radius: f32,
+        start_angle: f32,
+        end_angle: f32,
+    ) -> ShapeEntityCommands<'w, 's, '_>;
+}
 
-impl Plugin for Disc2dPlugin {
-    fn build(&self, app: &mut App) {
-        app.register_type::<Disc>();
-        setup_instanced_pipeline_2d::<DiscInstance>(app);
+impl<'w, 's, T: ShapeSpawner<'w, 's>> DiscSpawner<'w, 's> for T {
+    fn circle(&mut self, radius: f32) -> ShapeEntityCommands<'w, 's, '_> {
+        self.spawn_shape(ShapeBundle::circle(self.config(), radius))
+    }
+
+    fn arc(
+        &mut self,
+        radius: f32,
+        start_angle: f32,
+        end_angle: f32,
+    ) -> ShapeEntityCommands<'w, 's, '_> {
+        self.spawn_shape(ShapeBundle::arc(
+            self.config(),
+            radius,
+            start_angle,
+            end_angle,
+        ))
     }
 }

@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 
-use crate::{painter::LocalShapeConfig, prelude::*};
+use crate::{painter::LocalShapeConfig, prelude::*, shapes::Shape3d, ShapeMode};
 
 /// A system param that allows ergonomic spawning of shape entities.
 ///

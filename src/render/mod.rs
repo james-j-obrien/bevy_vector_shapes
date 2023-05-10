@@ -7,10 +7,10 @@ use bevy::{
         core_3d::{AlphaMask3d, Opaque3d, Transparent3d},
     },
     prelude::*,
-    reflect::TypeUuid,
+    reflect::{GetTypeRegistration, TypeUuid},
     render::{
         render_phase::AddRenderCommand,
-        render_resource::{Buffer, SpecializedRenderPipelines},
+        render_resource::{Buffer, ShaderRef, SpecializedRenderPipelines},
         view::RenderLayers,
         Extract, RenderApp, RenderSet,
     },
@@ -20,7 +20,7 @@ use bitfield::bitfield;
 use bytemuck::Pod;
 use wgpu::VertexAttribute;
 
-use crate::prelude::*;
+use crate::{painter::ShapeEntry, prelude::*};
 
 pub(crate) mod pipeline;
 use pipeline::*;
@@ -65,26 +65,32 @@ pub fn load_shaders(app: &mut App) {
 
 /// Collection of instances extracted from components into pairs of [`RenderKey`] and [`Instanceable`].
 #[derive(Component, Deref, DerefMut)]
-pub struct InstanceData<T>(pub Vec<(RenderKey, T)>);
+pub struct InstanceData<T: ShapeData>(pub Vec<ShapeEntry<T>>);
 
-/// Trait implemented by each type of shape, defines common methods used in the rendering pipeline for instancing.
-pub trait Instanceable: Send + Sync + Pod {
-    type Component: InstanceComponent<Self>;
+/// Trait implemented by each type of shape, defines common methods used in the rendering pipeline.
+pub trait ShapeData: Send + Sync + Pod + std::fmt::Debug {
+    /// Corresponding component representing the given shape.
+    type Component: ShapeComponent<Self>;
+    /// Vertex layout to be sent to the shader.
     fn vertex_layout() -> Vec<VertexAttribute>;
-    fn shader() -> Handle<Shader>;
-    fn distance(&self) -> f32;
+    /// Reference to the shader to be used when rendering the shape.
+    fn shader() -> ShaderRef;
+    /// Distance to the shape to be used for z-ordering in 2D.
+    fn distance(&self) -> f32 {
+        self.transform().transform_point3(Vec3::ZERO).z
+    }
+    /// Transform of the shape to be used for z-ordering in 3D.
     fn transform(&self) -> Mat4;
-    fn null_instance() -> Self;
 }
 
 /// Trait implemented by the corresponding component for each shape type.
-pub trait InstanceComponent<T: Instanceable>: Component {
-    fn instance(&self, tf: &GlobalTransform) -> T;
+pub trait ShapeComponent<T: ShapeData>: Component + GetTypeRegistration {
+    fn into_data(&self, tf: &GlobalTransform) -> T;
 }
 
 /// Buffer of instances for a given shape type.
 #[derive(Component)]
-pub struct InstanceBuffer<T: Instanceable> {
+pub struct InstanceBuffer<T: ShapeData> {
     view: Entity,
     key: RenderKey,
     buffer: Buffer,
@@ -104,20 +110,22 @@ bitfield! {
 }
 
 /// Properties attached to a batch of shapes that are needed for pipeline specialization
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
 pub struct RenderKey {
     render_layers: RenderLayers,
     alpha_mode: AlphaModeOrd,
     disable_laa: bool,
+    canvas: Option<Entity>,
 }
 
 impl RenderKey {
-    pub fn new(flags: Option<&Shape>, render_layers: Option<&RenderLayers>) -> Self {
+    pub fn new(flags: Option<&ShapeMaterial>, render_layers: Option<&RenderLayers>) -> Self {
         let flags = flags.cloned().unwrap_or_default();
         Self {
             render_layers: render_layers.cloned().unwrap_or_default(),
             alpha_mode: AlphaModeOrd(flags.alpha_mode),
             disable_laa: flags.disable_laa || flags.alpha_mode == AlphaMode::Opaque,
+            canvas: flags.canvas,
         }
     }
 }
@@ -128,11 +136,12 @@ impl From<&ShapeConfig> for RenderKey {
             render_layers: config.render_layers.unwrap_or_default(),
             alpha_mode: AlphaModeOrd(config.alpha_mode),
             disable_laa: config.disable_laa || config.alpha_mode == AlphaMode::Opaque,
+            canvas: config.canvas,
         }
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 struct AlphaModeOrd(AlphaMode);
 
 impl AlphaModeOrd {
@@ -163,7 +172,7 @@ impl Ord for AlphaModeOrd {
 /// System that extracts [`RenderLayers`] for each camera
 ///
 /// Having to do this isn't ideal but with the way the render pipeline is setup for shapes using `visible_entities` is not ideal either.
-/// This may be removed once a better implementation is complete.
+/// This may be removed once a better implementation is possible.
 pub fn extract_render_layers(
     mut commands: Commands,
     cameras: Extract<Query<(Entity, &RenderLayers), With<Camera>>>,
@@ -173,32 +182,32 @@ pub fn extract_render_layers(
     }
 }
 
-/// Sets up the pipeline for the specified instanceable shape in the given app;
-pub fn setup_instanced_pipeline<T: Instanceable>(app: &mut App) {
-    app.add_event::<ShapeEvent<T>>();
+pub fn setup_pipeline_common<T: ShapeData>(app: &mut App) {
     app.sub_app_mut(RenderApp)
-        .add_render_command::<Opaque3d, DrawInstancedCommand<T>>()
-        .add_render_command::<Transparent3d, DrawInstancedCommand<T>>()
-        .add_render_command::<AlphaMask3d, DrawInstancedCommand<T>>()
         .init_resource::<InstancedPipeline<T>>()
         .init_resource::<SpecializedRenderPipelines<InstancedPipeline<T>>>()
-        .add_system(extract_instances::<T>.in_schedule(ExtractSchedule))
         .add_system(extract_render_layers.in_schedule(ExtractSchedule))
-        .add_system(prepare_instance_buffers::<T>.in_set(RenderSet::Prepare))
-        .add_system(queue_instances::<T>.in_set(RenderSet::Queue))
         .add_system(queue_instance_view_bind_groups::<T>.in_set(RenderSet::Queue));
 }
 
 /// Sets up the pipeline for the specified instanceable shape in the given app;
-pub fn setup_instanced_pipeline_2d<T: Instanceable>(app: &mut App) {
-    app.add_event::<ShapeEvent<T>>();
+pub fn setup_pipeline_3d<T: ShapeData>(app: &mut App) {
+    app.sub_app_mut(RenderApp)
+        .add_render_command::<Opaque3d, DrawInstancedCommand<T>>()
+        .add_render_command::<Transparent3d, DrawInstancedCommand<T>>()
+        .add_render_command::<AlphaMask3d, DrawInstancedCommand<T>>()
+        .add_system(extract_instances_3d::<T>.in_schedule(ExtractSchedule))
+        .add_system(prepare_instance_buffers_3d::<T>.in_set(RenderSet::Prepare))
+        .add_system(queue_instances_3d::<T>.in_set(RenderSet::Queue));
+}
+
+/// Sets up the pipeline for the specified instanceable shape in the given app;
+pub fn setup_pipeline_2d<T: ShapeData>(app: &mut App) {
     app.sub_app_mut(RenderApp)
         .add_render_command::<Transparent2d, DrawInstancedCommand<T>>()
         .init_resource::<InstancedPipeline<T>>()
         .init_resource::<SpecializedRenderPipelines<InstancedPipeline<T>>>()
         .add_system(extract_instances_2d::<T>.in_schedule(ExtractSchedule))
-        .add_system(extract_render_layers.in_schedule(ExtractSchedule))
         .add_system(prepare_instance_buffers_2d::<T>.in_set(RenderSet::Prepare))
-        .add_system(queue_instances_2d::<T>.in_set(RenderSet::Queue))
-        .add_system(queue_instance_view_bind_groups::<T>.in_set(RenderSet::Queue));
+        .add_system(queue_instances_2d::<T>.in_set(RenderSet::Queue));
 }

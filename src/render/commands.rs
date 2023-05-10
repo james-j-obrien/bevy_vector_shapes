@@ -29,12 +29,12 @@ pub type DrawInstancedCommand<T> = (
 );
 
 #[derive(Component, Debug)]
-pub struct InstancedViewBindGroup<T: Instanceable> {
+pub struct InstancedViewBindGroup<T: ShapeData> {
     value: BindGroup,
     _marker: PhantomData<T>,
 }
 
-pub fn queue_instance_view_bind_groups<T: Instanceable>(
+pub fn queue_instance_view_bind_groups<T: ShapeData>(
     mut commands: Commands,
     render_device: Res<RenderDevice>,
     instanced_pipeline: Res<InstancedPipeline<T>>,
@@ -60,9 +60,9 @@ pub fn queue_instance_view_bind_groups<T: Instanceable>(
     }
 }
 
-pub struct SetInstancedViewBindGroup<T: Instanceable, const I: usize>(PhantomData<T>);
+pub struct SetInstancedViewBindGroup<T: ShapeData, const I: usize>(PhantomData<T>);
 
-impl<T: Instanceable, const I: usize, P: PhaseItem> RenderCommand<P>
+impl<T: ShapeData, const I: usize, P: PhaseItem> RenderCommand<P>
     for SetInstancedViewBindGroup<T, I>
 {
     type ViewWorldQuery = (Read<ViewUniformOffset>, Read<InstancedViewBindGroup<T>>);
@@ -86,7 +86,7 @@ pub struct DrawInstanced<T> {
     _marker: PhantomData<T>,
 }
 
-impl<P: PhaseItem, T: Instanceable + 'static> RenderCommand<P> for DrawInstanced<T> {
+impl<P: PhaseItem, T: ShapeData + 'static> RenderCommand<P> for DrawInstanced<T> {
     type Param = ();
     type ViewWorldQuery = ();
     type ItemWorldQuery = Read<InstanceBuffer<T>>;

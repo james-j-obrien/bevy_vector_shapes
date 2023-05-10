@@ -50,16 +50,16 @@ fn draw_circles(painter: &mut ShapePainter, radius: f32) {
 fn draw_gallery(mut painter: ShapePainter) {
     let radius = 2.0;
 
-    painter.clear();
+    painter.reset();
     painter.translate(Vec3::X * radius * -4.0);
     painter.alpha_mode = AlphaMode::Add;
     draw_circles(&mut painter, radius);
 
-    painter.clear();
+    painter.reset();
     painter.alpha_mode = AlphaMode::Multiply;
     draw_circles(&mut painter, radius);
 
-    painter.clear();
+    painter.reset();
     painter.translate(Vec3::X * radius * 4.0);
     painter.alpha_mode = AlphaMode::Blend;
     draw_circles(&mut painter, radius);

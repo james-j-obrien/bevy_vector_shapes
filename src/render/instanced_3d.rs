@@ -11,36 +11,41 @@ use bevy::{
     utils::FloatOrd,
 };
 
-use crate::render::*;
+use crate::{painter::ShapeStorage, render::*, shapes::Shape3d, ShapeMode};
 
-pub fn extract_instances<T: Instanceable>(
+pub fn extract_instances_3d<T: ShapeData>(
     mut commands: Commands,
     entities: Extract<
-        Query<(
-            &T::Component,
-            &GlobalTransform,
-            &ComputedVisibility,
-            Option<&Shape>,
-            Option<&RenderLayers>,
-        )>,
+        Query<
+            (
+                &T::Component,
+                &GlobalTransform,
+                &ComputedVisibility,
+                Option<&ShapeMaterial>,
+                Option<&RenderLayers>,
+            ),
+            With<Shape3d>,
+        >,
     >,
-    mut events: Extract<EventReader<ShapeEvent<T>>>,
+    storage: Extract<Res<ShapeStorage>>,
 ) {
     let mut instances = entities
         .iter()
         .filter_map(|(cp, tf, vis, flags, rl)| {
             if vis.is_visible() {
-                Some((RenderKey::new(flags, rl), cp.instance(tf)))
+                Some((RenderKey::new(flags, rl), cp.into_data(tf)))
             } else {
                 None
             }
         })
         .collect::<Vec<_>>();
 
-    instances.extend(events.into_iter().map(|e| e.0));
+    if let Some(iter) = storage.get::<T>(ShapeMode::Shape3d) {
+        instances.extend(iter.cloned());
+    }
 
     if !instances.is_empty() {
-        commands.spawn(InstanceData::<T>(instances));
+        commands.spawn((InstanceData::<T>(instances), Shape3d));
     }
 }
 
@@ -50,7 +55,42 @@ type WithPhases = (
     With<RenderPhase<AlphaMask3d>>,
 );
 
-fn spawn_buffers<T: Instanceable>(
+fn spawn_buffers<T: ShapeData>(
+    commands: &mut Commands,
+    render_device: &RenderDevice,
+    view_entity: Entity,
+    view: &ExtractedView,
+    key: RenderKey,
+    instances: &mut Vec<T>,
+) {
+    let rangefinder = view.rangefinder3d();
+    instances.sort_by_cached_key(|i| FloatOrd(rangefinder.distance(&i.transform())));
+
+    // Workaround for an issue in the implementation of Chromes webgl ANGLE D3D11 backend
+    #[cfg(target_arch = "wasm32")]
+    if instances.len() == 1 {
+        instances.push(T::null_instance());
+    }
+
+    let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
+        label: Some("instance data buffer"),
+        contents: bytemuck::cast_slice(instances.as_slice()),
+        usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
+    });
+    commands.spawn((
+        InstanceBuffer::<T> {
+            view: view_entity,
+            key,
+            buffer,
+            distance: rangefinder.distance(&instances[0].transform()),
+            length: instances.len(),
+            _marker: default(),
+        },
+        Shape3d,
+    ));
+}
+
+fn compute_visibility<T: ShapeData>(
     commands: &mut Commands,
     render_device: &RenderDevice,
     views: &Query<(Entity, &ExtractedView, Option<&RenderLayers>), WithPhases>,
@@ -60,40 +100,39 @@ fn spawn_buffers<T: Instanceable>(
     if instances.is_empty() {
         return;
     }
-    for (view_entity, view, render_layers) in views {
-        let render_layers = render_layers.cloned().unwrap_or_default();
-        if !render_layers.intersects(&key.render_layers) {
-            continue;
-        }
 
-        let rangefinder = view.rangefinder3d();
-        instances.sort_by_cached_key(|i| FloatOrd(rangefinder.distance(&i.transform())));
-
-        // Workaround for an issue in the implementation of Chromes webgl ANGLE D3D11 backend
-        #[cfg(target_arch = "wasm32")]
-        if instances.len() == 1 {
-            instances.push(T::null_instance());
-        }
-
-        let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
-            label: Some("instance data buffer"),
-            contents: bytemuck::cast_slice(instances.as_slice()),
-            usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
-        });
-        commands.spawn(InstanceBuffer::<T> {
-            view: view_entity,
+    if let Some(canvas) = key.canvas {
+        let (view_entity, view, _) = views.get(canvas).expect("Drawing to non-existent canvas.");
+        spawn_buffers(
+            commands,
+            render_device,
+            view_entity,
+            view,
             key,
-            buffer,
-            distance: rangefinder.distance(&instances[0].transform()),
-            length: instances.len(),
-            _marker: default(),
-        });
+            &mut instances,
+        );
+    } else {
+        for (view_entity, view, render_layers) in views {
+            let render_layers = render_layers.cloned().unwrap_or_default();
+            if !render_layers.intersects(&key.render_layers) {
+                continue;
+            }
+
+            spawn_buffers(
+                commands,
+                render_device,
+                view_entity,
+                view,
+                key,
+                &mut instances,
+            )
+        }
     }
 }
 
-pub fn prepare_instance_buffers<T: Instanceable>(
+pub fn prepare_instance_buffers_3d<T: ShapeData>(
     mut commands: Commands,
-    mut query: Query<&mut InstanceData<T>>,
+    mut query: Query<&mut InstanceData<T>, With<Shape3d>>,
     render_device: Res<RenderDevice>,
     views: Query<(Entity, &ExtractedView, Option<&RenderLayers>), WithPhases>,
 ) {
@@ -107,7 +146,7 @@ pub fn prepare_instance_buffers<T: Instanceable>(
                     instances.push(*instance);
                     (key, instances)
                 } else {
-                    spawn_buffers(
+                    compute_visibility(
                         &mut commands,
                         render_device.as_ref(),
                         &views,
@@ -120,7 +159,7 @@ pub fn prepare_instance_buffers<T: Instanceable>(
             },
         );
 
-        spawn_buffers(
+        compute_visibility(
             &mut commands,
             render_device.as_ref(),
             &views,
@@ -131,7 +170,7 @@ pub fn prepare_instance_buffers<T: Instanceable>(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn queue_instances<T: Instanceable>(
+pub fn queue_instances_3d<T: ShapeData>(
     opaque_draw_functions: Res<DrawFunctions<Opaque3d>>,
     alpha_mask_draw_functions: Res<DrawFunctions<AlphaMask3d>>,
     transparent_draw_functions: Res<DrawFunctions<Transparent3d>>,
@@ -139,7 +178,7 @@ pub fn queue_instances<T: Instanceable>(
     instanced_pipeline: ResMut<InstancedPipeline<T>>,
     pipeline_cache: Res<PipelineCache>,
     msaa: Res<Msaa>,
-    instance_buffers: Query<(Entity, &InstanceBuffer<T>)>,
+    instance_buffers: Query<(Entity, &InstanceBuffer<T>), With<Shape3d>>,
     mut views: Query<(
         &ExtractedView,
         &mut RenderPhase<Opaque3d>,

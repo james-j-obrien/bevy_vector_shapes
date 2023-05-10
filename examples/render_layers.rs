@@ -11,6 +11,7 @@ use bevy::{
         render_resource::{
             Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
         },
+        texture::ImageSampler,
         view::RenderLayers,
     },
 };
@@ -36,33 +37,8 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
 ) {
-    let size = Extent3d {
-        width: 512,
-        height: 512,
-        ..default()
-    };
+    let image_handle = Canvas::create_image(images.as_mut(), 512, 512, ImageSampler::Default);
 
-    // This is the texture that will be rendered to.
-    let mut image = Image {
-        texture_descriptor: TextureDescriptor {
-            label: None,
-            size,
-            dimension: TextureDimension::D2,
-            format: TextureFormat::Bgra8UnormSrgb,
-            mip_level_count: 1,
-            sample_count: 1,
-            usage: TextureUsages::TEXTURE_BINDING
-                | TextureUsages::COPY_DST
-                | TextureUsages::RENDER_ATTACHMENT,
-            view_formats: &[],
-        },
-        ..default()
-    };
-
-    // fill image.data with zeroes
-    image.resize(size);
-
-    let image_handle = images.add(image);
     // This specifies the layer used for the first pass, which will be attached to the first pass camera and cube.
     let first_pass_layer = RenderLayers::layer(1);
 
@@ -123,7 +99,7 @@ fn setup(
 }
 
 fn draw_shapes(time: Res<Time>, mut painter: ShapePainter) {
-    painter.clear();
+    painter.reset();
     painter.render_layers = Some(RenderLayers::layer(1));
     painter.hollow = true;
     painter.transform.scale = Vec3::ONE * 3.0;

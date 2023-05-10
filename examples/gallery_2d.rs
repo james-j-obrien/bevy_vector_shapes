@@ -1,7 +1,6 @@
 // Demonstrates rendering the same gallery as gallery_3d but with a 2d camera
 
 use bevy::prelude::*;
-use bevy::render::camera::ScalingMode;
 use bevy_vector_shapes::prelude::*;
 
 mod gallery_3d;
@@ -19,19 +18,10 @@ fn main() {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle {
-        transform: Transform::from_translation(Vec3::Z),
-        projection: OrthographicProjection {
-            scaling_mode: ScalingMode::AutoMin {
-                min_width: 5.2 * 4.5,
-                min_height: 3.2 * 4.5,
-            },
-            ..default()
-        },
-        ..default()
-    });
+    commands.spawn(Camera2dBundle::default());
 }
 
-fn draw_gallery(time: Res<Time>, painter: ShapePainter) {
+fn draw_gallery(time: Res<Time>, mut painter: ShapePainter) {
+    painter.scale(Vec3::ONE * 50.0);
     gallery(painter, time.elapsed_seconds(), 0..15);
 }

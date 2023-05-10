@@ -2,15 +2,13 @@ use bevy::{
     core::{Pod, Zeroable},
     prelude::*,
     reflect::{FromReflect, Reflect},
+    render::render_resource::ShaderRef,
 };
 use wgpu::vertex_attr_array;
 
 use crate::{
     prelude::*,
-    render::{
-        setup_instanced_pipeline, setup_instanced_pipeline_2d, Flags, InstanceComponent,
-        Instanceable, NGON_HANDLE,
-    },
+    render::{Flags, ShapeComponent, ShapeData, NGON_HANDLE},
 };
 
 /// Component containing the data for drawing a regular polygon.
@@ -46,14 +44,14 @@ impl RegularPolygon {
     }
 }
 
-impl InstanceComponent<NgonInstance> for RegularPolygon {
-    fn instance(&self, tf: &GlobalTransform) -> NgonInstance {
+impl ShapeComponent<NgonData> for RegularPolygon {
+    fn into_data(&self, tf: &GlobalTransform) -> NgonData {
         let mut flags = Flags(0);
         flags.set_thickness_type(self.thickness_type);
         flags.set_alignment(self.alignment);
         flags.set_hollow(self.hollow as u32);
 
-        NgonInstance {
+        NgonData {
             transform: tf.compute_matrix().to_cols_array_2d(),
 
             color: self.color.as_rgba_f32(),
@@ -84,9 +82,9 @@ impl Default for RegularPolygon {
 }
 
 /// Raw data sent to the regular polygon shader to draw a regular polygon
-#[derive(Clone, Copy, Reflect, FromReflect, Pod, Zeroable)]
+#[derive(Clone, Copy, Reflect, FromReflect, Pod, Zeroable, Default, Debug)]
 #[repr(C)]
-pub struct NgonInstance {
+pub struct NgonData {
     transform: [[f32; 4]; 4],
 
     color: [f32; 4],
@@ -98,14 +96,14 @@ pub struct NgonInstance {
     roundness: f32,
 }
 
-impl NgonInstance {
-    pub fn new(config: &ShapeConfig, sides: f32, radius: f32) -> NgonInstance {
+impl NgonData {
+    pub fn new(config: &ShapeConfig, sides: f32, radius: f32) -> NgonData {
         let mut flags = Flags(0);
         flags.set_thickness_type(config.thickness_type);
         flags.set_alignment(config.alignment);
         flags.set_hollow(config.hollow as u32);
 
-        NgonInstance {
+        NgonData {
             transform: config.transform.compute_matrix().to_cols_array_2d(),
 
             color: config.color.as_rgba_f32(),
@@ -119,7 +117,7 @@ impl NgonInstance {
     }
 }
 
-impl Instanceable for NgonInstance {
+impl ShapeData for NgonData {
     type Component = RegularPolygon;
 
     fn vertex_layout() -> Vec<wgpu::VertexAttribute> {
@@ -139,38 +137,44 @@ impl Instanceable for NgonInstance {
         .to_vec()
     }
 
-    fn shader() -> Handle<Shader> {
-        NGON_HANDLE.typed::<Shader>()
-    }
-
-    fn distance(&self) -> f32 {
-        self.transform().transform_point3(Vec3::ZERO).z
+    fn shader() -> ShaderRef {
+        NGON_HANDLE.typed::<Shader>().into()
     }
 
     fn transform(&self) -> Mat4 {
         Mat4::from_cols_array_2d(&self.transform)
     }
+}
 
-    fn null_instance() -> Self {
-        let config = ShapeConfig::default();
-        Self::new(&config, 3.0, 0.0)
+/// Extension trait for [`ShapePainter`] to enable it to draw regular polygons.
+pub trait RegularPolygonPainter {
+    fn ngon(&mut self, sides: f32, radius: f32) -> &mut Self;
+}
+
+impl<'w, 's> RegularPolygonPainter for ShapePainter<'w, 's> {
+    fn ngon(&mut self, sides: f32, radius: f32) -> &mut Self {
+        self.send(NgonData::new(self.config(), sides, radius))
     }
 }
 
-pub(crate) struct RegularPolygonPlugin;
+/// Extension trait for [`ShapeBundle`] to enable creation of regular polygon bundles.
+pub trait RegularPolygonBundle {
+    fn ngon(config: &ShapeConfig, sides: f32, radius: f32) -> Self;
+}
 
-impl Plugin for RegularPolygonPlugin {
-    fn build(&self, app: &mut App) {
-        app.register_type::<RegularPolygon>();
-        setup_instanced_pipeline::<NgonInstance>(app);
+impl RegularPolygonBundle for ShapeBundle<RegularPolygon> {
+    fn ngon(config: &ShapeConfig, sides: f32, radius: f32) -> Self {
+        Self::new(config, RegularPolygon::new(config, sides, radius))
     }
 }
 
-pub(crate) struct RegularPolygon2dPlugin;
+/// Extension trait for [`ShapeCommands`] and [`ShapeChildBuilder`] to enable spawning of regular polygon entities.
+pub trait RegularPolygonSpawner<'w, 's> {
+    fn ngon(&mut self, sides: f32, radius: f32) -> ShapeEntityCommands<'w, 's, '_>;
+}
 
-impl Plugin for RegularPolygon2dPlugin {
-    fn build(&self, app: &mut App) {
-        app.register_type::<RegularPolygon>();
-        setup_instanced_pipeline_2d::<NgonInstance>(app);
+impl<'w, 's, T: ShapeSpawner<'w, 's>> RegularPolygonSpawner<'w, 's> for T {
+    fn ngon(&mut self, sides: f32, radius: f32) -> ShapeEntityCommands<'w, 's, '_> {
+        self.spawn_shape(ShapeBundle::ngon(self.config(), sides, radius))
     }
 }

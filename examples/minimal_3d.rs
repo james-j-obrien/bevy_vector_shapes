@@ -6,7 +6,7 @@ use bevy_vector_shapes::prelude::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        // Add the shape plugin
+        // Add the 3D shape plugin
         .add_plugin(ShapePlugin::default())
         .add_startup_system(setup)
         .add_system(draw)

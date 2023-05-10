@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy::render::view::RenderLayers;
 
-use crate::prelude::*;
+use crate::{prelude::*, ShapeMode};
 
 /// Describes a configuration that can be applied to a spawned shape.
 #[derive(Copy, Clone, Reflect, FromReflect)]
@@ -24,6 +24,8 @@ pub struct ShapeConfig {
     pub alpha_mode: AlphaMode,
     /// Forcibly disables local anti-aliasing for all shapes
     pub disable_laa: bool,
+    pub canvas: Option<Entity>,
+    pub mode: ShapeMode,
 }
 
 impl ShapeConfig {
@@ -79,8 +81,8 @@ impl ShapeConfig {
     }
 }
 
-impl Default for ShapeConfig {
-    fn default() -> Self {
+impl ShapeConfig {
+    pub fn default_2d() -> Self {
         Self {
             transform: default(),
 
@@ -93,9 +95,19 @@ impl Default for ShapeConfig {
             roundness: default(),
             corner_radii: default(),
 
-            render_layers: default(),
+            render_layers: None,
             alpha_mode: AlphaMode::Blend,
             disable_laa: false,
+            canvas: None,
+            mode: ShapeMode::Shape2d,
         }
+    }
+}
+
+impl ShapeConfig {
+    pub fn default_3d() -> Self {
+        let mut config = Self::default_2d();
+        config.mode = ShapeMode::Shape3d;
+        config
     }
 }

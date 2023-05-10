@@ -13,8 +13,9 @@ fn main() {
         .add_plugin(ShapePlugin {
             base_config: ShapeConfig {
                 alignment: Alignment::Billboard,
-                ..default()
+                ..ShapeConfig::default_3d()
             },
+            ..default()
         })
         .insert_resource(ClearColor(Color::DARK_GRAY))
         .insert_resource(Msaa::Off)

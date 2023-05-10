@@ -48,7 +48,7 @@ fn draw_tree(time: f32, painter: &mut ShapePainter, depth: u32) {
 }
 
 fn draw_gallery(time: Res<Time>, mut painter: ShapePainter) {
-    painter.clear();
+    painter.reset();
     painter.color = Color::SEA_GREEN;
     painter.translate(Vec3::NEG_Y * 5.);
     painter

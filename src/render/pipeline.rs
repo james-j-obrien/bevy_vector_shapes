@@ -61,16 +61,14 @@ impl InstancedPipelineKey {
 }
 
 #[derive(Resource)]
-pub struct InstancedPipeline<T: Instanceable> {
+pub struct InstancedPipeline<T: ShapeData> {
     pub view_layout: BindGroupLayout,
     shader: Handle<Shader>,
     _marker: PhantomData<T>,
 }
 
-impl<T: Instanceable> FromWorld for InstancedPipeline<T> {
+impl<T: ShapeData> FromWorld for InstancedPipeline<T> {
     fn from_world(world: &mut World) -> Self {
-        let shader = T::shader();
-
         let render_device = world.get_resource::<RenderDevice>().unwrap();
         let view_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
             entries: &[
@@ -88,16 +86,21 @@ impl<T: Instanceable> FromWorld for InstancedPipeline<T> {
             ],
             label: Some("instanced_view_layout"),
         });
+        let asset_server = world.resource_mut::<AssetServer>();
 
         Self {
             view_layout,
-            shader,
+            shader: match T::shader() {
+                ShaderRef::Default => RECT_HANDLE.typed::<Shader>(),
+                ShaderRef::Handle(handle) => handle,
+                ShaderRef::Path(path) => asset_server.load(path),
+            },
             _marker: default(),
         }
     }
 }
 
-impl<T: Instanceable> SpecializedRenderPipeline for InstancedPipeline<T> {
+impl<T: ShapeData> SpecializedRenderPipeline for InstancedPipeline<T> {
     type Key = InstancedPipelineKey;
 
     fn specialize(&self, key: Self::Key) -> RenderPipelineDescriptor {

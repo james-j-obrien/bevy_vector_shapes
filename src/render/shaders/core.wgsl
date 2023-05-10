@@ -26,6 +26,19 @@ struct View {
 @group(0) @binding(0)
 var<uniform> view: View;
 
+// Vertex positions for a basic quad
+fn get_quad_vertex(v: Vertex) -> vec3<f32> {
+    var vertexes: array<vec3<f32>, 6u> = array<vec3<f32>, 6u>(
+        vec3<f32>(-1.0, 1.0, 0.0),
+        vec3<f32>(1.0, 1.0, 0.0),
+        vec3<f32>(1.0, -1.0, 0.0),
+        vec3<f32>(1.0, -1.0, 0.0),
+        vec3<f32>(-1.0, -1.0, 0.0),
+        vec3<f32>(-1.0, 1.0, 0.0),
+    );
+    return vertexes[v.index];
+}
+
 // Calculate pixels per world unit from a given position and up vector
 fn pixels_per_unit(pos: vec3<f32>, dir: vec3<f32>) -> f32 {
     var vp = transpose(view.view_proj);

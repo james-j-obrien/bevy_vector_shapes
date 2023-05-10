@@ -2,15 +2,13 @@ use bevy::{
     core::{Pod, Zeroable},
     prelude::*,
     reflect::{FromReflect, Reflect},
+    render::render_resource::ShaderRef,
 };
 use wgpu::vertex_attr_array;
 
 use crate::{
     prelude::*,
-    render::{
-        setup_instanced_pipeline, setup_instanced_pipeline_2d, Flags, InstanceComponent,
-        Instanceable, RECT_HANDLE,
-    },
+    render::{Flags, ShapeComponent, ShapeData, RECT_HANDLE},
 };
 
 /// Component containing the data for drawing a rectangle.
@@ -43,14 +41,14 @@ impl Rectangle {
     }
 }
 
-impl InstanceComponent<RectInstance> for Rectangle {
-    fn instance(&self, tf: &GlobalTransform) -> RectInstance {
+impl ShapeComponent<RectData> for Rectangle {
+    fn into_data(&self, tf: &GlobalTransform) -> RectData {
         let mut flags = Flags(0);
         flags.set_thickness_type(self.thickness_type);
         flags.set_alignment(self.alignment);
         flags.set_hollow(self.hollow as u32);
 
-        RectInstance {
+        RectData {
             transform: tf.compute_matrix().to_cols_array_2d(),
 
             color: self.color.as_rgba_f32(),
@@ -79,9 +77,9 @@ impl Default for Rectangle {
 }
 
 /// Raw data sent to the rectangle shader to draw a rectangle
-#[derive(Clone, Copy, Reflect, FromReflect, Pod, Zeroable)]
+#[derive(Clone, Copy, Reflect, FromReflect, Pod, Zeroable, Default, Debug)]
 #[repr(C)]
-pub struct RectInstance {
+pub struct RectData {
     transform: [[f32; 4]; 4],
 
     color: [f32; 4],
@@ -92,7 +90,7 @@ pub struct RectInstance {
     corner_radii: [f32; 4],
 }
 
-impl RectInstance {
+impl RectData {
     pub fn new(config: &ShapeConfig, size: Vec2) -> Self {
         let mut flags = Flags(0);
         flags.set_alignment(config.alignment);
@@ -112,7 +110,7 @@ impl RectInstance {
     }
 }
 
-impl Instanceable for RectInstance {
+impl ShapeData for RectData {
     type Component = Rectangle;
 
     fn vertex_layout() -> Vec<wgpu::VertexAttribute> {
@@ -131,38 +129,44 @@ impl Instanceable for RectInstance {
         .to_vec()
     }
 
-    fn shader() -> Handle<Shader> {
-        RECT_HANDLE.typed::<Shader>()
-    }
-
-    fn distance(&self) -> f32 {
-        self.transform().transform_point3(Vec3::ZERO).z
+    fn shader() -> ShaderRef {
+        RECT_HANDLE.typed::<Shader>().into()
     }
 
     fn transform(&self) -> Mat4 {
         Mat4::from_cols_array_2d(&self.transform)
     }
+}
 
-    fn null_instance() -> Self {
-        let config = ShapeConfig::default();
-        Self::new(&config, Vec2::ZERO)
+/// Extension trait for [`ShapePainter`] to enable it to draw rectangles.
+pub trait RectPainter {
+    fn rect(&mut self, size: Vec2) -> &mut Self;
+}
+
+impl<'w, 's> RectPainter for ShapePainter<'w, 's> {
+    fn rect(&mut self, size: Vec2) -> &mut Self {
+        self.send(RectData::new(self.config(), size))
     }
 }
 
-pub(crate) struct RectPlugin;
+/// Extension trait for [`ShapeBundle`] to enable creation of rectangle bundles.
+pub trait RectangleBundle {
+    fn rect(config: &ShapeConfig, size: Vec2) -> Self;
+}
 
-impl Plugin for RectPlugin {
-    fn build(&self, app: &mut App) {
-        app.register_type::<Rectangle>();
-        setup_instanced_pipeline::<RectInstance>(app);
+impl RectangleBundle for ShapeBundle<Rectangle> {
+    fn rect(config: &ShapeConfig, size: Vec2) -> Self {
+        Self::new(config, Rectangle::new(config, size))
     }
 }
 
-pub(crate) struct Rect2dPlugin;
+/// Extension trait for [`ShapeCommands`] and [`ShapeChildBuilder`] to enable spawning of rectangle entities.
+pub trait RectangleSpawner<'w, 's> {
+    fn rect(&mut self, size: Vec2) -> ShapeEntityCommands<'w, 's, '_>;
+}
 
-impl Plugin for Rect2dPlugin {
-    fn build(&self, app: &mut App) {
-        app.register_type::<Rectangle>();
-        setup_instanced_pipeline_2d::<RectInstance>(app);
+impl<'w, 's, T: ShapeSpawner<'w, 's>> RectangleSpawner<'w, 's> for T {
+    fn rect(&mut self, size: Vec2) -> ShapeEntityCommands<'w, 's, '_> {
+        self.spawn_shape(ShapeBundle::rect(self.config(), size))
     }
 }

@@ -27,16 +27,9 @@ fn vertex(v: Vertex) -> VertexOutput {
     var out: VertexOutput;
 
     // Vertex positions for a basic quad
-    var vertexes: array<vec3<f32>, 6u> = array<vec3<f32>, 6u>(
-        vec3<f32>(-1.0, 1.0, 0.0),
-        vec3<f32>(1.0, 1.0, 0.0),
-        vec3<f32>(1.0, -1.0, 0.0),
-        vec3<f32>(1.0, -1.0, 0.0),
-        vec3<f32>(-1.0, -1.0, 0.0),
-        vec3<f32>(-1.0, 1.0, 0.0),
-    );
-    let vertex = vertexes[v.index];
+    let vertex = get_quad_vertex(v);
 
+    // Reconstruct our transformation matrix
     let matrix = mat4x4<f32>(
         v.matrix_0,
         v.matrix_1,
@@ -44,22 +37,24 @@ fn vertex(v: Vertex) -> VertexOutput {
         v.matrix_3
     );
 
-    let a = (matrix * vec4<f32>(v.start, 1.0)).xyz;
-    let b = (matrix * vec4<f32>(v.end, 1.0)).xyz;
+    // Vector from start -> end
+    var line_vec = v.end - v.start;
 
-    // Vector from A -> B
-    var line_vec = b - a;
-    // Line length in world space
+    // Center of line in world space
+    var center = line_vec / 2.0;
+
+    // Line length in local space
     var line_length = length(line_vec);
 
-    // In order to determine the rotated position for the vertex of our quad
-    //  we must calculate each of the basis vectors
+    // Get our start and end in world space
+    var world_start = (matrix * vec4<f32>(v.start, 1.0)).xyz;
+    var world_end = (matrix * vec4<f32>(v.end, 1.0)).xyz;
 
     // The y basis is the normalized vector along the line
-    var y_basis = -normalize(line_vec);
+    var y_basis = normalize(world_start - world_end);
 
     // Choose which point we will work in reference to based on our y position
-    var origin = select(b, a, vertex.y < 0.0);
+    var origin = select(world_end, world_start, vertex.y < 0.0);
 
     // Calculate the remainder of our basis vectors
     var basis_vectors = get_basis_vectors_from_up(matrix, origin, y_basis, v.flags);
@@ -68,53 +63,48 @@ fn vertex(v: Vertex) -> VertexOutput {
     var thickness_type = f_thickness_type(v.flags);
     var thickness_data = get_thickness_data(v.thickness, thickness_type, origin, basis_vectors[1]);
 
+    let scale = vec3<f32>(length(matrix[0].xyz), length(matrix[1].xyz), length(matrix[2].xyz));
+
     // If our thickness in pixels is less than 1, clamp to 1 and reduce the alpha instead
     var out_color = v.color;
-    if thickness_data.thickness_p < 1.0 {
+    if thickness_data.thickness_p * max(scale.x, scale.y) < 1.0 {
         out_color.a = out_color.a * thickness_data.thickness_p;
         thickness_data.thickness_p = 1.;
     }
 
     // Calculate thickness and radius in world units
-    var thickness_u = thickness_data.thickness_p / thickness_data.pixels_per_u;
-    var radius_u = thickness_u / 2.;
+    var thickness = thickness_data.thickness_p / thickness_data.pixels_per_u;
+    var radius = thickness / 2.0;
 
     var cap_type = f_cap(v.flags);
     var cap_length = 0.0;
 
     // If we have caps increase the cap length to our radius
     if cap_type > 0u {
-        cap_length = radius_u;
+        cap_length = radius;
     }
 
     // If our caps are round store the ratio of the length of our caps to the entire length of the line
     if cap_type == 2u {
-        let thickness = thickness_u * line_length / length(v.start - v.end);
         out.cap_ratio = thickness / (line_length + thickness);
     }
 
-    // Calculate the local positioning of the vertex by multiplying by our basis vectors
-    var local_pos = vertex.x * basis_vectors[0] * radius_u + cap_length * vertex.y * basis_vectors[1];
+    // Calculate the vertex position with scaling
+    var local_pos = vertex.xy * vec2<f32>(radius, cap_length + line_length / 2.0) * scale.xy;
 
     // Scale our padding to world space and match direction of our vertex
     var aa_padding_u = AA_PADDING / thickness_data.pixels_per_u;
-    var aa_padding = vertex.xy * aa_padding_u;
-
-    // Rotate our padding into 3 dimensions by multiplying by basis vectors
-    var world_aa_padding = aa_padding.x * basis_vectors[0] + aa_padding.y * basis_vectors[1];
-
-    // In order to scale our padding into uv space we need to know the 2d local space coordinate of our vertex
-    var local_pos_xy = vertex.xy * vec2<f32>(radius_u, line_length / 2.0 + cap_length);
+    var aa_padding = sign(vertex.xy) * aa_padding_u;
 
     // Pad our position and determine the ratio by which to scale uv such that uvs ignore the padding
-    var padded_pos = local_pos + world_aa_padding;
-    var uv_ratio = (local_pos_xy + aa_padding) / local_pos_xy;
+    var padded_pos = local_pos + aa_padding;
+    var uv_ratio = padded_pos / local_pos;
 
-    // Calculate our scale in world space
-    let scale = (matrix * vec4<f32>(1.0, 1.0, 1.0, 0.0)).xyz;
+    // Caluclate the offset from our origin point
+    var local_offset = vertex.xy * (vec2<f32>(radius, cap_length) * scale.xy + aa_padding_u);
 
-    // Determine final world position by offsetting by the origin we chose and scaling
-    var world_pos = origin + padded_pos * scale;
+    // Determine final world position by offsetting by the origin we chose and rotating by our basis vectors
+    var world_pos = origin + local_offset.x * basis_vectors[0] + local_offset.y * basis_vectors[1];
 
     // Multiply the world space position by the view projection matrix to convert to our clip position
     out.clip_position = view.view_proj * vec4<f32>(world_pos, 1.0);

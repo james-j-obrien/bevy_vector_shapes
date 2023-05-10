@@ -13,6 +13,7 @@ repository = "https://github.com/james-j-obrien/bevy_vector_shapes"
 version = "0.3.4"
 
 [dependencies]
+any_vec = "0.11.0"
 bevy = {version = "0.10", default-features = false, features = ["bevy_render", "bevy_sprite", "bevy_asset", "bevy_winit", "bevy_core_pipeline", "bevy_pbr", "x11"]}
 bitfield = "0.14.0"
 bitflags = "2.0.2"

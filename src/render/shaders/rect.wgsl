@@ -29,15 +29,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     var out: VertexOutput;
 
     // Vertex positions for a basic quad
-    var vertexes: array<vec3<f32>, 6u> = array<vec3<f32>, 6u>(
-        vec3<f32>(-1.0, 1.0, 0.0),
-        vec3<f32>(1.0, 1.0, 0.0),
-        vec3<f32>(1.0, -1.0, 0.0),
-        vec3<f32>(1.0, -1.0, 0.0),
-        vec3<f32>(-1.0, -1.0, 0.0),
-        vec3<f32>(-1.0, 1.0, 0.0),
-    );
-    let vertex = vertexes[v.index];
+    let vertex = get_quad_vertex(v);
 
     // Reconstruct our transformation matrix
     let matrix = mat4x4<f32>(

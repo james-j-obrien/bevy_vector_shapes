@@ -11,11 +11,13 @@ use bevy_vector_shapes::prelude::*;
 
 pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
     let seconds = seconds % (2.0 * TAU);
+    let start_pos = painter.transform;
 
     for i in entries {
         let (x, y) = ((i % 5 - 2) as f32, (i / 5 - 1) as f32);
         let diag_vec = Vec3::X + Vec3::Y;
-        painter.transform = Transform::from_translation((Vec3::X * x - Vec3::Y * y) * 4.0);
+        painter.transform = start_pos;
+        painter.translate((Vec3::X * x - Vec3::Y * y) * 4.0);
 
         match i {
             // Line examples
@@ -131,12 +133,13 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
             7 => {
                 let circle_fill = ((seconds * 2.).sin() + 1.0) / 2.0;
 
+                painter.hollow = true;
                 painter.color = Color::ORANGE;
                 painter.thickness = 0.5;
                 painter.circle(1.5 * circle_fill);
             }
             12 => {
-                fn draw_bubble<'w, 's, 'a>(
+                fn draw_bubble(
                     painter: &mut ShapePainter,
                     seconds: f32,
                     position: Vec3,
@@ -148,33 +151,33 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
                     painter.thickness = f32::powf(2.5, 2.8) / 40.0 * scale - circle_size;
                     painter.hollow = true;
                     painter.color = Color::ORANGE + Color::WHITE * circle_size;
-                    painter.transform.translation = position + Vec3::Y * circle_size * 2.0 * scale;
+                    painter.translate(position + Vec3::Y * circle_size * 2.0 * scale);
                     painter.circle(circle_size);
                 }
-                let position = painter.transform.translation + Vec3::NEG_Y * 0.6;
-                draw_bubble(
-                    &mut painter,
-                    seconds,
-                    position + Vec3::X + Vec3::NEG_Y * 0.6,
-                    1.1,
-                );
-                draw_bubble(&mut painter, seconds + 0.5, position + Vec3::NEG_Y, 1.7);
+                painter.translate(Vec3::NEG_Y * 0.6);
+                let start_pos = painter.transform;
+                draw_bubble(&mut painter, seconds, Vec3::X + Vec3::NEG_Y * 0.6, 1.1);
+                painter.transform = start_pos;
+                draw_bubble(&mut painter, seconds + 0.5, Vec3::NEG_Y, 1.7);
+                painter.transform = start_pos;
                 draw_bubble(
                     &mut painter,
                     seconds + PI / 3.0,
-                    position + Vec3::NEG_X + Vec3::NEG_Y,
+                    Vec3::NEG_X + Vec3::NEG_Y,
                     1.3,
                 );
+                painter.transform = start_pos;
                 draw_bubble(
                     &mut painter,
                     seconds + PI / 2.0,
-                    position + Vec3::NEG_X * 0.5 + Vec3::NEG_Y * 1.2,
+                    Vec3::NEG_X * 0.5 + Vec3::NEG_Y * 1.2,
                     1.9,
                 );
+                painter.transform = start_pos;
                 draw_bubble(
                     &mut painter,
                     seconds + PI / 1.2,
-                    position + Vec3::X * 0.7 + Vec3::NEG_Y * 1.4,
+                    Vec3::X * 0.7 + Vec3::NEG_Y * 1.4,
                     1.4,
                 );
             }
@@ -197,6 +200,8 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
                 let start_angle = seconds * 3.0;
                 let end_angle = start_angle + PI * (seconds.sin() + 1.) * 0.75 + 0.5 * PI;
 
+                painter.thickness = 0.5;
+                painter.hollow = true;
                 painter.color = Color::CRIMSON;
                 painter.cap = Cap::None;
                 painter.arc(1.5, start_angle, end_angle);
@@ -208,6 +213,7 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
                 let start_angle = -meter_size / 2.0;
                 let end_angle = -meter_size / 2.0 + meter_fill * meter_size;
 
+                painter.hollow = true;
                 painter.cap = Cap::Round;
                 painter.thickness = 0.4;
                 painter.color = Color::CRIMSON * (1.0 / (0.5 + meter_fill));
@@ -253,6 +259,7 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
                 painter.ngon(6., 0.8);
             }
             9 => {
+                painter.hollow = true;
                 painter.thickness = 0.5;
                 painter.color = Color::PURPLE;
                 painter.roundness = 0.5;
@@ -266,7 +273,8 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
                 let right_vec = Quat::from_rotation_z(-PI * 5.0 / 6.0) * Vec3::Y * HEX_RADIUS * 2.0;
 
                 fn draw_gon(painter: &mut ShapePainter, origin: Vec3, sides: f32, radius: f32) {
-                    let dist = painter.transform.translation.distance(origin);
+                    let dist = ((painter.transform.translation - origin) / painter.transform.scale)
+                        .length();
                     if dist <= BOUNDS {
                         let ratio = 1.0 - f32::max(dist, 0.5) / BOUNDS;
                         painter.color = Color::PURPLE * 0.8;
@@ -312,6 +320,7 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
             _ => {}
         }
     }
+    painter.reset();
 }
 
 fn main() {

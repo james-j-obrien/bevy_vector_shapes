@@ -24,13 +24,13 @@ fn setup(mut commands: Commands) {
         &ShapeConfig {
             color: Color::MIDNIGHT_BLUE,
             corner_radii: Vec4::splat(0.3),
-            ..default()
+            ..ShapeConfig::default_2d()
         },
         Vec2::splat(2.0),
     ));
 }
 
-fn update_shapes(time: Res<Time>, mut shapes: Query<&mut Transform, With<Shape>>) {
+fn update_shapes(time: Res<Time>, mut shapes: Query<&mut Transform, With<ShapeMaterial>>) {
     shapes.for_each_mut(|mut tf| {
         tf.rotate_local_z(time.delta_seconds());
     })

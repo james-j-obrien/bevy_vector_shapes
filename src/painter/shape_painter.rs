@@ -1,44 +1,61 @@
-use std::ops::{Deref, DerefMut};
+use std::{
+    any::TypeId,
+    ops::{Deref, DerefMut},
+    slice::Iter,
+};
 
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::{ecs::system::SystemParam, prelude::*, utils::HashMap};
+
+use any_vec::AnyVec;
 
 use crate::{
     painter::LocalShapeConfig,
     prelude::*,
-    render::{Instanceable, RenderKey},
-    shapes::{DiscInstance, LineInstance, NgonInstance, RectInstance},
+    render::{RenderKey, ShapeData},
+    ShapeMode,
 };
 
-/// Event backing immediate mode shapes.
-pub struct ShapeEvent<T: Instanceable>(pub(crate) (RenderKey, T));
+/// Type stored in ShapeStorage
+pub type ShapeEntry<T> = (RenderKey, T);
 
-/// A system param for writing each type of [`ShapeEvent`]
+/// A system param for type erased storage of [`ShapeEntry`]
 ///
 /// Generally should only be consumed as part of [`ShapePainter`] and not used directly.
-#[derive(SystemParam)]
-pub struct ShapeEventWriter<'w> {
-    line_writer: EventWriter<'w, ShapeEvent<LineInstance>>,
-    rect_writer: EventWriter<'w, ShapeEvent<RectInstance>>,
-    disc_writer: EventWriter<'w, ShapeEvent<DiscInstance>>,
-    ngon_writer: EventWriter<'w, ShapeEvent<NgonInstance>>,
+#[derive(Resource, Default)]
+pub struct ShapeStorage {
+    shapes: HashMap<(TypeId, ShapeMode), AnyVec<dyn Send + Sync>>,
 }
 
-impl<'w> ShapeEventWriter<'w> {
-    fn line(&mut self, render_key: RenderKey, instance: LineInstance) {
-        self.line_writer.send(ShapeEvent((render_key, instance)));
+impl ShapeStorage {
+    fn send<T: ShapeData>(&mut self, config: &ShapeConfig, instance: T) {
+        let key = (TypeId::of::<T>(), config.mode);
+        let entry = (RenderKey::from(config), instance);
+        let vec = self
+            .shapes
+            .entry(key)
+            .or_insert_with(|| AnyVec::new::<ShapeEntry<T>>());
+
+        // SAFETY: we only insert entries in this function and only those that match the appropriate TypeId
+        unsafe {
+            vec.downcast_mut_unchecked().push(entry);
+        }
     }
 
-    fn rect(&mut self, render_key: RenderKey, instance: RectInstance) {
-        self.rect_writer.send(ShapeEvent((render_key, instance)));
+    pub fn get<T: ShapeData>(&self, mode: ShapeMode) -> Option<Iter<'_, ShapeEntry<T>>> {
+        match self.shapes.get(&(TypeId::of::<T>(), mode)) {
+            // SAFETY: we only insert entries in ShapeStorage::send and only those that match the appropriate TypeId
+            Some(vec) => Some(unsafe { vec.downcast_ref_unchecked::<ShapeEntry<T>>().iter() }),
+            None => None,
+        }
     }
 
-    fn disc(&mut self, render_key: RenderKey, instance: DiscInstance) {
-        self.disc_writer.send(ShapeEvent((render_key, instance)));
+    fn clear(&mut self) {
+        self.shapes = HashMap::new();
     }
+}
 
-    fn ngon(&mut self, render_key: RenderKey, instance: NgonInstance) {
-        self.ngon_writer.send(ShapeEvent((render_key, instance)));
-    }
+pub fn clear_storage(mut storage: ResMut<ShapeStorage>) {
+    storage.clear();
 }
 
 /// A system param that allows ergonomic drawing of immediate mode shapes.
@@ -50,7 +67,7 @@ impl<'w> ShapeEventWriter<'w> {
 #[derive(SystemParam)]
 pub struct ShapePainter<'w, 's> {
     config: Local<'s, LocalShapeConfig>,
-    event_writer: ShapeEventWriter<'w>,
+    event_writer: ResMut<'w, ShapeStorage>,
     default_config: Res<'w, BaseShapeConfig>,
 }
 
@@ -63,43 +80,13 @@ impl<'w, 's> ShapePainter<'w, 's> {
         self.config.0 = *config;
     }
 
-    pub fn line(&mut self, start: Vec3, end: Vec3) -> &mut Self {
-        self.event_writer.line(
-            RenderKey::from(self.config()),
-            LineInstance::new(self.config(), start, end),
-        );
-        self
-    }
-
-    pub fn rect(&mut self, size: Vec2) -> &mut Self {
-        self.event_writer.rect(
-            RenderKey::from(self.config()),
-            RectInstance::new(self.config(), size),
-        );
-        self
-    }
-
-    pub fn ngon(&mut self, sides: f32, radius: f32) -> &mut Self {
-        self.event_writer.ngon(
-            RenderKey::from(self.config()),
-            NgonInstance::new(self.config(), sides, radius),
-        );
-        self
-    }
-
-    pub fn circle(&mut self, radius: f32) -> &mut Self {
-        self.event_writer.disc(
-            RenderKey::from(self.config()),
-            DiscInstance::circle(self.config(), radius),
-        );
-        self
-    }
-
-    pub fn arc(&mut self, radius: f32, start_angle: f32, end_angle: f32) -> &mut Self {
-        self.event_writer.disc(
-            RenderKey::from(self.config()),
-            DiscInstance::arc(self.config(), radius, start_angle, end_angle),
-        );
+    pub fn send<T: ShapeData>(&mut self, instance: T) -> &mut Self {
+        let Self {
+            config,
+            event_writer,
+            ..
+        } = self;
+        event_writer.send(config, instance);
         self
     }
 
@@ -115,7 +102,7 @@ impl<'w, 's> ShapePainter<'w, 's> {
     }
 
     /// Set the painter's [`ShapeConfig`] to the current value of the [`BaseShapeConfig`] resource.
-    pub fn clear(&mut self) {
+    pub fn reset(&mut self) {
         self.config.0 = self.default_config.0;
     }
 }
