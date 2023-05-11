@@ -20,7 +20,7 @@ use bitfield::bitfield;
 use bytemuck::Pod;
 use wgpu::VertexAttribute;
 
-use crate::{painter::ShapeInstance, prelude::*, ShapePipelineType};
+use crate::prelude::*;
 
 pub(crate) mod pipeline;
 use pipeline::*;
@@ -98,6 +98,9 @@ pub fn load_shaders(app: &mut App) {
     );
 }
 
+/// A pair of [`ShapePipelineMaterial`] and [`ShapeData`] to be used for rendering.
+pub type ShapeInstance<T> = (ShapePipelineMaterial, T);
+
 /// Collection of shape data in pairs of [`ShapePipelineMaterial`] and [`ShapeData`].
 #[derive(Component, Deref, DerefMut)]
 pub struct ShapeInstances<T: ShapeData>(pub Vec<ShapeInstance<T>>);
@@ -122,6 +125,15 @@ pub trait ShapeData: Send + Sync + Pod {
 pub trait ShapeComponent: Component + GetTypeRegistration {
     type Data: ShapeData<Component = Self>;
     fn into_data(&self, tf: &GlobalTransform) -> Self::Data;
+}
+
+/// Determines whether the shape is rendered in the 2D or 3D pipelines.
+#[derive(
+    Resource, Copy, Clone, Reflect, FromReflect, Eq, PartialEq, Hash, PartialOrd, Ord, Debug,
+)]
+pub enum ShapePipelineType {
+    Shape3d,
+    Shape2d,
 }
 
 /// Marker component to determine shape type for [`ShapeDataBuffer`] entities.

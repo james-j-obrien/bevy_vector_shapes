@@ -6,7 +6,7 @@ use bevy::{
 };
 use smallvec::SmallVec;
 
-use crate::{prelude::*, ShapePipelineType};
+use crate::{prelude::*, render::ShapePipelineType};
 
 /// Command that pushes children to the end of the entity's [`Children`].
 ///

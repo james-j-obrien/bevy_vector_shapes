@@ -11,14 +11,10 @@ use any_vec::AnyVec;
 use crate::{
     painter::LocalShapeConfig,
     prelude::*,
-    render::{ShapeData, ShapePipelineMaterial},
-    ShapePipelineType,
+    render::{ShapeData, ShapeInstance, ShapePipelineMaterial, ShapePipelineType},
 };
 
-/// A pair of [`ShapePipelineMaterial`] and [`ShapeData`] to be used for rendering.
-pub type ShapeInstance<T> = (ShapePipelineMaterial, T);
-
-/// A system param for type erased storage of [`ShapeInstance`]
+/// A system param for type erased storage of [`ShapeInstance`].
 ///
 /// Generally should only be consumed as part of [`ShapePainter`] and not used directly.
 #[derive(Resource, Default)]
@@ -64,8 +60,8 @@ pub fn clear_storage(mut storage: ResMut<ShapeStorage>) {
 
 /// A system param that allows ergonomic drawing of immediate mode shapes.
 ///
-/// The ShapeConfig used is initially extracted from the [`BaseShapeConfig`] resource.
-/// Subsequent calls to .reset() will reset the config back to whatever is currently stored within the [`BaseShapeConfig`] resource.
+/// The [`ShapeConfig`] used is initially extracted from the [`BaseShapeConfig`] resource.
+/// Subsequent calls to `reset()` will reset the config back to whatever is currently stored within the [`BaseShapeConfig`] resource.
 ///
 /// Shapes are spawned via events which will be extracted for rendering.
 #[derive(SystemParam)]

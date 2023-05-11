@@ -12,7 +12,7 @@
 </div>
 
 ## What is Bevy Vector Shapes?
-Bevy Vector Shapes is a library for easily and ergonomically creating instanced vector shapes in [Bevy Engine](https://bevyengine.org/).
+Bevy Vector Shapes is a library for easily and ergonomically creating instanced vector shapes in [Bevy](https://bevyengine.org/).
 
 ## WARNING
 Bevy Vector Shapes is in the early stages of development. You may encounter issues, but feel free to report them.
@@ -30,7 +30,7 @@ Bevy Vector Shapes is in the early stages of development. You may encounter issu
 - Compilation to wasm to run your projects in the browser.
 
 ## Usage
-See the `minimal_2d` or `minimal_3d` examples for basic usage and the remaining examples for explorations of supported features.
+See basic usage below and the [examples](https://github.com/james-j-obrien/bevy_vector_shapes/tree/main/examples) for more details on all supported features.
 
 ```rust
 use bevy::prelude::*;
@@ -40,7 +40,9 @@ use bevy_vector_shapes::prelude::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        // Add the shape plugin, Shape2dPlugin for 2D cameras or ShapePlugin for both 2D and 3D cameras
+        // Add the shape plugin:
+        // - Shape2dPlugin for 2D cameras
+        // - ShapePlugin for both 3D and 2D cameras
         .add_plugin(Shape2dPlugin::default())
         .add_startup_system(setup)
         .add_system(draw)
@@ -60,7 +62,7 @@ fn draw(mut painter: ShapePainter) {
 
 | bevy | bevy_vector_shapes |
 | ---- | ------------------ |
-| 0.10 | 0.4.0              |
+| 0.10 | 0.4.1              |
 
 ## Alternatives
 - [bevy_smud](https://github.com/johanhelsing/bevy_smud): for generating custom sdf expressions at run time.

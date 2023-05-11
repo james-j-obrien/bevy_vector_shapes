@@ -1,8 +1,41 @@
 #![allow(clippy::type_complexity)]
 
+//! `bevy_vector_shapes` is a library for easily and ergonomically creating instanced vector shapes in [Bevy](https://bevyengine.org/).
+//!
+//! ## Usage
+//! See the the [examples](https://github.com/james-j-obrien/bevy_vector_shapes/tree/main/examples) for more details on all supported features.
+//! ```rust
+//! use bevy::prelude::*;
+//! // Import commonly used items
+//! use bevy_vector_shapes::prelude::*;
+
+//! fn main() {
+//!     App::new()
+//!         .add_plugins(DefaultPlugins)
+//!         // Add the shape plugin:
+//!         // - Shape2dPlugin for 2D cameras
+//!         // - ShapePlugin for both 3D and 2D cameras
+//!         .add_plugin(Shape2dPlugin::default())
+//!         .add_startup_system(setup)
+//!         .add_system(draw)
+//!         .run();
+//! }
+
+//! fn setup(mut commands: Commands) {
+//!     // Spawn the camera
+//!     commands.spawn(Camera2dBundle::default());
+//! }
+
+//! fn draw(mut painter: ShapePainter) {
+//!     // Draw a circle
+//!     painter.circle(100.0);
+//! }
+//! ```
+//!
+
 use bevy::prelude::*;
 
-/// Components and Enums used to define shapes.
+/// Components and Enums used to define shape types.
 pub mod shapes;
 use shapes::*;
 
@@ -10,7 +43,7 @@ use shapes::*;
 pub mod render;
 use render::{Shape3dRenderPlugin, ShapeRenderPlugin, ShapeType3dPlugin, ShapeTypePlugin};
 
-/// Structs and components used by the [`ShapePainter`].
+/// Structs and components used by the [`ShapePainter`], [`ShapeCommands`] and [`Canvas`] APIs.
 pub mod painter;
 use painter::*;
 
@@ -23,7 +56,7 @@ pub mod prelude {
     pub use crate::{shapes::*, BaseShapeConfig, Shape2dPlugin, ShapePlugin};
 }
 
-/// Resource that represents the default shape config to be used by [`ShapePainter`]s.
+/// Resource that represents the default shape config to be used by [`ShapePainter`] and [`ShapeCommands`] APIs.
 ///
 /// When a [`ShapePainter`] is cleared it will have it's config reset to the current value of this resource.
 #[derive(Resource, Clone)]
@@ -61,15 +94,6 @@ impl Plugin for Shape2dPlugin {
             .add_plugin(ShapeTypePlugin::<Rectangle>::default())
             .add_plugin(ShapeTypePlugin::<RegularPolygon>::default());
     }
-}
-
-/// Determines whether the shape is rendered in the 2D or 3D pipelines.
-#[derive(
-    Resource, Copy, Clone, Reflect, FromReflect, Eq, PartialEq, Hash, PartialOrd, Ord, Debug,
-)]
-pub enum ShapePipelineType {
-    Shape3d,
-    Shape2d,
 }
 
 /// Plugin that contains all necessary functionality to draw shapes with a 3D or 2D camera.

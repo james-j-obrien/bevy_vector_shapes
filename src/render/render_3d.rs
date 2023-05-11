@@ -11,7 +11,7 @@ use bevy::{
     utils::FloatOrd,
 };
 
-use crate::{painter::ShapeStorage, render::*, shapes::Shape3d, ShapePipelineType};
+use crate::{painter::ShapeStorage, render::*, shapes::Shape3d};
 
 pub fn extract_shapes_3d<T: ShapeData>(
     mut commands: Commands,

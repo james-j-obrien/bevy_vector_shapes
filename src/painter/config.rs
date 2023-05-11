@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 use bevy::render::view::RenderLayers;
 
-use crate::{prelude::*, ShapePipelineType};
+use crate::prelude::*;
+use crate::render::ShapePipelineType;
 
 /// Describes a configuration that can be applied to a spawned shape.
 #[derive(Clone, Reflect, FromReflect)]
@@ -28,8 +29,8 @@ pub struct ShapeConfig {
     pub canvas: Option<Entity>,
     /// Texture to apply to the shape, color is determined as color * sample.
     pub texture: Option<Handle<Image>>,
-    /// Determines whether the shape is rendered in the 2D or 3D pipelines.
-    pub pipeline: ShapePipelineType,
+    /// Set with set_2d, set_3d and set_canvas.
+    pub(crate) pipeline: ShapePipelineType,
 }
 
 impl ShapeConfig {

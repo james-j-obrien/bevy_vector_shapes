@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{prelude::*, ShapePipelineType};
+use crate::{prelude::*, render::ShapePipelineType};
 
 mod disc;
 pub use disc::*;
