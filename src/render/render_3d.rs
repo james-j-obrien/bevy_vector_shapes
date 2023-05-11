@@ -103,7 +103,7 @@ fn compute_visibility<T: ShapeData>(
     }
 
     debug_assert!(
-        material.pipeline == ShapePipelineType::Shape3d, 
+        material.pipeline == ShapePipelineType::Shape3d,
         "Attempting to draw 2D shape in 3D pipeline. Ensure you are setting config.pipeline correctly."
     );
 
