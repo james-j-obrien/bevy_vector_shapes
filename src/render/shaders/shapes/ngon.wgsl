@@ -1,4 +1,4 @@
-#import bevy_vector_shapes::core
+#import bevy_vector_shapes::bindings
 
 struct Vertex {
     @builtin(vertex_index) index: u32,
@@ -16,6 +16,8 @@ struct Vertex {
     @location(9) roundness: f32
 };
 
+#import bevy_vector_shapes::functions
+
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) color: vec4<f32>,
@@ -23,7 +25,10 @@ struct VertexOutput {
     @location(2) thickness: f32,
     @location(3) central_angle: f32,
     @location(4) half_side_length: f32,
-    @location(5) roundness: f32
+    @location(5) roundness: f32,
+#ifdef TEXTURED
+    @location(6) texture_uv: vec2<f32>,
+#endif
 };
 
 @vertex
@@ -73,6 +78,9 @@ fn vertex(v: Vertex) -> VertexOutput {
     out.half_side_length = half_side_length / unit_apothem * (1.0 - out.roundness);
 
     out.color = v.color;
+#ifdef TEXTURED
+    out.texture_uv = get_texture_uv(vertex.xy);
+#endif
     return out;
 }
 
@@ -82,7 +90,10 @@ struct FragmentInput {
     @location(2) thickness: f32,
     @location(3) central_angle: f32,
     @location(4) half_side_length: f32,
-    @location(5) roundness: f32
+    @location(5) roundness: f32,
+#ifdef TEXTURED
+    @location(6) texture_uv: vec2<f32>,
+#endif
 };
 
 // Given a position, a central angle and a half side length determine the distance
@@ -131,6 +142,6 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    return vec4<f32>(f.color.rgb, in_shape);
+    return color_output(vec4<f32>(f.color.rgb, in_shape), f);
 }
 #endif

@@ -10,7 +10,7 @@ use bevy::{
     reflect::{GetTypeRegistration, TypeUuid},
     render::{
         render_phase::AddRenderCommand,
-        render_resource::{Buffer, ShaderRef, SpecializedRenderPipelines},
+        render_resource::{Buffer, ShaderRef},
         view::RenderLayers,
         Extract, RenderApp, RenderSet,
     },
@@ -20,7 +20,7 @@ use bitfield::bitfield;
 use bytemuck::Pod;
 use wgpu::VertexAttribute;
 
-use crate::{painter::ShapeEntry, prelude::*};
+use crate::{painter::ShapeInstance, prelude::*, ShapePipelineType};
 
 pub(crate) mod pipeline;
 use pipeline::*;
@@ -28,15 +28,19 @@ use pipeline::*;
 pub(crate) mod commands;
 use commands::*;
 
-pub(crate) mod instanced_2d;
-use instanced_2d::*;
+pub(crate) mod render_2d;
+use render_2d::*;
 
-pub(crate) mod instanced_3d;
-use instanced_3d::*;
+pub(crate) mod render_3d;
+use render_3d::*;
 
 /// Handler to shader containing shared functionality.
-pub const CORE_HANDLE: HandleUntyped =
+pub const BINDINGS_HANDLE: HandleUntyped =
     HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 13215291696265391738);
+
+/// Handler to shader containing shared functionality.
+pub const FUNCTIONS_HANDLE: HandleUntyped =
+    HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 14523762397345674763);
 
 /// Handler to shader for drawing discs.
 pub const DISC_HANDLE: HandleUntyped =
@@ -56,21 +60,52 @@ pub const RECT_HANDLE: HandleUntyped =
 
 /// Load the libraries shaders as internal assets.
 pub fn load_shaders(app: &mut App) {
-    load_internal_asset!(app, CORE_HANDLE, "shaders/core.wgsl", Shader::from_wgsl);
-    load_internal_asset!(app, DISC_HANDLE, "shaders/disc.wgsl", Shader::from_wgsl);
-    load_internal_asset!(app, LINE_HANDLE, "shaders/line.wgsl", Shader::from_wgsl);
-    load_internal_asset!(app, NGON_HANDLE, "shaders/ngon.wgsl", Shader::from_wgsl);
-    load_internal_asset!(app, RECT_HANDLE, "shaders/rect.wgsl", Shader::from_wgsl);
+    load_internal_asset!(
+        app,
+        BINDINGS_HANDLE,
+        "shaders/bindings.wgsl",
+        Shader::from_wgsl
+    );
+    load_internal_asset!(
+        app,
+        FUNCTIONS_HANDLE,
+        "shaders/functions.wgsl",
+        Shader::from_wgsl
+    );
+    load_internal_asset!(
+        app,
+        DISC_HANDLE,
+        "shaders/shapes/disc.wgsl",
+        Shader::from_wgsl
+    );
+    load_internal_asset!(
+        app,
+        LINE_HANDLE,
+        "shaders/shapes/line.wgsl",
+        Shader::from_wgsl
+    );
+    load_internal_asset!(
+        app,
+        NGON_HANDLE,
+        "shaders/shapes/ngon.wgsl",
+        Shader::from_wgsl
+    );
+    load_internal_asset!(
+        app,
+        RECT_HANDLE,
+        "shaders/shapes/rect.wgsl",
+        Shader::from_wgsl
+    );
 }
 
-/// Collection of instances extracted from components into pairs of [`RenderKey`] and [`Instanceable`].
+/// Collection of shape data in pairs of [`ShapePipelineMaterial`] and [`ShapeData`].
 #[derive(Component, Deref, DerefMut)]
-pub struct InstanceData<T: ShapeData>(pub Vec<ShapeEntry<T>>);
+pub struct ShapeInstances<T: ShapeData>(pub Vec<ShapeInstance<T>>);
 
-/// Trait implemented by each type of shape, defines common methods used in the rendering pipeline.
-pub trait ShapeData: Send + Sync + Pod + std::fmt::Debug {
+/// Trait implemented by each shapes shader data, defines common methods used in the rendering pipeline.
+pub trait ShapeData: Send + Sync + Pod {
     /// Corresponding component representing the given shape.
-    type Component: ShapeComponent<Self>;
+    type Component: ShapeComponent<Data = Self>;
     /// Vertex layout to be sent to the shader.
     fn vertex_layout() -> Vec<VertexAttribute>;
     /// Reference to the shader to be used when rendering the shape.
@@ -84,19 +119,33 @@ pub trait ShapeData: Send + Sync + Pod + std::fmt::Debug {
 }
 
 /// Trait implemented by the corresponding component for each shape type.
-pub trait ShapeComponent<T: ShapeData>: Component + GetTypeRegistration {
-    fn into_data(&self, tf: &GlobalTransform) -> T;
+pub trait ShapeComponent: Component + GetTypeRegistration {
+    type Data: ShapeData<Component = Self>;
+    fn into_data(&self, tf: &GlobalTransform) -> Self::Data;
 }
 
-/// Buffer of instances for a given shape type.
+/// Marker component to determine shape type for [`ShapeDataBuffer`] entities.
 #[derive(Component)]
-pub struct InstanceBuffer<T: ShapeData> {
+pub struct ShapeType<T: ShapeData> {
+    _marker: PhantomData<T>,
+}
+
+impl<T: ShapeData> Default for ShapeType<T> {
+    fn default() -> Self {
+        Self {
+            _marker: Default::default(),
+        }
+    }
+}
+
+/// Buffer of instances for a given shape type determined by [`ShapeType`].
+#[derive(Component)]
+pub struct ShapeDataBuffer {
     view: Entity,
-    key: RenderKey,
+    material: ShapePipelineMaterial,
     buffer: Buffer,
     distance: f32,
     length: usize,
-    _marker: PhantomData<T>,
 }
 
 bitfield! {
@@ -110,32 +159,38 @@ bitfield! {
 }
 
 /// Properties attached to a batch of shapes that are needed for pipeline specialization
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
-pub struct RenderKey {
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
+pub struct ShapePipelineMaterial {
     render_layers: RenderLayers,
     alpha_mode: AlphaModeOrd,
     disable_laa: bool,
+    texture: Option<Handle<Image>>,
     canvas: Option<Entity>,
+    pipeline: ShapePipelineType,
 }
 
-impl RenderKey {
-    pub fn new(flags: Option<&ShapeMaterial>, render_layers: Option<&RenderLayers>) -> Self {
-        let flags = flags.cloned().unwrap_or_default();
+impl ShapePipelineMaterial {
+    pub fn new(material: Option<&ShapeMaterial>, render_layers: Option<&RenderLayers>) -> Self {
+        let material = material.cloned().unwrap_or_default();
         Self {
             render_layers: render_layers.cloned().unwrap_or_default(),
-            alpha_mode: AlphaModeOrd(flags.alpha_mode),
-            disable_laa: flags.disable_laa || flags.alpha_mode == AlphaMode::Opaque,
-            canvas: flags.canvas,
+            alpha_mode: AlphaModeOrd(material.alpha_mode),
+            disable_laa: material.disable_laa || material.alpha_mode == AlphaMode::Opaque,
+            canvas: material.canvas,
+            pipeline: material.pipeline,
+            texture: material.texture,
         }
     }
 }
 
-impl From<&ShapeConfig> for RenderKey {
+impl From<&ShapeConfig> for ShapePipelineMaterial {
     fn from(config: &ShapeConfig) -> Self {
         Self {
             render_layers: config.render_layers.unwrap_or_default(),
             alpha_mode: AlphaModeOrd(config.alpha_mode),
             disable_laa: config.disable_laa || config.alpha_mode == AlphaMode::Opaque,
+            texture: config.texture.clone(),
+            pipeline: config.pipeline,
             canvas: config.canvas,
         }
     }
@@ -182,32 +237,86 @@ pub fn extract_render_layers(
     }
 }
 
-pub fn setup_pipeline_common<T: ShapeData>(app: &mut App) {
+fn setup_pipeline(app: &mut App) {
     app.sub_app_mut(RenderApp)
-        .init_resource::<InstancedPipeline<T>>()
-        .init_resource::<SpecializedRenderPipelines<InstancedPipeline<T>>>()
+        .init_resource::<ShapePipelines>()
+        .init_resource::<ShapeTextureBindGroups>()
         .add_system(extract_render_layers.in_schedule(ExtractSchedule))
-        .add_system(queue_instance_view_bind_groups::<T>.in_set(RenderSet::Queue));
+        .add_system(queue_shape_view_bind_groups.in_set(RenderSet::Queue))
+        .add_system(queue_shape_texture_bind_groups.in_set(RenderSet::Queue));
 }
 
-/// Sets up the pipeline for the specified instanceable shape in the given app;
-pub fn setup_pipeline_3d<T: ShapeData>(app: &mut App) {
+fn setup_pipeline_3d(app: &mut App) {
     app.sub_app_mut(RenderApp)
-        .add_render_command::<Opaque3d, DrawInstancedCommand<T>>()
-        .add_render_command::<Transparent3d, DrawInstancedCommand<T>>()
-        .add_render_command::<AlphaMask3d, DrawInstancedCommand<T>>()
-        .add_system(extract_instances_3d::<T>.in_schedule(ExtractSchedule))
-        .add_system(prepare_instance_buffers_3d::<T>.in_set(RenderSet::Prepare))
-        .add_system(queue_instances_3d::<T>.in_set(RenderSet::Queue));
+        .add_render_command::<Opaque3d, DrawShapeCommand>()
+        .add_render_command::<Transparent3d, DrawShapeCommand>()
+        .add_render_command::<AlphaMask3d, DrawShapeCommand>();
 }
 
-/// Sets up the pipeline for the specified instanceable shape in the given app;
-pub fn setup_pipeline_2d<T: ShapeData>(app: &mut App) {
+fn setup_pipeline_2d(app: &mut App) {
     app.sub_app_mut(RenderApp)
-        .add_render_command::<Transparent2d, DrawInstancedCommand<T>>()
-        .init_resource::<InstancedPipeline<T>>()
-        .init_resource::<SpecializedRenderPipelines<InstancedPipeline<T>>>()
-        .add_system(extract_instances_2d::<T>.in_schedule(ExtractSchedule))
-        .add_system(prepare_instance_buffers_2d::<T>.in_set(RenderSet::Prepare))
-        .add_system(queue_instances_2d::<T>.in_set(RenderSet::Queue));
+        .add_render_command::<Transparent2d, DrawShapeCommand>();
+}
+
+fn setup_type_pipeline<T: ShapeData>(app: &mut App) {
+    app.sub_app_mut(RenderApp)
+        .init_resource::<ShapePipeline<T>>();
+}
+
+fn setup_type_pipeline_3d<T: ShapeData>(app: &mut App) {
+    app.sub_app_mut(RenderApp)
+        .add_system(extract_shapes_3d::<T>.in_schedule(ExtractSchedule))
+        .add_system(prepare_shape_buffers_3d::<T>.in_set(RenderSet::Prepare))
+        .add_system(queue_shapes_3d::<T>.in_set(RenderSet::Queue));
+}
+
+fn setup_type_pipeline_2d<T: ShapeData>(app: &mut App) {
+    app.sub_app_mut(RenderApp)
+        .add_system(extract_shapes_2d::<T>.in_schedule(ExtractSchedule))
+        .add_system(prepare_shape_buffers_2d::<T>.in_set(RenderSet::Prepare))
+        .add_system(queue_shapes_2d::<T>.in_set(RenderSet::Queue));
+}
+
+/// Plugin that sets up the 2d render pipeline for the given [`ShapeComponent`].
+#[derive(Default)]
+pub struct ShapeTypePlugin<T: ShapeComponent>(PhantomData<T>);
+
+impl<T: ShapeComponent> Plugin for ShapeTypePlugin<T> {
+    fn build(&self, app: &mut App) {
+        app.register_type::<T>();
+        setup_type_pipeline::<T::Data>(app);
+        setup_type_pipeline_2d::<T::Data>(app);
+    }
+}
+
+/// Plugin that sets up the 3d render pipeline for the given [`ShapeComponent`].
+///
+/// Requires [`ShapeTypePlugin`] of the same type to have already been built.
+#[derive(Default)]
+pub struct ShapeType3dPlugin<T: ShapeComponent>(PhantomData<T>);
+
+impl<T: ShapeComponent> Plugin for ShapeType3dPlugin<T> {
+    fn build(&self, app: &mut App) {
+        setup_type_pipeline_3d::<T::Data>(app);
+    }
+}
+
+/// Plugin that sets up shared components for [`ShapeTypePlugin`].
+pub struct ShapeRenderPlugin;
+
+impl Plugin for ShapeRenderPlugin {
+    fn build(&self, app: &mut App) {
+        load_shaders(app);
+        setup_pipeline(app);
+        setup_pipeline_2d(app);
+    }
+}
+
+/// Plugin that sets up shared components for [`ShapeType3dPlugin`].
+pub struct Shape3dRenderPlugin;
+
+impl Plugin for Shape3dRenderPlugin {
+    fn build(&self, app: &mut App) {
+        setup_pipeline_3d(app);
+    }
 }

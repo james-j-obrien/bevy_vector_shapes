@@ -11,9 +11,9 @@ use bevy::{
     utils::FloatOrd,
 };
 
-use crate::{painter::ShapeStorage, render::*, shapes::Shape3d, ShapeMode};
+use crate::{painter::ShapeStorage, render::*, shapes::Shape3d, ShapePipelineType};
 
-pub fn extract_instances_3d<T: ShapeData>(
+pub fn extract_shapes_3d<T: ShapeData>(
     mut commands: Commands,
     entities: Extract<
         Query<
@@ -33,19 +33,19 @@ pub fn extract_instances_3d<T: ShapeData>(
         .iter()
         .filter_map(|(cp, tf, vis, flags, rl)| {
             if vis.is_visible() {
-                Some((RenderKey::new(flags, rl), cp.into_data(tf)))
+                Some((ShapePipelineMaterial::new(flags, rl), cp.into_data(tf)))
             } else {
                 None
             }
         })
         .collect::<Vec<_>>();
 
-    if let Some(iter) = storage.get::<T>(ShapeMode::Shape3d) {
+    if let Some(iter) = storage.get::<T>(ShapePipelineType::Shape3d) {
         instances.extend(iter.cloned());
     }
 
     if !instances.is_empty() {
-        commands.spawn((InstanceData::<T>(instances), Shape3d));
+        commands.spawn((ShapeInstances::<T>(instances), Shape3d));
     }
 }
 
@@ -60,7 +60,7 @@ fn spawn_buffers<T: ShapeData>(
     render_device: &RenderDevice,
     view_entity: Entity,
     view: &ExtractedView,
-    key: RenderKey,
+    material: ShapePipelineMaterial,
     instances: &mut Vec<T>,
 ) {
     let rangefinder = view.rangefinder3d();
@@ -69,23 +69,24 @@ fn spawn_buffers<T: ShapeData>(
     // Workaround for an issue in the implementation of Chromes webgl ANGLE D3D11 backend
     #[cfg(target_arch = "wasm32")]
     if instances.len() == 1 {
-        instances.push(T::null_instance());
+        instances.push(T::zeroed());
     }
 
     let buffer = render_device.create_buffer_with_data(&BufferInitDescriptor {
-        label: Some("instance data buffer"),
+        label: Some("shape_instance_data_buffer"),
         contents: bytemuck::cast_slice(instances.as_slice()),
         usage: BufferUsages::VERTEX | BufferUsages::COPY_DST,
     });
+
     commands.spawn((
-        InstanceBuffer::<T> {
+        ShapeDataBuffer {
             view: view_entity,
-            key,
+            material,
             buffer,
             distance: rangefinder.distance(&instances[0].transform()),
             length: instances.len(),
-            _marker: default(),
         },
+        ShapeType::<T>::default(),
         Shape3d,
     ));
 }
@@ -94,55 +95,48 @@ fn compute_visibility<T: ShapeData>(
     commands: &mut Commands,
     render_device: &RenderDevice,
     views: &Query<(Entity, &ExtractedView, Option<&RenderLayers>), WithPhases>,
-    key: RenderKey,
+    material: &ShapePipelineMaterial,
     mut instances: Vec<T>,
 ) {
     if instances.is_empty() {
         return;
     }
 
-    if let Some(canvas) = key.canvas {
-        let (view_entity, view, _) = views.get(canvas).expect("Drawing to non-existent canvas.");
+    debug_assert!(
+        material.pipeline == ShapePipelineType::Shape3d, 
+        "Attempting to draw 2D shape in 3D pipeline. Ensure you are setting config.pipeline correctly."
+    );
+
+    for (view_entity, view, render_layers) in views {
+        let render_layers = render_layers.cloned().unwrap_or_default();
+        if !render_layers.intersects(&material.render_layers) {
+            continue;
+        }
+
         spawn_buffers(
             commands,
             render_device,
             view_entity,
             view,
-            key,
+            material.clone(),
             &mut instances,
-        );
-    } else {
-        for (view_entity, view, render_layers) in views {
-            let render_layers = render_layers.cloned().unwrap_or_default();
-            if !render_layers.intersects(&key.render_layers) {
-                continue;
-            }
-
-            spawn_buffers(
-                commands,
-                render_device,
-                view_entity,
-                view,
-                key,
-                &mut instances,
-            )
-        }
+        )
     }
 }
 
-pub fn prepare_instance_buffers_3d<T: ShapeData>(
+pub fn prepare_shape_buffers_3d<T: ShapeData>(
     mut commands: Commands,
-    mut query: Query<&mut InstanceData<T>, With<Shape3d>>,
+    mut query: Query<&mut ShapeInstances<T>, With<Shape3d>>,
     render_device: Res<RenderDevice>,
     views: Query<(Entity, &ExtractedView, Option<&RenderLayers>), WithPhases>,
 ) {
     for mut instance_data in &mut query {
-        instance_data.sort_by_key(|(k, _i)| *k);
+        instance_data.sort_by(|(a, _), (b, _)| a.cmp(b));
 
         let (key, instances) = instance_data.iter().fold(
-            (instance_data[0].0, Vec::new()),
+            (&instance_data[0].0, Vec::new()),
             |(key, mut instances), (next_key, instance)| {
-                if *next_key == key {
+                if next_key == key {
                     instances.push(*instance);
                     (key, instances)
                 } else {
@@ -154,7 +148,7 @@ pub fn prepare_instance_buffers_3d<T: ShapeData>(
                         instances,
                     );
 
-                    (*next_key, vec![*instance])
+                    (next_key, vec![*instance])
                 }
             },
         );
@@ -170,15 +164,15 @@ pub fn prepare_instance_buffers_3d<T: ShapeData>(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub fn queue_instances_3d<T: ShapeData>(
+pub fn queue_shapes_3d<T: ShapeData>(
     opaque_draw_functions: Res<DrawFunctions<Opaque3d>>,
     alpha_mask_draw_functions: Res<DrawFunctions<AlphaMask3d>>,
     transparent_draw_functions: Res<DrawFunctions<Transparent3d>>,
-    mut pipelines: ResMut<SpecializedRenderPipelines<InstancedPipeline<T>>>,
-    instanced_pipeline: ResMut<InstancedPipeline<T>>,
+    pipeline: Res<ShapePipeline<T>>,
     pipeline_cache: Res<PipelineCache>,
     msaa: Res<Msaa>,
-    instance_buffers: Query<(Entity, &InstanceBuffer<T>), With<Shape3d>>,
+    shape_buffers: Query<(Entity, &ShapeDataBuffer), (With<ShapeType<T>>, With<Shape3d>)>,
+    mut shape_pipelines: ResMut<ShapePipelines>,
     mut views: Query<(
         &ExtractedView,
         &mut RenderPhase<Opaque3d>,
@@ -188,29 +182,25 @@ pub fn queue_instances_3d<T: ShapeData>(
 ) where
     T: 'static,
 {
-    let draw_opaque = opaque_draw_functions.read().id::<DrawInstancedCommand<T>>();
-    let draw_alpha_mask = alpha_mask_draw_functions
-        .read()
-        .id::<DrawInstancedCommand<T>>();
-    let draw_transparent = transparent_draw_functions
-        .read()
-        .id::<DrawInstancedCommand<T>>();
+    let draw_opaque = opaque_draw_functions.read().id::<DrawShapeCommand>();
+    let draw_alpha_mask = alpha_mask_draw_functions.read().id::<DrawShapeCommand>();
+    let draw_transparent = transparent_draw_functions.read().id::<DrawShapeCommand>();
 
-    for (entity, buffer) in &instance_buffers {
+    for (entity, buffer) in &shape_buffers {
         let (view, mut opaque_phase, mut alpha_mask_phase, mut transparent_phase) = views
             .get_mut(buffer.view)
             .expect("View entity is gone during queue instances, oh no!");
 
-        let mut key = InstancedPipelineKey::from_msaa_samples(msaa.samples());
-        key |= InstancedPipelineKey::from_hdr(view.hdr);
-        key |= InstancedPipelineKey::from_alpha_mode(buffer.key.alpha_mode.0);
+        let mut key = ShapePipelineKey::from_msaa_samples(msaa.samples());
+        key |= ShapePipelineKey::from_hdr(view.hdr);
+        key |= ShapePipelineKey::from_material(&buffer.material);
 
-        if !buffer.key.disable_laa {
-            key |= InstancedPipelineKey::LOCAL_AA;
+        if !buffer.material.disable_laa {
+            key |= ShapePipelineKey::LOCAL_AA;
         }
 
-        let pipeline = pipelines.specialize(&pipeline_cache, &instanced_pipeline, key);
-        match buffer.key.alpha_mode.0 {
+        let pipeline = shape_pipelines.specialize::<T>(&pipeline_cache, pipeline.as_ref(), key);
+        match buffer.material.alpha_mode.0 {
             AlphaMode::Opaque => {
                 opaque_phase.add(Opaque3d {
                     entity,

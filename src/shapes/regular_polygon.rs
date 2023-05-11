@@ -44,7 +44,9 @@ impl RegularPolygon {
     }
 }
 
-impl ShapeComponent<NgonData> for RegularPolygon {
+impl ShapeComponent for RegularPolygon {
+    type Data = NgonData;
+
     fn into_data(&self, tf: &GlobalTransform) -> NgonData {
         let mut flags = Flags(0);
         flags.set_thickness_type(self.thickness_type);
@@ -168,7 +170,7 @@ impl RegularPolygonBundle for ShapeBundle<RegularPolygon> {
     }
 }
 
-/// Extension trait for [`ShapeCommands`] and [`ShapeChildBuilder`] to enable spawning of regular polygon entities.
+/// Extension trait for [`ShapeSpawner`] to enable spawning of regular polygon entities.
 pub trait RegularPolygonSpawner<'w, 's> {
     fn ngon(&mut self, sides: f32, radius: f32) -> ShapeEntityCommands<'w, 's, '_>;
 }

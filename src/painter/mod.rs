@@ -1,7 +1,7 @@
 use std::ops::DerefMut;
 
 use crate::prelude::*;
-use bevy::prelude::*;
+use bevy::{prelude::*, render::camera::CameraUpdateSystem};
 
 mod config;
 pub use config::*;
@@ -24,7 +24,7 @@ struct LocalShapeConfig(pub ShapeConfig);
 impl FromWorld for LocalShapeConfig {
     fn from_world(world: &mut World) -> Self {
         let config = world.resource::<BaseShapeConfig>();
-        Self(config.0)
+        Self(config.0.clone())
     }
 }
 
@@ -34,7 +34,22 @@ impl FromWorld for LocalShapeConfig {
 pub trait ShapeSpawner<'w, 's>: DerefMut<Target = ShapeConfig> {
     fn config(&self) -> &ShapeConfig;
 
-    fn set_config(&mut self, config: &ShapeConfig);
+    fn set_config(&mut self, config: ShapeConfig);
 
     fn spawn_shape(&mut self, bundle: impl Bundle) -> ShapeEntityCommands<'w, 's, '_>;
+}
+
+/// Plugin that setups up resources and systems for [`Canvas`] and [`ShapePainter`].
+pub struct PainterPlugin;
+
+impl Plugin for PainterPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<ShapeStorage>()
+            .add_system(
+                update_canvases
+                    .in_base_set(CoreSet::PostUpdate)
+                    .before(CameraUpdateSystem),
+            )
+            .add_system(clear_storage.in_base_set(CoreSet::PreUpdate));
+    }
 }

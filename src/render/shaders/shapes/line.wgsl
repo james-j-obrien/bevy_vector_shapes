@@ -1,4 +1,4 @@
-#import bevy_vector_shapes::core
+#import bevy_vector_shapes::bindings
 
 struct Vertex {
     @builtin(vertex_index) index: u32,
@@ -15,11 +15,16 @@ struct Vertex {
     @location(8) end: vec3<f32>,
 };
 
+#import bevy_vector_shapes::functions
+
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) color: vec4<f32>,
     @location(1) uv: vec2<f32>,
-    @location(2) cap_ratio: f32
+    @location(2) cap_ratio: f32,
+#ifdef TEXTURED
+    @location(3) texture_uv: vec2<f32>,
+#endif
 };
 
 @vertex
@@ -111,13 +116,19 @@ fn vertex(v: Vertex) -> VertexOutput {
     out.uv = vertex.xy * uv_ratio;
 
     out.color = out_color;
+#ifdef TEXTURED
+    out.texture_uv = get_texture_uv(vertex.xy);
+#endif
     return out;
 }
 
 struct FragmentInput {
     @location(0) color: vec4<f32>,
     @location(1) uv: vec2<f32>,
-    @location(2) cap_ratio: f32
+    @location(2) cap_ratio: f32,
+#ifdef TEXTURED
+    @location(3) texture_uv: vec2<f32>,
+#endif
 };
 
 // Due to https://github.com/gfx-rs/naga/issues/1743 this cannot be compiled into the vertex shader on web
@@ -159,6 +170,6 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    return vec4<f32>(f.color.rgb, in_shape);
+    return color_output(vec4<f32>(f.color.rgb, in_shape), f);
 }
 #endif

@@ -1,4 +1,4 @@
-// Demonstrated shapes respecting render layers
+// Demonstrates shapes respecting render layers
 // Adapted directly from https://github.com/bevyengine/bevy/blob/main/examples/3d/render_to_texture.rs
 
 use std::f32::consts::PI;
@@ -6,14 +6,7 @@ use std::f32::consts::PI;
 use bevy::{
     core_pipeline::clear_color::ClearColorConfig,
     prelude::*,
-    render::{
-        camera::RenderTarget,
-        render_resource::{
-            Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
-        },
-        texture::ImageSampler,
-        view::RenderLayers,
-    },
+    render::{camera::RenderTarget, texture::ImageSampler, view::RenderLayers},
 };
 use bevy_vector_shapes::prelude::*;
 

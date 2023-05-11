@@ -6,7 +6,7 @@ use bevy::{
 };
 use smallvec::SmallVec;
 
-use crate::prelude::*;
+use crate::{prelude::*, ShapePipelineType};
 
 /// Command that pushes children to the end of the entity's [`Children`].
 ///
@@ -113,6 +113,10 @@ impl<'w, 's, 'a> ShapeSpawner<'w, 's> for ShapeChildBuilder<'w, 's, 'a> {
         if let Some(layers) = config.render_layers {
             e.insert(layers);
         }
+        if let ShapePipelineType::Shape3d = config.pipeline {
+            e.insert(Shape3d);
+        }
+
         ShapeEntityCommands {
             commands: e,
             config,
@@ -123,8 +127,8 @@ impl<'w, 's, 'a> ShapeSpawner<'w, 's> for ShapeChildBuilder<'w, 's, 'a> {
         &self.config
     }
 
-    fn set_config(&mut self, config: &ShapeConfig) {
-        self.config = config.clone();
+    fn set_config(&mut self, config: ShapeConfig) {
+        self.config = config;
     }
 }
 
@@ -142,7 +146,11 @@ impl<'w, 's, 'a> DerefMut for ShapeChildBuilder<'w, 's, 'a> {
     }
 }
 
+/// Extension trait for [`EntityCommands`] to allow injection of [`ShapeConfig`].
+///
+/// Useful when parenting shapes under a non-shape entity.
 pub trait BuildShapeChildren {
+    /// Similar to [`ShapeEntityCommands::with_children`] except is available on non-shape entities, takes in config to pass along to the [`ShapeChildBuilder`]
     fn with_shape_children(
         &mut self,
         config: &ShapeConfig,
@@ -151,7 +159,6 @@ pub trait BuildShapeChildren {
 }
 
 impl<'w, 's, 'a> BuildShapeChildren for EntityCommands<'w, 's, 'a> {
-    /// Similar to `with_children` on [`ShapeEntityCommands::with_children`] except is available on non-shape entities, takes in config to pass along to the [`ShapeChildBuilder`]
     fn with_shape_children(
         &mut self,
         config: &ShapeConfig,

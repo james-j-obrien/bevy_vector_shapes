@@ -56,7 +56,9 @@ impl Default for Line {
     }
 }
 
-impl ShapeComponent<LineData> for Line {
+impl ShapeComponent for Line {
+    type Data = LineData;
+
     fn into_data(&self, tf: &GlobalTransform) -> LineData {
         let mut flags = Flags(0);
         flags.set_thickness_type(self.thickness_type);
@@ -160,7 +162,7 @@ impl LineBundle for ShapeBundle<Line> {
     }
 }
 
-/// Extension trait for [`ShapeCommands`] and [`ShapeChildBuilder`] to enable spawning of line entities.
+/// Extension trait for [`ShapeSpawner`] to enable spawning of line entities.
 pub trait LineSpawner<'w, 's>: ShapeSpawner<'w, 's> {
     fn line(&mut self, start: Vec3, end: Vec3) -> ShapeEntityCommands<'w, 's, '_>;
 }

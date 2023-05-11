@@ -67,7 +67,9 @@ impl Disc {
     }
 }
 
-impl ShapeComponent<DiscData> for Disc {
+impl ShapeComponent for Disc {
+    type Data = DiscData;
+
     fn into_data(&self, tf: &GlobalTransform) -> DiscData {
         let mut flags = Flags(0);
         flags.set_thickness_type(self.thickness_type);
@@ -230,7 +232,7 @@ impl DiscBundle for ShapeBundle<Disc> {
     }
 }
 
-/// Extension trait for [`ShapeCommands`] and [`ShapeChildBuilder`] to enable spawning of entities for disc type shapes.
+/// Extension trait for [`ShapeSpawner`] to enable spawning of entities for disc type shapes.
 pub trait DiscSpawner<'w, 's> {
     fn circle(&mut self, radius: f32) -> ShapeEntityCommands<'w, 's, '_>;
     fn arc(

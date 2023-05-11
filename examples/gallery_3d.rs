@@ -1,4 +1,4 @@
-// Demonstrates each shape type, it's various options and potential use cases
+// Demonstrates each shape type with a selection of options and possible use cases
 
 #![allow(dead_code)]
 use std::{

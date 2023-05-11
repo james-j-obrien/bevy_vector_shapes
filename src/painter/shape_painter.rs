@@ -11,29 +11,29 @@ use any_vec::AnyVec;
 use crate::{
     painter::LocalShapeConfig,
     prelude::*,
-    render::{RenderKey, ShapeData},
-    ShapeMode,
+    render::{ShapeData, ShapePipelineMaterial},
+    ShapePipelineType,
 };
 
-/// Type stored in ShapeStorage
-pub type ShapeEntry<T> = (RenderKey, T);
+/// A pair of [`ShapePipelineMaterial`] and [`ShapeData`] to be used for rendering.
+pub type ShapeInstance<T> = (ShapePipelineMaterial, T);
 
-/// A system param for type erased storage of [`ShapeEntry`]
+/// A system param for type erased storage of [`ShapeInstance`]
 ///
 /// Generally should only be consumed as part of [`ShapePainter`] and not used directly.
 #[derive(Resource, Default)]
 pub struct ShapeStorage {
-    shapes: HashMap<(TypeId, ShapeMode), AnyVec<dyn Send + Sync>>,
+    shapes: HashMap<(TypeId, ShapePipelineType), AnyVec<dyn Send + Sync>>,
 }
 
 impl ShapeStorage {
-    fn send<T: ShapeData>(&mut self, config: &ShapeConfig, instance: T) {
-        let key = (TypeId::of::<T>(), config.mode);
-        let entry = (RenderKey::from(config), instance);
+    fn send<T: ShapeData>(&mut self, config: &ShapeConfig, data: T) {
+        let key = (TypeId::of::<T>(), config.pipeline);
+        let entry = (ShapePipelineMaterial::from(config), data);
         let vec = self
             .shapes
             .entry(key)
-            .or_insert_with(|| AnyVec::new::<ShapeEntry<T>>());
+            .or_insert_with(|| AnyVec::new::<ShapeInstance<T>>());
 
         // SAFETY: we only insert entries in this function and only those that match the appropriate TypeId
         unsafe {
@@ -41,10 +41,13 @@ impl ShapeStorage {
         }
     }
 
-    pub fn get<T: ShapeData>(&self, mode: ShapeMode) -> Option<Iter<'_, ShapeEntry<T>>> {
-        match self.shapes.get(&(TypeId::of::<T>(), mode)) {
+    pub fn get<T: ShapeData>(
+        &self,
+        pipeline: ShapePipelineType,
+    ) -> Option<Iter<'_, ShapeInstance<T>>> {
+        match self.shapes.get(&(TypeId::of::<T>(), pipeline)) {
             // SAFETY: we only insert entries in ShapeStorage::send and only those that match the appropriate TypeId
-            Some(vec) => Some(unsafe { vec.downcast_ref_unchecked::<ShapeEntry<T>>().iter() }),
+            Some(vec) => Some(unsafe { vec.downcast_ref_unchecked::<ShapeInstance<T>>().iter() }),
             None => None,
         }
     }
@@ -54,6 +57,7 @@ impl ShapeStorage {
     }
 }
 
+/// Clears the [`ShapeStorage`] resource each frame.
 pub fn clear_storage(mut storage: ResMut<ShapeStorage>) {
     storage.clear();
 }
@@ -61,7 +65,7 @@ pub fn clear_storage(mut storage: ResMut<ShapeStorage>) {
 /// A system param that allows ergonomic drawing of immediate mode shapes.
 ///
 /// The ShapeConfig used is initially extracted from the [`BaseShapeConfig`] resource.
-/// Subsequent calls to .clear() will reset the config back to whatever is currently stored within the [`BaseShapeConfig`] resource.
+/// Subsequent calls to .reset() will reset the config back to whatever is currently stored within the [`BaseShapeConfig`] resource.
 ///
 /// Shapes are spawned via events which will be extracted for rendering.
 #[derive(SystemParam)]
@@ -76,17 +80,22 @@ impl<'w, 's> ShapePainter<'w, 's> {
         &self.config.0
     }
 
-    pub fn set_config(&mut self, config: &ShapeConfig) {
-        self.config.0 = *config;
+    pub fn set_config(&mut self, config: ShapeConfig) {
+        self.config.0 = config;
     }
 
-    pub fn send<T: ShapeData>(&mut self, instance: T) -> &mut Self {
+    pub fn send<T: ShapeData>(&mut self, data: T) -> &mut Self {
         let Self {
             config,
             event_writer,
             ..
         } = self;
-        event_writer.send(config, instance);
+        event_writer.send(config, data);
+        self
+    }
+
+    pub fn send_with_config<T: ShapeData>(&mut self, config: &ShapeConfig, data: T) -> &mut Self {
+        self.event_writer.send(config, data);
         self
     }
 
@@ -103,7 +112,7 @@ impl<'w, 's> ShapePainter<'w, 's> {
 
     /// Set the painter's [`ShapeConfig`] to the current value of the [`BaseShapeConfig`] resource.
     pub fn reset(&mut self) {
-        self.config.0 = self.default_config.0;
+        self.config.0 = self.default_config.0.clone();
     }
 }
 

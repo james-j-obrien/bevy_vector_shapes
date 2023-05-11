@@ -1,30 +1,4 @@
-#define_import_path bevy_vector_shapes::core
-
-const PI: f32 = 3.14159265359;
-const TAU: f32 = 6.28318530718;
-
-struct ColorGrading {
-    exposure: f32,
-    gamma: f32,
-    pre_saturation: f32,
-    post_saturation: f32,
-}
-
-struct View {
-    view_proj: mat4x4<f32>,
-    inverse_view_proj: mat4x4<f32>,
-    view: mat4x4<f32>,
-    inverse_view: mat4x4<f32>,
-    projection: mat4x4<f32>,
-    inverse_projection: mat4x4<f32>,
-    world_position: vec3<f32>,
-    // viewport(x_origin, y_origin, width, height)
-    viewport: vec4<f32>,
-    grading: ColorGrading,
-};
-
-@group(0) @binding(0)
-var<uniform> view: View;
+#define_import_path bevy_vector_shapes::functions
 
 // Vertex positions for a basic quad
 fn get_quad_vertex(v: Vertex) -> vec3<f32> {
@@ -261,15 +235,27 @@ fn get_vertex_data(matrix: mat4x4<f32>, vertex: vec2<f32>, thickness: f32, flags
     return out;
 }
 
-// Transform our color output to respect the alpha mode set for our shape
-fn color_output(color: vec4<f32>) -> vec4<f32> {
+fn get_texture_uv(vertex: vec2<f32>) -> vec2<f32> {
+    return (vertex + 1.0) / 2.0;
+}
+
+#ifdef FRAGMENT
+// Transform our color output to respect the alpha mode set for our shape and combine with our texture if any
+fn color_output(color: vec4<f32>, f: FragmentInput) -> vec4<f32> {
 #ifdef BLEND_MULTIPLY
-    return vec4<f32>(color.rgb * color.a, color.a);
+    var color = vec4<f32>(color.rgb * color.a, color.a);
 #endif
 #ifdef BLEND_ADD
-    return vec4<f32>(color.rgb * color.a, 0.0);
+    var color = vec4<f32>(color.rgb * color.a, 0.0);
 #endif
 #ifdef BLEND_ALPHA
-    return color;
+    var color = color;
 #endif
+
+#ifdef TEXTURED
+    color = color * textureSample(image, image_sampler, f.texture_uv);
+#endif
+
+    return color;
 }
+#endif

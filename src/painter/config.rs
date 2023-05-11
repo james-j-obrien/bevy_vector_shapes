@@ -1,19 +1,19 @@
 use bevy::prelude::*;
 use bevy::render::view::RenderLayers;
 
-use crate::{prelude::*, ShapeMode};
+use crate::{prelude::*, ShapePipelineType};
 
 /// Describes a configuration that can be applied to a spawned shape.
-#[derive(Copy, Clone, Reflect, FromReflect)]
+#[derive(Clone, Reflect, FromReflect)]
 pub struct ShapeConfig {
-    /// Transform with which the shape will be spawned
+    /// Transform with which the shape will be spawned.
     pub transform: Transform,
 
     pub color: Color,
     pub thickness: f32,
     pub thickness_type: ThicknessType,
     pub alignment: Alignment,
-    /// If true spawned shape will be hollow, taking into account thickness and thickness_type
+    /// If true spawned shape will be hollow, taking into account thickness and thickness_type.
     pub hollow: bool,
     pub cap: Cap,
     pub roundness: f32,
@@ -22,10 +22,14 @@ pub struct ShapeConfig {
     #[reflect(ignore)]
     pub render_layers: Option<RenderLayers>,
     pub alpha_mode: AlphaMode,
-    /// Forcibly disables local anti-aliasing for all shapes
+    /// Forcibly disables local anti-aliasing for all shapes.
     pub disable_laa: bool,
+    /// [`Canvas`] to draw the shape to.
     pub canvas: Option<Entity>,
-    pub mode: ShapeMode,
+    /// Texture to apply to the shape, color is determined as color * sample.
+    pub texture: Option<Handle<Image>>,
+    /// Determines whether the shape is rendered in the 2D or 3D pipelines.
+    pub pipeline: ShapePipelineType,
 }
 
 impl ShapeConfig {
@@ -74,6 +78,25 @@ impl ShapeConfig {
         self.transform.scale = scale;
     }
 
+    /// Helper method to change shape render target to a canvas.
+    ///
+    /// Also sets pipeline to Shape2d.
+    pub fn set_canvas(&mut self, canvas: Entity) {
+        self.pipeline = ShapePipelineType::Shape2d;
+        self.canvas = Some(canvas);
+    }
+
+    /// Helper method to change the target pipeline to the 3d pipeline.
+    pub fn set_3d(&mut self) {
+        self.pipeline = ShapePipelineType::Shape3d;
+    }
+
+    /// Helper method to change the target pipeline to the 2d pipeline.
+    pub fn set_2d(&mut self) {
+        self.pipeline = ShapePipelineType::Shape2d;
+    }
+
+    /// Helper method to clone the config without it's transform, useful when parenting.
     pub fn without_transform(&self) -> Self {
         let mut config = self.clone();
         config.transform = Transform::IDENTITY;
@@ -82,6 +105,7 @@ impl ShapeConfig {
 }
 
 impl ShapeConfig {
+    /// Default [`ShapeConfig`] with target set to the 2D pipeline.
     pub fn default_2d() -> Self {
         Self {
             transform: default(),
@@ -99,15 +123,17 @@ impl ShapeConfig {
             alpha_mode: AlphaMode::Blend,
             disable_laa: false,
             canvas: None,
-            mode: ShapeMode::Shape2d,
+            texture: None,
+            pipeline: ShapePipelineType::Shape2d,
         }
     }
 }
 
 impl ShapeConfig {
+    /// Default [`ShapeConfig`] with target set to the 3D pipeline.
     pub fn default_3d() -> Self {
         let mut config = Self::default_2d();
-        config.mode = ShapeMode::Shape3d;
+        config.pipeline = ShapePipelineType::Shape3d;
         config
     }
 }

@@ -18,8 +18,11 @@ Bevy Vector Shapes is a library for easily and ergonomically creating instanced 
 Bevy Vector Shapes is in the very early stages of development. There may be issues and some documentation may be sparse.
 
 ## Features
-- Variety of shape types: lines, rectangles, circles, arcs and regular polygons.
+- Variety of built in shape types: lines, rectangles, circles, arcs and regular polygons.
+- Traits to allow implementation of custom shape types.
 - Supports various bevy rendering features: 2D and 3D pipelines, transparency, alpha modes, render layers, bloom.
+- Canvas API for rendering shapes to a texture.
+- Ability to draw textures on shapes, including canvas textures.
 - Immediate and retained mode.
 - Local anti-aliasing for smoother looking shapes.
 - Optional billboarding for each shape type to ensure they are always facing the camera.
@@ -37,7 +40,7 @@ use bevy_vector_shapes::prelude::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        // Add the shape plugin, ShapePlugin for 3D cameras and Shape2dPlugin for 2D cameras
+        // Add the shape plugin, Shape2dPlugin for 2D cameras or ShapePlugin for both 2D and 3D cameras
         .add_plugin(Shape2dPlugin::default())
         .add_startup_system(setup)
         .add_system(draw)
@@ -57,4 +60,9 @@ fn draw(mut painter: ShapePainter) {
 
 | bevy | bevy_vector_shapes |
 | ---- | ------------------ |
-| 0.10 | 0.3.4              |
+| 0.10 | 0.4.0              |
+
+## Alternatives
+[bevy_smud](https://github.com/johanhelsing/bevy_smud): for generating custom sdf expressions at run time.
+[bevy_protoype_lyon](https://github.com/Nilirad/bevy_prototype_lyon): for generating meshes from 2D shapes and paths.
+[vello](https://github.com/linebender/vello): for very efficient 2D shape rendering to images.

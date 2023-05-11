@@ -1,4 +1,4 @@
-#import bevy_vector_shapes::core
+#import bevy_vector_shapes::bindings
 
 struct Vertex {
     @builtin(vertex_index) index: u32,
@@ -15,6 +15,8 @@ struct Vertex {
     @location(8) corner_radii: vec4<f32>,
 };
 
+#import bevy_vector_shapes::functions
+
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) color: vec4<f32>,
@@ -22,6 +24,9 @@ struct VertexOutput {
     @location(2) size: vec2<f32>,
     @location(3) corner_radii: vec4<f32>,
     @location(4) thickness: f32,
+#ifdef TEXTURED
+    @location(5) texture_uv: vec2<f32>,
+#endif
 };
 
 @vertex
@@ -53,6 +58,9 @@ fn vertex(v: Vertex) -> VertexOutput {
     out.corner_radii = 2.0 * min(v.corner_radii / shortest_side, vec4<f32>(0.5));
 
     out.color = v.color;
+#ifdef TEXTURED
+    out.texture_uv = get_texture_uv(vertex.xy);
+#endif
     return out;
 }
 
@@ -62,6 +70,9 @@ struct FragmentInput {
     @location(2) size: vec2<f32>,
     @location(3) corner_radii: vec4<f32>,
     @location(4) thickness: f32,
+#ifdef TEXTURED
+    @location(5) texture_uv: vec2<f32>,
+#endif
 };
 
 // Given a position, and a size determine the distance between a point and the rectangle with those side lengths
@@ -114,6 +125,6 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
         discard;
     }
 
-    return vec4<f32>(f.color.rgb, in_shape);
+    return color_output(vec4<f32>(f.color.rgb, in_shape), f);
 }
 #endif

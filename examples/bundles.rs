@@ -20,14 +20,17 @@ fn setup(mut commands: Commands) {
         ..default()
     },));
 
-    commands.spawn(ShapeBundle::rect(
-        &ShapeConfig {
-            color: Color::MIDNIGHT_BLUE,
-            corner_radii: Vec4::splat(0.3),
-            ..ShapeConfig::default_2d()
-        },
-        Vec2::splat(2.0),
-    ));
+    commands.spawn(
+        ShapeBundle::rect(
+            &ShapeConfig {
+                color: Color::MIDNIGHT_BLUE,
+                corner_radii: Vec4::splat(0.3),
+                ..ShapeConfig::default_3d()
+            },
+            Vec2::splat(2.0),
+        )
+        .insert_3d(),
+    );
 }
 
 fn update_shapes(time: Res<Time>, mut shapes: Query<&mut Transform, With<ShapeMaterial>>) {

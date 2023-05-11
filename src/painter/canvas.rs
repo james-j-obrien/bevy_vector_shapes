@@ -6,32 +6,78 @@ use bevy::{
 };
 use wgpu::{Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages};
 
-use crate::prelude::*;
-
+/// Prepares the camera assosciated with each canvas.
+///
+/// Replaces the image handle when the canvas is resized and applies [`CanvasMode`] behaviours.
 pub fn update_canvases(
-    mut canvases: Query<(&mut Canvas, &mut Camera, &mut OrthographicProjection), Changed<Canvas>>,
+    mut canvases: Query<(
+        &mut Canvas,
+        &mut Camera,
+        &mut Camera2d,
+        &mut OrthographicProjection,
+    )>,
 ) {
-    canvases.for_each_mut(|(canvas, mut camera, mut projection)| {
-        camera.target = RenderTarget::Image(canvas.image.clone());
-        projection.set_changed();
+    canvases.for_each_mut(|(mut canvas, mut camera, mut camera_2d, mut projection)| {
+        if let RenderTarget::Image(camera_handle) = &camera.target {
+            if camera_handle != &canvas.image {
+                camera.target = RenderTarget::Image(canvas.image.clone());
+                projection.set_changed();
+            }
+        }
+
+        match canvas.mode {
+            CanvasMode::Continuous => {
+                camera_2d.clear_color = canvas.clear_color.clone();
+                camera.is_active = true;
+            }
+            CanvasMode::Persistent => {
+                if canvas.redraw {
+                    camera_2d.clear_color = canvas.clear_color.clone();
+                } else {
+                    camera_2d.clear_color = ClearColorConfig::None;
+                }
+            }
+            CanvasMode::OnDemand => {
+                if canvas.redraw {
+                    camera.is_active = true;
+                } else {
+                    camera.is_active = false;
+                }
+            }
+        }
+
+        canvas.redraw = false;
     })
 }
 
+/// Enum that determines when canvases are cleared and redrawn.
 #[derive(Default)]
-pub enum CanvasClearMode {
+pub enum CanvasMode {
+    /// Always clear and draw each frame
     #[default]
-    Always,
+    Continuous,
+    /// Always draw but don't clear until a call to Canvas::redraw
+    Persistent,
+    /// Don't draw or clear until a call to Canvas::redraw
     OnDemand,
 }
 
+/// Component containing data and methods for a given canvas.
+///
+/// Can be spawned as part of a [`CanvasBundle`] with [`CanvasCommands::spawn_canvas`].
 #[derive(Component)]
 pub struct Canvas {
+    /// Handle to the canvas' target texture.
     pub image: Handle<Image>,
+    /// Width of the canvas' target texture in pixels.
     pub width: u32,
+    /// Height of the canvas' target texture in pixels.
     pub height: u32,
-    pub clear_mode: CanvasClearMode,
-    pub zoom: f32,
-    will_clear: bool,
+    /// Determines when the canvas is cleared and drawn to, see [`CanvasMode`].
+    pub mode: CanvasMode,
+    /// Clear mode to revert to for [`CanvasMode::OnDemand`].
+    pub clear_color: ClearColorConfig,
+    redraw: bool,
 }
 
 impl Canvas {
@@ -89,15 +135,27 @@ impl Canvas {
         self.image = handle.clone();
         handle
     }
+
+    /// Mark this canvas to be redraw this frame, behaviour depends on [`CanvasMode`].
+    pub fn redraw(&mut self) {
+        self.redraw = true;
+    }
 }
 
+/// Configuration to be used when creating a [`CanvasBundle`]
 #[derive(Default)]
 pub struct CanvasConfig {
+    /// Clear mode analagous to [`Camera2d`].
     pub clear_color: ClearColorConfig,
-    pub clear_mode: CanvasClearMode,
+    /// Determines when the canvas is cleared and drawn to, see [`CanvasMode`].
+    pub mode: CanvasMode,
+    /// Width of the canvas' target texture in pixels.
     pub width: u32,
+    /// Height of the canvas' target texture in pixels.
     pub height: u32,
+    /// Camera order analagous to [`Camera`].
     pub order: isize,
+    /// [`ImageSampler`] to be used when creating the target texture.
     pub sampler: ImageSampler,
 }
 
@@ -105,7 +163,7 @@ impl CanvasConfig {
     pub fn new(width: u32, height: u32) -> Self {
         Self {
             clear_color: ClearColorConfig::Default,
-            clear_mode: CanvasClearMode::Always,
+            mode: CanvasMode::default(),
             width,
             height,
             order: -1,
@@ -114,6 +172,9 @@ impl CanvasConfig {
     }
 }
 
+/// Bundle containing requisite components for a [`Canvas`] entity.
+///
+/// Can be spawned with [`CanvasCommands::spawn_canvas`].
 #[derive(Bundle)]
 pub struct CanvasBundle {
     camera: Camera2dBundle,
@@ -127,7 +188,7 @@ impl CanvasBundle {
         Self {
             camera: Camera2dBundle {
                 camera_2d: Camera2d {
-                    clear_color: config.clear_color,
+                    clear_color: config.clear_color.clone(),
                 },
                 camera: Camera {
                     order: config.order,
@@ -141,15 +202,16 @@ impl CanvasBundle {
                 width: config.width,
                 height: config.height,
 
-                clear_mode: config.clear_mode,
-                will_clear: false,
-                zoom: 1.0,
+                mode: config.mode,
+                clear_color: config.clear_color,
+                redraw: true,
             },
             render_layers: RenderLayers::none(),
         }
     }
 }
 
+/// Extension trait for [`Commands`] to allow spawning of [`CanvasBundle`] entities.
 pub trait CanvasCommands<'w, 's> {
     /// Spawns a [`CanvasBundle`] according to the given [`CanvasConfig`].
     ///

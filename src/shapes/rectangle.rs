@@ -41,7 +41,9 @@ impl Rectangle {
     }
 }
 
-impl ShapeComponent<RectData> for Rectangle {
+impl ShapeComponent for Rectangle {
+    type Data = RectData;
+
     fn into_data(&self, tf: &GlobalTransform) -> RectData {
         let mut flags = Flags(0);
         flags.set_thickness_type(self.thickness_type);
@@ -141,11 +143,21 @@ impl ShapeData for RectData {
 /// Extension trait for [`ShapePainter`] to enable it to draw rectangles.
 pub trait RectPainter {
     fn rect(&mut self, size: Vec2) -> &mut Self;
+
+    fn image(&mut self, image: Handle<Image>, size: Vec2) -> &mut Self;
 }
 
 impl<'w, 's> RectPainter for ShapePainter<'w, 's> {
     fn rect(&mut self, size: Vec2) -> &mut Self {
         self.send(RectData::new(self.config(), size))
+    }
+
+    fn image(&mut self, image: Handle<Image>, size: Vec2) -> &mut Self {
+        let mut config = self.config().clone();
+        config.texture = Some(image);
+        config.color = Color::WHITE;
+        config.hollow = false;
+        self.send_with_config(&config, RectData::new(&config, size))
     }
 }
 
@@ -160,7 +172,7 @@ impl RectangleBundle for ShapeBundle<Rectangle> {
     }
 }
 
-/// Extension trait for [`ShapeCommands`] and [`ShapeChildBuilder`] to enable spawning of rectangle entities.
+/// Extension trait for [`ShapeSpawner`] to enable spawning of rectangle entities.
 pub trait RectangleSpawner<'w, 's> {
     fn rect(&mut self, size: Vec2) -> ShapeEntityCommands<'w, 's, '_>;
 }

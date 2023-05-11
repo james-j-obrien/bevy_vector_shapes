@@ -1,11 +1,6 @@
-use std::marker::PhantomData;
-
 use bevy::prelude::*;
 
-use crate::{
-    render::{setup_pipeline_2d, setup_pipeline_3d, setup_pipeline_common, ShapeData},
-    ShapeConfig,
-};
+use crate::{prelude::*, ShapePipelineType};
 
 mod disc;
 pub use disc::*;
@@ -19,28 +14,19 @@ pub use rectangle::*;
 mod regular_polygon;
 pub use regular_polygon::*;
 
-#[derive(Clone)]
-pub enum ShapeFill {
-    Color(Color),
-    Texture(Handle<Image>),
-}
-
-/// Component that holds data related to a shape that is not consumed by it's shader,
+/// Component that holds data related to a shape to be used during rendering,
 #[derive(Component, Clone)]
 pub struct ShapeMaterial {
     /// Alpha mode to use when rendering, Opaque, Blend, Add and Multiply are explicitly supported.
     pub alpha_mode: AlphaMode,
     /// Forcibly disable local anti-aliasing.
     pub disable_laa: bool,
+    /// Target pipeline draw the shape.
+    pub pipeline: ShapePipelineType,
+    /// [`Canvas`] to draw the shape to.
     pub canvas: Option<Entity>,
-    pub color: Color,
-    pub fill: ShapeFill,
-}
-
-impl ShapeMaterial {
-    pub fn set_color(&mut self, color: Color) {
-        self.fill = Shape
-    }
+    /// Texture to apply to the shape.
+    pub texture: Option<Handle<Image>>,
 }
 
 impl Default for ShapeMaterial {
@@ -48,12 +34,14 @@ impl Default for ShapeMaterial {
         Self {
             alpha_mode: AlphaMode::Blend,
             disable_laa: false,
+            pipeline: ShapePipelineType::Shape2d,
+            texture: None,
             canvas: None,
-            fill: ShapeFill::Color(Color::WHITE),
         }
     }
 }
 
+/// Marker component for entities that should be drawn by the 3D pipeline.
 #[derive(Component)]
 pub struct Shape3d;
 
@@ -74,12 +62,15 @@ impl<T: Component> ShapeBundle<T> {
             shape: ShapeMaterial {
                 alpha_mode: config.alpha_mode,
                 disable_laa: config.disable_laa,
+                pipeline: config.pipeline,
                 canvas: config.canvas,
+                texture: config.texture.clone(),
             },
             shape_type: component,
         }
     }
 
+    /// Inserts the [`Shape3d`] marker component so that the entity is picked up by the associated pipeline.
     pub fn insert_3d(self) -> (Self, Shape3d) {
         (self, Shape3d)
     }
@@ -135,29 +126,5 @@ pub enum Alignment {
 impl From<Alignment> for u32 {
     fn from(value: Alignment) -> Self {
         value as u32
-    }
-}
-
-#[derive(Default)]
-pub(crate) struct InstancePlugin<T: ShapeData> {
-    _marker: PhantomData<T>,
-}
-
-impl<T: ShapeData> Plugin for InstancePlugin<T> {
-    fn build(&self, app: &mut App) {
-        app.register_type::<T::Component>();
-        setup_pipeline_common::<T>(app);
-        setup_pipeline_2d::<T>(app);
-    }
-}
-
-#[derive(Default)]
-pub(crate) struct Instance3dPlugin<T: ShapeData> {
-    _marker: PhantomData<T>,
-}
-
-impl<T: ShapeData> Plugin for Instance3dPlugin<T> {
-    fn build(&self, app: &mut App) {
-        setup_pipeline_3d::<T>(app);
     }
 }
