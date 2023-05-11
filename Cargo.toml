@@ -7,10 +7,10 @@ exclude = [
 ]
 homepage = "https://github.com/james-j-obrien/bevy_vector_shapes"
 keywords = ["bevy", "gamedev", "graphics"]
-license-file = "LICENSE"
+license = "MIT OR Apache-2.0"
 name = "bevy_vector_shapes"
 repository = "https://github.com/james-j-obrien/bevy_vector_shapes"
-version = "0.4.2"
+version = "0.4.3"
 
 [dependencies]
 any_vec = "0.11.0"

@@ -50,6 +50,6 @@ impl Plugin for PainterPlugin {
                     .in_base_set(CoreSet::PostUpdate)
                     .before(CameraUpdateSystem),
             )
-            .add_system(clear_storage.in_base_set(CoreSet::PreUpdate));
+            .add_system(clear_storage.in_base_set(CoreSet::First));
     }
 }
