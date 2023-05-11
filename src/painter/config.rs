@@ -30,7 +30,7 @@ pub struct ShapeConfig {
     /// Texture to apply to the shape, color is determined as color * sample.
     pub texture: Option<Handle<Image>>,
     /// Set with set_2d, set_3d and set_canvas.
-    pub(crate) pipeline: ShapePipelineType,
+    pub pipeline: ShapePipelineType,
 }
 
 impl ShapeConfig {
