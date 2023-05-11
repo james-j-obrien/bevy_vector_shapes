@@ -62,7 +62,7 @@ fn draw(mut painter: ShapePainter) {
 
 | bevy | bevy_vector_shapes |
 | ---- | ------------------ |
-| 0.10 | 0.4.1              |
+| 0.10 | 0.4.2              |
 
 ## Alternatives
 - [bevy_smud](https://github.com/johanhelsing/bevy_smud): for generating custom sdf expressions at run time.
