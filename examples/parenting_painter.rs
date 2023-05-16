@@ -1,4 +1,4 @@
-// Demonstrates spawning child shapes using with_children
+// Demonstrates spawning child shapes using with_children on ShapePainter
 
 use bevy::prelude::*;
 use bevy_vector_shapes::prelude::*;
@@ -14,11 +14,20 @@ fn main() {
         .run();
 }
 
+#[derive(Component)]
+struct Tree;
+
 fn setup(mut commands: Commands) {
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(0., 0., 16.).looking_at(Vec3::ZERO, Vec3::Y),
         ..default()
     });
+
+    // Immediate mode shapes don't need to be parented to an entity but we do so here to demonstrate how
+    commands.spawn((
+        Tree,
+        SpatialBundle::from_transform(Transform::from_xyz(0.0, -5.0, 0.0)),
+    ));
 }
 
 fn draw_tree(time: f32, painter: &mut ShapePainter, depth: u32) {
@@ -47,14 +56,22 @@ fn draw_tree(time: f32, painter: &mut ShapePainter, depth: u32) {
         });
 }
 
-fn draw_gallery(time: Res<Time>, mut painter: ShapePainter) {
-    painter.reset();
+fn draw_gallery(
+    time: Res<Time>,
+    mut painter: ShapePainter,
+    mut tree: Query<&mut Transform, With<Tree>>,
+) {
+    let mut tree = tree.single_mut();
+    tree.rotation = Quat::from_rotation_z(time.elapsed_seconds().sin() / 4.0);
+
+    // Position our painter relative to our tree entity
+    painter.transform = *tree;
     painter.color = Color::SEA_GREEN;
-    painter.translate(Vec3::NEG_Y * 5.);
     painter
         .line(Vec3::ZERO, Vec3::Y)
         .with_children(|child_painter| {
             child_painter.translate(Vec3::Y);
             draw_tree(time.elapsed_seconds(), child_painter, 10);
         });
+    painter.reset();
 }

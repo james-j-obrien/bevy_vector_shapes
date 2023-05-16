@@ -23,8 +23,10 @@ pub struct ShapeConfig {
     #[reflect(ignore)]
     pub render_layers: Option<RenderLayers>,
     pub alpha_mode: AlphaMode,
-    /// Forcibly disables local anti-aliasing for all shapes.
+    /// Forcibly disables local anti-aliasing.
     pub disable_laa: bool,
+    /// Forcibly disables local instancing.
+    pub instance_id: u16,
     /// [`Canvas`] to draw the shape to.
     pub canvas: Option<Entity>,
     /// Texture to apply to the shape, color is determined as color * sample.
@@ -123,6 +125,7 @@ impl ShapeConfig {
             render_layers: None,
             alpha_mode: AlphaMode::Blend,
             disable_laa: false,
+            instance_id: 0,
             canvas: None,
             texture: None,
             pipeline: ShapePipelineType::Shape2d,

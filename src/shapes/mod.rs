@@ -21,6 +21,10 @@ pub struct ShapeMaterial {
     pub alpha_mode: AlphaMode,
     /// Forcibly disable local anti-aliasing.
     pub disable_laa: bool,
+    /// Instancing will be split by id, work around for if instancing causes ordering issues.
+    /// 
+    /// Will be removed once batching support is merged in bevy
+    pub instance_id: u16,
     /// Target pipeline draw the shape.
     pub pipeline: ShapePipelineType,
     /// [`Canvas`] to draw the shape to.
@@ -34,6 +38,7 @@ impl Default for ShapeMaterial {
         Self {
             alpha_mode: AlphaMode::Blend,
             disable_laa: false,
+            instance_id: 0,
             pipeline: ShapePipelineType::Shape2d,
             texture: None,
             canvas: None,
@@ -62,6 +67,7 @@ impl<T: Component> ShapeBundle<T> {
             shape: ShapeMaterial {
                 alpha_mode: config.alpha_mode,
                 disable_laa: config.disable_laa,
+                instance_id: config.instance_id,
                 pipeline: config.pipeline,
                 canvas: config.canvas,
                 texture: config.texture.clone(),

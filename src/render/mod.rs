@@ -179,6 +179,7 @@ pub struct ShapePipelineMaterial {
     texture: Option<Handle<Image>>,
     canvas: Option<Entity>,
     pipeline: ShapePipelineType,
+    instance_id: u16,
 }
 
 impl ShapePipelineMaterial {
@@ -191,6 +192,7 @@ impl ShapePipelineMaterial {
             canvas: material.canvas,
             pipeline: material.pipeline,
             texture: material.texture,
+            instance_id: material.instance_id,
         }
     }
 }
@@ -204,6 +206,7 @@ impl From<&ShapeConfig> for ShapePipelineMaterial {
             texture: config.texture.clone(),
             pipeline: config.pipeline,
             canvas: config.canvas,
+            instance_id: config.instance_id,
         }
     }
 }
