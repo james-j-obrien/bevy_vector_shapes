@@ -22,7 +22,7 @@ pub struct ShapeMaterial {
     /// Forcibly disable local anti-aliasing.
     pub disable_laa: bool,
     /// Instancing will be split by id, work around for if instancing causes ordering issues.
-    /// 
+    ///
     /// Will be removed once batching support is merged in bevy
     pub instance_id: u16,
     /// Target pipeline draw the shape.
