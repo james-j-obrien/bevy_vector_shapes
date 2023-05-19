@@ -30,7 +30,7 @@ fn draw_shapes(time: Res<Time>, mut painter: ShapePainter, canvas: Query<(Entity
     painter.set_canvas(canvas_e);
     painter.hollow = true;
     painter.thickness = 16.0;
-    painter.color = Color::SEA_GREEN;
+    painter.color = Color::SEA_GREEN + Color::WHITE * 0.25;
     painter.rect(Vec2::splat(1024.0));
 
     painter.rotate_z(time.elapsed_seconds().sin());

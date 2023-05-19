@@ -117,7 +117,7 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
         var dist = length(end_point - f.uv);
 
         var mask = step_aa(dist, f.thickness / 2.0);
-        in_shape = max(in_shape, mask);
+        in_shape = min(max(in_shape, mask), 1.0);
     }
 
     // Discard fragments no longer in the shape

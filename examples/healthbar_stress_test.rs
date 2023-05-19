@@ -50,7 +50,7 @@ fn draw_spheres(time: Res<Time>, mut painter: ShapePainter) {
             let position = Vec3::new(x * 2.0, offset.sin(), y * 2.0);
 
             painter.hollow = false;
-            painter.color = Color::DARK_GRAY;
+            painter.color = Color::GRAY;
             painter.alignment = Alignment::Billboard;
             painter.transform.translation = position;
             painter.circle(0.5);
