@@ -73,7 +73,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     // If our thickness in pixels is less than 1, clamp to 1 and reduce the alpha instead
     var out_color = v.color;
     if thickness_data.thickness_p * max(scale.x, scale.y) < 1.0 {
-        out_color.a = out_color.a * thickness_data.thickness_p;
+        out_color.a = out_color.a * thickness_data.thickness_p * max(scale.x, scale.y);
         thickness_data.thickness_p = 1.;
     }
 
