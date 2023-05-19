@@ -81,7 +81,7 @@ impl ShapeComponent for Disc {
         DiscData {
             transform: tf.compute_matrix().to_cols_array_2d(),
 
-            color: self.color.as_rgba_f32(),
+            color: self.color.as_linear_rgba_f32(),
             thickness: self.thickness,
             flags: flags.0,
 
@@ -136,7 +136,7 @@ impl DiscData {
         DiscData {
             transform: config.transform.compute_matrix().to_cols_array_2d(),
 
-            color: config.color.as_rgba_f32(),
+            color: config.color.as_linear_rgba_f32(),
             thickness: config.thickness,
             flags: flags.0,
 
@@ -158,7 +158,7 @@ impl DiscData {
         DiscData {
             transform: config.transform.compute_matrix().to_cols_array_2d(),
 
-            color: config.color.as_rgba_f32(),
+            color: config.color.as_linear_rgba_f32(),
             thickness: config.thickness,
             flags: flags.0,
 
