@@ -66,7 +66,7 @@ fn draw_gallery(
 
     // Position our painter relative to our tree entity
     painter.transform = *tree;
-    painter.color = Color::SEA_GREEN + Color::WHITE * 0.5;
+    painter.color = Color::SEA_GREEN + Color::WHITE * 0.25;
     painter
         .line(Vec3::ZERO, Vec3::Y)
         .with_children(|child_painter| {

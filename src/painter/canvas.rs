@@ -2,7 +2,11 @@ use bevy::{
     core_pipeline::clear_color::ClearColorConfig,
     ecs::system::EntityCommands,
     prelude::*,
-    render::{camera::RenderTarget, texture::ImageSampler, view::RenderLayers},
+    render::{
+        camera::RenderTarget,
+        texture::{BevyDefault, ImageSampler},
+        view::{RenderLayers, ViewTarget},
+    },
 };
 use wgpu::{Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages};
 
@@ -87,6 +91,7 @@ impl Canvas {
         width: u32,
         height: u32,
         sampler: ImageSampler,
+        hdr: bool,
     ) -> Handle<Image> {
         let size = Extent3d {
             width,
@@ -99,7 +104,11 @@ impl Canvas {
                 label: None,
                 size,
                 dimension: TextureDimension::D2,
-                format: TextureFormat::Bgra8UnormSrgb,
+                format: if hdr {
+                    TextureFormat::bevy_default()
+                } else {
+                    ViewTarget::TEXTURE_FORMAT_HDR
+                },
                 mip_level_count: 1,
                 sample_count: 1,
                 usage: TextureUsages::TEXTURE_BINDING
@@ -157,6 +166,8 @@ pub struct CanvasConfig {
     pub order: isize,
     /// [`ImageSampler`] to be used when creating the target texture.
     pub sampler: ImageSampler,
+    /// Whether to enable hdr for the assosciated camera and texture.
+    pub hdr: bool,
 }
 
 impl CanvasConfig {
@@ -168,6 +179,7 @@ impl CanvasConfig {
             height,
             order: -1,
             sampler: ImageSampler::Default,
+            hdr: false,
         }
     }
 }
@@ -192,6 +204,7 @@ impl CanvasBundle {
                 },
                 camera: Camera {
                     order: config.order,
+                    hdr: config.hdr,
                     target: RenderTarget::Image(image.clone()),
                     ..default()
                 },
@@ -229,8 +242,13 @@ impl<'w, 's> CanvasCommands<'w, 's> for Commands<'w, 's> {
         assets: &mut Assets<Image>,
         config: CanvasConfig,
     ) -> (Handle<Image>, EntityCommands<'w, 's, '_>) {
-        let handle =
-            Canvas::create_image(assets, config.width, config.height, config.sampler.clone());
+        let handle = Canvas::create_image(
+            assets,
+            config.width,
+            config.height,
+            config.sampler.clone(),
+            config.hdr,
+        );
         (
             handle.clone(),
             self.spawn(CanvasBundle::new(handle, config)),

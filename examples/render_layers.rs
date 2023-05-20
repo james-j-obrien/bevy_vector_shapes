@@ -30,7 +30,8 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut images: ResMut<Assets<Image>>,
 ) {
-    let image_handle = Canvas::create_image(images.as_mut(), 512, 512, ImageSampler::Default);
+    let image_handle =
+        Canvas::create_image(images.as_mut(), 512, 512, ImageSampler::Default, false);
 
     // This specifies the layer used for the first pass, which will be attached to the first pass camera and cube.
     let first_pass_layer = RenderLayers::layer(1);
