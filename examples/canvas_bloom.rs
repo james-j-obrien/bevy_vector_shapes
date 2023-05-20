@@ -1,4 +1,6 @@
-// Demonstrates use of the canvas API by drawing the gallery from gallery_3d onto a canvas and drawing the canvas to the screen
+// Demonstrates use of the canvas API with HDR enabled to allow bloom effects
+// Note you will still get some bloom effects even without an HDR canvas,
+// but in order to allow for color values below 1.0 the canvas needs HDR enabled
 
 use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::texture::ImageSampler};
 use bevy_vector_shapes::prelude::*;

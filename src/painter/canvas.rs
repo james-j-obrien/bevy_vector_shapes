@@ -105,9 +105,9 @@ impl Canvas {
                 size,
                 dimension: TextureDimension::D2,
                 format: if hdr {
-                    TextureFormat::bevy_default()
-                } else {
                     ViewTarget::TEXTURE_FORMAT_HDR
+                } else {
+                    TextureFormat::bevy_default()
                 },
                 mip_level_count: 1,
                 sample_count: 1,
