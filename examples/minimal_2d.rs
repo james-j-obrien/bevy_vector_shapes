@@ -7,9 +7,9 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         // Add the shape plugin
-        .add_plugin(Shape2dPlugin::default())
-        .add_startup_system(setup)
-        .add_system(draw)
+        .add_plugins(Shape2dPlugin::default())
+        .add_systems(Startup, setup)
+        .add_systems(Update, draw)
         .run();
 }
 

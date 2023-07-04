@@ -1,4 +1,6 @@
-#import bevy_vector_shapes::bindings
+#import bevy_vector_shapes::core as core
+#import bevy_vector_shapes::core view, image, image_sampler
+#import bevy_vector_shapes::constants PI, TAU
 
 struct Vertex {
     @builtin(vertex_index) index: u32,
@@ -14,8 +16,6 @@ struct Vertex {
     @location(7) size: vec2<f32>,
     @location(8) corner_radii: vec4<f32>,
 };
-
-#import bevy_vector_shapes::functions
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -34,7 +34,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     var out: VertexOutput;
 
     // Vertex positions for a basic quad
-    let vertex = get_quad_vertex(v);
+    let vertex = core::get_quad_vertex(v.index);
 
     // Reconstruct our transformation matrix
     let matrix = mat4x4<f32>(
@@ -46,20 +46,20 @@ fn vertex(v: Vertex) -> VertexOutput {
     // Shortest of the two side lengths for the rectangle
     var shortest_side = min(v.size.x, v.size.y);
 
-    var vertex_data = get_vertex_data(matrix, vertex.xy * v.size / 2.0, v.thickness, v.flags);
+    var vertex_data = core::get_vertex_data(matrix, vertex.xy * v.size / 2.0, v.thickness, v.flags);
     out.clip_position = vertex_data.clip_pos;
 
     // Our vertex outputs should all be in uv space so scale our uv space such that the shortest side is of length 1
     out.size = v.size / shortest_side;
     out.uv = vertex.xy * out.size * vertex_data.uv_ratio;
-    out.thickness = calculate_thickness(vertex_data.thickness_data, shortest_side / 2.0, v.flags);
+    out.thickness = core::calculate_thickness(vertex_data.thickness_data, shortest_side / 2.0, v.flags);
 
     // Our corner radii cannot be more than half the shortest side so cap them
     out.corner_radii = 2.0 * min(v.corner_radii / shortest_side, vec4<f32>(0.5));
 
     out.color = v.color;
 #ifdef TEXTURED
-    out.texture_uv = get_texture_uv(vertex.xy);
+    out.texture_uv = core::get_texture_uv(vertex.xy);
 #endif
     return out;
 }
@@ -118,13 +118,17 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
     var dist = rectSDF(f.uv, f.size - radii) - radii;
     
     // Cut off points outside the shape or within the hollow area
-    in_shape *= step_aa(-f.thickness, dist) * step_aa(dist, 0.);
+    in_shape *= core::step_aa(-f.thickness, dist) * core::step_aa(dist, 0.);
 
     // Discard fragments no longer in the shape
-    if in_shape < 0.0001 {
-        discard;
-    }
+    // if in_shape < 0.0001 {
+    //     discard;
+    // }
 
-    return color_output(vec4<f32>(f.color.rgb, in_shape), f);
+    var color = core::color_output(vec4<f32>(f.color.rgb, in_shape));
+#ifdef TEXTURED
+    color = color * textureSample(image, image_sampler, f.texture_uv);
+#endif
+    return color;
 }
 #endif

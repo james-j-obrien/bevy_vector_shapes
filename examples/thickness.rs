@@ -6,11 +6,11 @@ use bevy_vector_shapes::prelude::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(ShapePlugin::default())
+        .add_plugins(ShapePlugin::default())
         .insert_resource(ClearColor(Color::DARK_GRAY))
         .insert_resource(Msaa::Off)
-        .add_startup_system(setup)
-        .add_system(draw_gallery)
+        .add_systems(Startup, setup)
+        .add_systems(Update, draw_gallery)
         .run();
 }
 

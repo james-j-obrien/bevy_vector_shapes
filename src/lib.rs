@@ -15,7 +15,7 @@
 //!         // Add the shape plugin:
 //!         // - Shape2dPlugin for 2D cameras
 //!         // - ShapePlugin for both 3D and 2D cameras
-//!         .add_plugin(Shape2dPlugin::default())
+//!         .add_plugins(Shape2dPlugin::default())
 //!         .add_startup_system(setup)
 //!         .add_system(draw)
 //!         .run();
@@ -87,12 +87,12 @@ impl Shape2dPlugin {
 impl Plugin for Shape2dPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(BaseShapeConfig(self.base_config.clone()))
-            .add_plugin(PainterPlugin)
-            .add_plugin(ShapeRenderPlugin)
-            .add_plugin(ShapeTypePlugin::<Line>::default())
-            .add_plugin(ShapeTypePlugin::<Disc>::default())
-            .add_plugin(ShapeTypePlugin::<Rectangle>::default())
-            .add_plugin(ShapeTypePlugin::<RegularPolygon>::default());
+            .add_plugins(PainterPlugin)
+            .add_plugins(ShapeRenderPlugin)
+            .add_plugins(ShapeTypePlugin::<Line>::default())
+            .add_plugins(ShapeTypePlugin::<Disc>::default())
+            .add_plugins(ShapeTypePlugin::<Rectangle>::default())
+            .add_plugins(ShapeTypePlugin::<RegularPolygon>::default());
     }
 }
 
@@ -129,12 +129,12 @@ impl Default for ShapePlugin {
 impl Plugin for ShapePlugin {
     fn build(&self, app: &mut App) {
         if !self.exclude_2d {
-            app.add_plugin(Shape2dPlugin::new(self.base_config.clone()));
+            app.add_plugins(Shape2dPlugin::new(self.base_config.clone()));
         }
-        app.add_plugin(Shape3dRenderPlugin)
-            .add_plugin(ShapeType3dPlugin::<Line>::default())
-            .add_plugin(ShapeType3dPlugin::<Disc>::default())
-            .add_plugin(ShapeType3dPlugin::<Rectangle>::default())
-            .add_plugin(ShapeType3dPlugin::<RegularPolygon>::default());
+        app.add_plugins(Shape3dRenderPlugin)
+            .add_plugins(ShapeType3dPlugin::<Line>::default())
+            .add_plugins(ShapeType3dPlugin::<Disc>::default())
+            .add_plugins(ShapeType3dPlugin::<Rectangle>::default())
+            .add_plugins(ShapeType3dPlugin::<RegularPolygon>::default());
     }
 }

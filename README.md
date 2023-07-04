@@ -43,7 +43,7 @@ fn main() {
         // Add the shape plugin:
         // - Shape2dPlugin for 2D cameras
         // - ShapePlugin for both 3D and 2D cameras
-        .add_plugin(Shape2dPlugin::default())
+        .add_plugins(Shape2dPlugin::default())
         .add_startup_system(setup)
         .add_system(draw)
         .run();

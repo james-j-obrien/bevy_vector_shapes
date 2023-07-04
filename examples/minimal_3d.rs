@@ -7,9 +7,9 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         // Add the 3D shape plugin
-        .add_plugin(ShapePlugin::default())
-        .add_startup_system(setup)
-        .add_system(draw)
+        .add_plugins(ShapePlugin::default())
+        .add_systems(Startup, setup)
+        .add_systems(Update, draw)
         .run();
 }
 

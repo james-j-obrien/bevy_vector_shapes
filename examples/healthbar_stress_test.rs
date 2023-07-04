@@ -11,12 +11,12 @@ const SHAPES_PER_AXIS: u32 = 200;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(ShapePlugin::default())
+        .add_plugins(ShapePlugin::default())
         .insert_resource(ClearColor(Color::DARK_GRAY))
-        .add_plugin(FrameTimeDiagnosticsPlugin)
-        .add_plugin(LogDiagnosticsPlugin::default())
-        .add_startup_system(setup)
-        .add_system(draw_spheres)
+        .add_plugins(FrameTimeDiagnosticsPlugin)
+        .add_plugins(LogDiagnosticsPlugin::default())
+        .add_systems(Startup, setup)
+        .add_systems(Update, draw_spheres)
         .run();
 }
 

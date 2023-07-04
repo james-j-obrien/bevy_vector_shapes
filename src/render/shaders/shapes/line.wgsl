@@ -1,4 +1,6 @@
-#import bevy_vector_shapes::bindings
+#import bevy_vector_shapes::core as core
+#import bevy_vector_shapes::core view, image, image_sampler
+#import bevy_vector_shapes::constants PI, TAU
 
 struct Vertex {
     @builtin(vertex_index) index: u32,
@@ -15,8 +17,6 @@ struct Vertex {
     @location(8) end: vec3<f32>,
 };
 
-#import bevy_vector_shapes::functions
-
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) color: vec4<f32>,
@@ -32,7 +32,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     var out: VertexOutput;
 
     // Vertex positions for a basic quad
-    let vertex = get_quad_vertex(v);
+    let vertex = core::get_quad_vertex(v.index);
 
     // Reconstruct our transformation matrix
     let matrix = mat4x4<f32>(
@@ -62,11 +62,11 @@ fn vertex(v: Vertex) -> VertexOutput {
     var origin = select(world_end, world_start, vertex.y < 0.0);
 
     // Calculate the remainder of our basis vectors
-    var basis_vectors = get_basis_vectors_from_up(matrix, origin, y_basis, f_alignment(v.flags) << 1u);
+    var basis_vectors = core::get_basis_vectors_from_up(matrix, origin, y_basis, f_alignment(v.flags) << 1u);
 
     // Calculate thickness data
-    var thickness_type = f_thickness_type(v.flags);
-    var thickness_data = get_thickness_data(v.thickness, thickness_type, origin, basis_vectors[1]);
+    var thickness_type = core::f_thickness_type(v.flags);
+    var thickness_data = core::get_thickness_data(v.thickness, thickness_type, origin, basis_vectors[1]);
 
     let scale = vec3<f32>(length(matrix[0].xyz), length(matrix[1].xyz), length(matrix[2].xyz));
 
@@ -81,7 +81,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     var thickness = thickness_data.thickness_p / thickness_data.pixels_per_u;
     var radius = thickness / 2.0;
 
-    var cap_type = f_cap(v.flags);
+    var cap_type = core::f_cap(v.flags);
     var cap_length = 0.0;
 
     // If we have caps increase the cap length to our radius
@@ -98,7 +98,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     var local_pos = vertex.xy * vec2<f32>(radius, cap_length + line_length / 2.0) * scale.xy;
 
     // Scale our padding to world space and match direction of our vertex
-    var aa_padding_u = AA_PADDING / thickness_data.pixels_per_u;
+    var aa_padding_u = core::AA_PADDING / thickness_data.pixels_per_u;
     var aa_padding = sign(vertex.xy) * aa_padding_u;
 
     // Pad our position and determine the ratio by which to scale uv such that uvs ignore the padding
@@ -159,17 +159,21 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
         var dist = length(pos);
 
         // Mask out corners
-        in_shape = step_aa(dist, 1.);
+        in_shape = core::step_aa(dist, 1.);
     } else {
         // Simple rectangle sdf for no caps or square caps
-        in_shape = step_aa(abs(f.uv.x), 1.) * step_aa(abs(f.uv.y), 1.0);
+        in_shape = core::step_aa(abs(f.uv.x), 1.) * core::step_aa(abs(f.uv.y), 1.0);
     }
 
     // Discard fragments no longer in the shape
-    if in_shape < 0.0001 {
-        discard;
-    }
+    // if in_shape < 0.0001 {
+    //     discard;
+    // }
 
-    return color_output(vec4<f32>(f.color.rgb, in_shape), f);
+    var color = core::color_output(vec4<f32>(f.color.rgb, in_shape));
+#ifdef TEXTURED
+    color = color * textureSample(image, image_sampler, f.texture_uv);
+#endif
+    return color;
 }
 #endif

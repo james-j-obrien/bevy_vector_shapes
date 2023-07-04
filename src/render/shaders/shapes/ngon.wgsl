@@ -1,4 +1,6 @@
-#import bevy_vector_shapes::bindings
+#import bevy_vector_shapes::core as core
+#import bevy_vector_shapes::core view, image, image_sampler
+#import bevy_vector_shapes::constants PI, TAU
 
 struct Vertex {
     @builtin(vertex_index) index: u32,
@@ -15,8 +17,6 @@ struct Vertex {
     @location(8) radius: f32,
     @location(9) roundness: f32
 };
-
-#import bevy_vector_shapes::functions
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -36,7 +36,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     var out: VertexOutput;
 
     // Vertex positions for a basic quad
-    let vertex = get_quad_vertex(v);
+    let vertex = core::get_quad_vertex(v.index);
 
     // Reconstruct our transformation matrix
     let matrix = mat4x4<f32>(
@@ -47,7 +47,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     );
 
     // Calculate vertex data shared between most shapes
-    var vertex_data = get_vertex_data(matrix, vertex.xy * v.radius, v.thickness, v.flags);
+    var vertex_data = core::get_vertex_data(matrix, vertex.xy * v.radius, v.thickness, v.flags);
     out.clip_position = vertex_data.clip_pos;
 
     // Here we precompute several values related to our polygon
@@ -70,7 +70,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     // We want 1 unit in uv space to be the length of the apothem of our polygon 
     // so scale world to uv space using the world space apothem
     out.uv = vertex_data.local_pos / (apothem * vertex_data.scale) * vertex_data.uv_ratio;
-    out.thickness = calculate_thickness(vertex_data.thickness_data, apothem, v.flags);
+    out.thickness = core::calculate_thickness(vertex_data.thickness_data, apothem, v.flags);
     out.roundness = min(v.roundness / apothem, 1.0);
 
     // Scale our half side length to match our uv space of 1 unit per apothem
@@ -135,13 +135,17 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
     var dist = ngonSDF(f.uv, f.central_angle, f.half_side_length, 1.0 - f.roundness) - f.roundness;
     
     // Cut off points outside the shape or within the hollow area
-    in_shape *= step_aa(-f.thickness, dist) * step_aa(dist, 0.);
+    in_shape *= core::step_aa(-f.thickness, dist) * core::step_aa(dist, 0.);
 
     // Discard fragments no longer in the shape
-    if in_shape < 0.0001 {
-        discard;
-    }
+    // if in_shape < 0.0001 {
+    //     discard;
+    // }
 
-    return color_output(vec4<f32>(f.color.rgb, in_shape), f);
+    var color = core::color_output(vec4<f32>(f.color.rgb, in_shape));
+#ifdef TEXTURED
+    color = color * textureSample(image, image_sampler, f.texture_uv);
+#endif
+    return color;
 }
 #endif

@@ -5,7 +5,7 @@ use crate::prelude::*;
 use crate::render::ShapePipelineType;
 
 /// Describes a configuration that can be applied to a spawned shape.
-#[derive(Clone, Reflect, FromReflect)]
+#[derive(Clone, Reflect)]
 pub struct ShapeConfig {
     /// Transform with which the shape will be spawned.
     pub transform: Transform,
