@@ -112,10 +112,9 @@ fn compute_visibility<T: ShapeData>(
         }
     } else {
         for (view_entity, render_layers) in views {
-            if let Some(render_layers) = render_layers {
-                if !render_layers.intersects(&material.render_layers) {
-                    continue;
-                }
+            let render_layers = render_layers.cloned().unwrap_or_default();
+            if !render_layers.intersects(&material.render_layers) {
+                continue;
             }
 
             spawn_buffers(
