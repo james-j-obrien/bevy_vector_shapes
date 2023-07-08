@@ -149,9 +149,9 @@ dependencies = [
 
 [[package]]
 name = "any_vec"
-version = "0.11.0"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b56408f2dd866296398209442769a8bbe71a0a8a6097d68bf5de3bfcceb22f7"
+checksum = "d7ea5311447c840f0ec49bf882e9746aec88e4eadffb5bba99969756ca62b718"
 
 [[package]]
 name = "anyhow"
@@ -759,7 +759,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_vector_shapes"
-version = "0.4.6"
+version = "0.5.0"
 dependencies = [
  "any_vec",
  "bevy",

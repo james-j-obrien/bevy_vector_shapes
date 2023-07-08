@@ -62,7 +62,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     var origin = select(world_end, world_start, vertex.y < 0.0);
 
     // Calculate the remainder of our basis vectors
-    var basis_vectors = core::get_basis_vectors_from_up(matrix, origin, y_basis, f_alignment(v.flags) << 1u);
+    var basis_vectors = core::get_basis_vectors_from_up(matrix, origin, y_basis, core::f_alignment(v.flags) << 1u);
 
     // Calculate thickness data
     var thickness_type = core::f_thickness_type(v.flags);
@@ -117,7 +117,7 @@ fn vertex(v: Vertex) -> VertexOutput {
 
     out.color = out_color;
 #ifdef TEXTURED
-    out.texture_uv = get_texture_uv(vertex.xy);
+    out.texture_uv = core::get_texture_uv(vertex.xy);
 #endif
     return out;
 }
@@ -165,6 +165,7 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
         in_shape = core::step_aa(abs(f.uv.x), 1.) * core::step_aa(abs(f.uv.y), 1.0);
     }
 
+    // TODO: Investigate
     // Discard fragments no longer in the shape
     // if in_shape < 0.0001 {
     //     discard;

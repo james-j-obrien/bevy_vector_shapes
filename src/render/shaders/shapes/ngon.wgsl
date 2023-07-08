@@ -79,7 +79,7 @@ fn vertex(v: Vertex) -> VertexOutput {
 
     out.color = v.color;
 #ifdef TEXTURED
-    out.texture_uv = get_texture_uv(vertex.xy);
+    out.texture_uv = core::get_texture_uv(vertex.xy);
 #endif
     return out;
 }

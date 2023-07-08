@@ -198,7 +198,6 @@ fn get_scale(matrix: mat4x4<f32>) -> vec2<f32> {
 fn get_basis_vectors(matrix: mat4x4<f32>, origin: vec3<f32>, flags: u32) -> mat3x3<f32> {
     return get_basis_vectors_from_up(matrix, origin, normalize(matrix[1].xyz), f_alignment(flags));
 }
-
 // Calculate each of the basis vectors for our shape
 // Z-basis is either taken from the mesh or from the direction to the camera depending on alignment
 fn get_basis_vectors_from_up(matrix: mat4x4<f32>, origin: vec3<f32>, up: vec3<f32>, alignment: u32) -> mat3x3<f32> {
@@ -225,6 +224,7 @@ fn get_basis_vectors_from_up(matrix: mat4x4<f32>, origin: vec3<f32>, up: vec3<f3
     // The x basis is then calculated as the cross product of the y and z basis
     var x_basis = normalize(cross(y_basis, z_basis));
 
+    // TODO: Test removal
     // Now that we have our accurate x basis and z basis we must correct our y basis
     // simply calculate it the same way we did the x basis
     y_basis = cross(x_basis, z_basis);
