@@ -62,7 +62,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     var origin = select(world_end, world_start, vertex.y < 0.0);
 
     // Calculate the remainder of our basis vectors
-    var basis_vectors = get_basis_vectors_from_up(matrix, origin, y_basis, v.flags);
+    var basis_vectors = get_basis_vectors_from_up(matrix, origin, y_basis, f_alignment(v.flags) << 1u);
 
     // Calculate thickness data
     var thickness_type = f_thickness_type(v.flags);
