@@ -29,7 +29,7 @@ impl ShapeStorage {
         let vec = self
             .shapes
             .entry(key)
-            .or_insert_with(|| AnyVec::new::<ShapeInstance<T>>());
+            .or_insert_with(AnyVec::new::<ShapeInstance<T>>);
 
         // SAFETY: we only insert entries in this function and only those that match the appropriate TypeId
         unsafe {
@@ -41,11 +41,10 @@ impl ShapeStorage {
         &self,
         pipeline: ShapePipelineType,
     ) -> Option<Iter<'_, ShapeInstance<T>>> {
-        match self.shapes.get(&(TypeId::of::<T>(), pipeline)) {
-            // SAFETY: we only insert entries in ShapeStorage::send and only those that match the appropriate TypeId
-            Some(vec) => Some(unsafe { vec.downcast_ref_unchecked::<ShapeInstance<T>>().iter() }),
-            None => None,
-        }
+        // SAFETY: we only insert entries in ShapeStorage::send and only those that match the appropriate TypeId
+        self.shapes
+            .get(&(TypeId::of::<T>(), pipeline))
+            .map(|vec| unsafe { vec.downcast_ref_unchecked::<ShapeInstance<T>>().iter() })
     }
 
     fn clear(&mut self) {

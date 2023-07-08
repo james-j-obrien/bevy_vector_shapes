@@ -24,7 +24,7 @@ impl<'w, 's> ShapeCommands<'w, 's> {
     }
 }
 
-impl<'w, 's, 'a> ShapeSpawner<'w, 's> for ShapeCommands<'w, 's> {
+impl<'w, 's> ShapeSpawner<'w, 's> for ShapeCommands<'w, 's> {
     fn spawn_shape(&mut self, bundle: impl Bundle) -> ShapeEntityCommands<'w, 's, '_> {
         let Self {
             commands, config, ..

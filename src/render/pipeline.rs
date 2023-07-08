@@ -136,7 +136,7 @@ impl ShapePipelines {
         } = self;
 
         *pipeline_cache
-            .entry((key.clone(), TypeId::of::<T>()))
+            .entry((key, TypeId::of::<T>()))
             .or_insert_with(|| {
                 let descriptor = pipeline.specialize(view_layout, texture_layout, key);
                 cache.queue_render_pipeline(descriptor)
