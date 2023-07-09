@@ -18,7 +18,7 @@ pub struct PushChildren {
 }
 
 impl Command for PushChildren {
-    fn write(self, world: &mut World) {
+    fn apply(self, world: &mut World) {
         world.entity_mut(self.parent).push_children(&self.children);
     }
 }

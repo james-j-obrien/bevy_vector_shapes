@@ -43,6 +43,10 @@ pub fn extract_shapes_3d<T: ShapeData>(
     if let Some(iter) = storage.get::<T>(ShapePipelineType::Shape3d) {
         instances.extend(iter.cloned());
     }
+    // dbg!(instances
+    //     .iter()
+    //     .map(|i| (&i.0, i.1.transform()))
+    //     .collect::<Vec<_>>());
 
     if !instances.is_empty() {
         commands.spawn((ShapeInstances::<T>(instances), Shape3d));

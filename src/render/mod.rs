@@ -12,7 +12,7 @@ use bevy::{
         render_phase::AddRenderCommand,
         render_resource::{Buffer, ShaderRef},
         view::RenderLayers,
-        Extract, RenderApp, RenderSet,
+        Extract, Render, RenderApp, RenderSet,
     },
     utils::FloatOrd,
 };
@@ -35,11 +35,11 @@ pub(crate) mod render_3d;
 use render_3d::*;
 
 /// Handler to shader containing shared functionality.
-pub const BINDINGS_HANDLE: HandleUntyped =
+pub const CORE_HANDLE: HandleUntyped =
     HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 13215291696265391738);
 
-/// Handler to shader containing shared functionality.
-pub const FUNCTIONS_HANDLE: HandleUntyped =
+/// Handler to shader containing shared constants.
+pub const CONSTANTS_HANDLE: HandleUntyped =
     HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 14523762397345674763);
 
 /// Handler to shader for drawing discs.
@@ -60,16 +60,11 @@ pub const RECT_HANDLE: HandleUntyped =
 
 /// Load the libraries shaders as internal assets.
 pub fn load_shaders(app: &mut App) {
+    load_internal_asset!(app, CORE_HANDLE, "shaders/core.wgsl", Shader::from_wgsl);
     load_internal_asset!(
         app,
-        BINDINGS_HANDLE,
-        "shaders/bindings.wgsl",
-        Shader::from_wgsl
-    );
-    load_internal_asset!(
-        app,
-        FUNCTIONS_HANDLE,
-        "shaders/functions.wgsl",
+        CONSTANTS_HANDLE,
+        "shaders/constants.wgsl",
         Shader::from_wgsl
     );
     load_internal_asset!(
@@ -128,9 +123,7 @@ pub trait ShapeComponent: Component + GetTypeRegistration {
 }
 
 /// Determines whether the shape is rendered in the 2D or 3D pipelines.
-#[derive(
-    Resource, Copy, Clone, Reflect, FromReflect, Eq, PartialEq, Hash, PartialOrd, Ord, Debug,
-)]
+#[derive(Resource, Copy, Clone, Reflect, Eq, PartialEq, Hash, PartialOrd, Ord, Debug)]
 pub enum ShapePipelineType {
     Shape3d,
     Shape2d,
@@ -256,9 +249,15 @@ fn setup_pipeline(app: &mut App) {
     app.sub_app_mut(RenderApp)
         .init_resource::<ShapePipelines>()
         .init_resource::<ShapeTextureBindGroups>()
-        .add_system(extract_render_layers.in_schedule(ExtractSchedule))
-        .add_system(queue_shape_view_bind_groups.in_set(RenderSet::Queue))
-        .add_system(queue_shape_texture_bind_groups.in_set(RenderSet::Queue));
+        .add_systems(ExtractSchedule, extract_render_layers)
+        .add_systems(
+            Render,
+            queue_shape_view_bind_groups.in_set(RenderSet::Queue),
+        )
+        .add_systems(
+            Render,
+            queue_shape_texture_bind_groups.in_set(RenderSet::Queue),
+        );
 }
 
 fn setup_pipeline_3d(app: &mut App) {
@@ -280,16 +279,22 @@ fn setup_type_pipeline<T: ShapeData>(app: &mut App) {
 
 fn setup_type_pipeline_3d<T: ShapeData>(app: &mut App) {
     app.sub_app_mut(RenderApp)
-        .add_system(extract_shapes_3d::<T>.in_schedule(ExtractSchedule))
-        .add_system(prepare_shape_buffers_3d::<T>.in_set(RenderSet::Prepare))
-        .add_system(queue_shapes_3d::<T>.in_set(RenderSet::Queue));
+        .add_systems(ExtractSchedule, extract_shapes_3d::<T>)
+        .add_systems(
+            Render,
+            prepare_shape_buffers_3d::<T>.in_set(RenderSet::Prepare),
+        )
+        .add_systems(Render, queue_shapes_3d::<T>.in_set(RenderSet::Queue));
 }
 
 fn setup_type_pipeline_2d<T: ShapeData>(app: &mut App) {
     app.sub_app_mut(RenderApp)
-        .add_system(extract_shapes_2d::<T>.in_schedule(ExtractSchedule))
-        .add_system(prepare_shape_buffers_2d::<T>.in_set(RenderSet::Prepare))
-        .add_system(queue_shapes_2d::<T>.in_set(RenderSet::Queue));
+        .add_systems(ExtractSchedule, extract_shapes_2d::<T>)
+        .add_systems(
+            Render,
+            prepare_shape_buffers_2d::<T>.in_set(RenderSet::Prepare),
+        )
+        .add_systems(Render, queue_shapes_2d::<T>.in_set(RenderSet::Queue));
 }
 
 /// Plugin that sets up the 2d render pipeline for the given [`ShapeComponent`].
@@ -322,6 +327,9 @@ pub struct ShapeRenderPlugin;
 impl Plugin for ShapeRenderPlugin {
     fn build(&self, app: &mut App) {
         load_shaders(app);
+    }
+
+    fn finish(&self, app: &mut App) {
         setup_pipeline(app);
         setup_pipeline_2d(app);
     }
@@ -331,7 +339,9 @@ impl Plugin for ShapeRenderPlugin {
 pub struct Shape3dRenderPlugin;
 
 impl Plugin for Shape3dRenderPlugin {
-    fn build(&self, app: &mut App) {
+    fn build(&self, _app: &mut App) {}
+
+    fn finish(&self, app: &mut App) {
         setup_pipeline_3d(app);
     }
 }

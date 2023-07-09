@@ -1,7 +1,44 @@
-#define_import_path bevy_vector_shapes::functions
+#define_import_path bevy_vector_shapes::core
+
+struct ColorGrading {
+    exposure: f32,
+    gamma: f32,
+    pre_saturation: f32,
+    post_saturation: f32,
+}
+
+struct View {
+    view_proj: mat4x4<f32>,
+    unjittered_view_proj: mat4x4<f32>,
+    inverse_view_proj: mat4x4<f32>,
+    view: mat4x4<f32>,
+    inverse_view: mat4x4<f32>,
+    projection: mat4x4<f32>,
+    inverse_projection: mat4x4<f32>,
+    world_position: vec3<f32>,
+    // viewport(x_origin, y_origin, width, height)
+    viewport: vec4<f32>,
+    color_grading: ColorGrading,
+    mip_bias: f32,
+};
+
+@group(0) @binding(0)
+var<uniform> view: View;
+
+#ifdef TEXTURED
+#ifdef FRAGMENT
+
+@group(1) @binding(0)
+var image: texture_2d<f32>;
+
+@group(1) @binding(1)
+var image_sampler: sampler;
+
+#endif
+#endif
 
 // Vertex positions for a basic quad
-fn get_quad_vertex(v: Vertex) -> vec3<f32> {
+fn get_quad_vertex(index: u32) -> vec3<f32> {
     var vertexes: array<vec3<f32>, 6u> = array<vec3<f32>, 6u>(
         vec3<f32>(-1.0, 1.0, 0.0),
         vec3<f32>(1.0, 1.0, 0.0),
@@ -10,7 +47,7 @@ fn get_quad_vertex(v: Vertex) -> vec3<f32> {
         vec3<f32>(-1.0, -1.0, 0.0),
         vec3<f32>(-1.0, 1.0, 0.0),
     );
-    return vertexes[v.index];
+    return vertexes[index];
 }
 
 // Calculate pixels per world unit from a given position and up vector
@@ -161,7 +198,6 @@ fn get_scale(matrix: mat4x4<f32>) -> vec2<f32> {
 fn get_basis_vectors(matrix: mat4x4<f32>, origin: vec3<f32>, flags: u32) -> mat3x3<f32> {
     return get_basis_vectors_from_up(matrix, origin, normalize(matrix[1].xyz), f_alignment(flags));
 }
-
 // Calculate each of the basis vectors for our shape
 // Z-basis is either taken from the mesh or from the direction to the camera depending on alignment
 fn get_basis_vectors_from_up(matrix: mat4x4<f32>, origin: vec3<f32>, up: vec3<f32>, alignment: u32) -> mat3x3<f32> {
@@ -245,7 +281,7 @@ fn get_texture_uv(vertex: vec2<f32>) -> vec2<f32> {
 
 #ifdef FRAGMENT
 // Transform our color output to respect the alpha mode set for our shape and combine with our texture if any
-fn color_output(color: vec4<f32>, f: FragmentInput) -> vec4<f32> {
+fn color_output(color: vec4<f32>) -> vec4<f32> {
 #ifdef BLEND_MULTIPLY
     var color = vec4<f32>(color.rgb * color.a, color.a);
 #endif
@@ -254,10 +290,6 @@ fn color_output(color: vec4<f32>, f: FragmentInput) -> vec4<f32> {
 #endif
 #ifdef BLEND_ALPHA
     var color = color;
-#endif
-
-#ifdef TEXTURED
-    color = color * textureSample(image, image_sampler, f.texture_uv);
 #endif
 
     return color;

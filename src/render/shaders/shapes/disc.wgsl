@@ -1,4 +1,6 @@
-#import bevy_vector_shapes::bindings
+#import bevy_vector_shapes::core as core
+#import bevy_vector_shapes::core view, image, image_sampler
+#import bevy_vector_shapes::constants PI, TAU
 
 struct Vertex {
     @builtin(vertex_index) index: u32,
@@ -29,14 +31,12 @@ struct VertexOutput {
 #endif
 };
 
-#import bevy_vector_shapes::functions
-
 @vertex
 fn vertex(v: Vertex) -> VertexOutput {
     var out: VertexOutput;
 
     // Vertex positions for a basic quad
-    let vertex = get_quad_vertex(v);
+    let vertex = core::get_quad_vertex(v.index);
 
     let matrix = mat4x4<f32>(
         v.matrix_0,
@@ -45,18 +45,18 @@ fn vertex(v: Vertex) -> VertexOutput {
         v.matrix_3
     );
 
-    var vertex_data = get_vertex_data(matrix, vertex.xy * v.radius, v.thickness, v.flags);
+    var vertex_data = core::get_vertex_data(matrix, vertex.xy * v.radius, v.thickness, v.flags);
 
     // Multiply the world space position by the view projection matrix to convert to our clip position
     out.clip_position = vertex_data.clip_pos;
     out.uv = vertex.xy * vertex_data.uv_ratio;
-    out.thickness = calculate_thickness(vertex_data.thickness_data, v.radius, v.flags);
+    out.thickness = core::calculate_thickness(vertex_data.thickness_data, v.radius, v.flags);
 
     // Extract cap type from flags
-    out.cap = f_cap(v.flags);
+    out.cap = core::f_cap(v.flags);
 
     // Setup angles for the fragment shader if we are an arc
-    var arc = f_arc(v.flags);
+    var arc = core::f_arc(v.flags);
     if arc > 0u {
         // Transform our angles such that 0 points towards y up
         var delta = (v.end_angle - v.start_angle) / 2.0;
@@ -64,7 +64,7 @@ fn vertex(v: Vertex) -> VertexOutput {
         out.delta = delta;
 
         // Rotate our uv space such that y up is towards the center of our arc
-        out.uv = rotate_vec_a(out.uv, -out.angle);
+        out.uv = core::rotate_vec_a(out.uv, -out.angle);
     } else {
         out.angle = 0.0;
         out.delta = PI;
@@ -72,7 +72,7 @@ fn vertex(v: Vertex) -> VertexOutput {
 
     out.color = v.color;
 #ifdef TEXTURED
-    out.texture_uv = get_texture_uv(vertex.xy);
+    out.texture_uv = core::get_texture_uv(vertex.xy);
 #endif
     return out;
 }
@@ -98,11 +98,11 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
 
     // Cut off points outside the shape or within the hollow area
     var dist = length(f.uv) - 1.;
-    in_shape *= step_aa(-f.thickness, dist) * step_aa(dist, 0.);
+    in_shape *= core::step_aa(-f.thickness, dist) * core::step_aa(dist, 0.);
 
     // Cut off points outside the allowed range of angles
     var angle = atan2(f.uv.y, f.uv.x);
-    in_shape *= step_aa_pd(-f.delta, angle, abs(angle)) * step_aa_pd(angle, f.delta, abs(angle));
+    in_shape *= core::step_aa_pd(-f.delta, angle, abs(angle)) * core::step_aa_pd(angle, f.delta, abs(angle));
 
     // Handle rounded caps
     if f.cap == 2u {
@@ -116,15 +116,20 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
         // Mask in points near the end point based on our thickness
         var dist = length(end_point - f.uv);
 
-        var mask = step_aa(dist, f.thickness / 2.0);
+        var mask = core::step_aa(dist, f.thickness / 2.0);
         in_shape = min(max(in_shape, mask), 1.0);
     }
+
+    var color = core::color_output(vec4<f32>(f.color.rgb, in_shape));
+#ifdef TEXTURED
+    color = color * textureSample(image, image_sampler, f.texture_uv);
+#endif
 
     // Discard fragments no longer in the shape
     if in_shape < 0.0001 {
         discard;
     }
 
-    return color_output(vec4<f32>(f.color.rgb, in_shape), f);
+    return color;
 }
 #endif

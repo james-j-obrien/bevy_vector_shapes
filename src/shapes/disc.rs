@@ -111,7 +111,7 @@ impl Default for Disc {
 }
 
 /// Raw data sent to the disc shader to draw a disc
-#[derive(Clone, Copy, Reflect, FromReflect, Pod, Zeroable, Default, Debug)]
+#[derive(Clone, Copy, Reflect, Pod, Zeroable, Default, Debug)]
 #[repr(C)]
 pub struct DiscData {
     transform: [[f32; 4]; 4],

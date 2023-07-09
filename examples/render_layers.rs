@@ -13,10 +13,10 @@ use bevy_vector_shapes::prelude::*;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(ShapePlugin::default())
+        .add_plugins(ShapePlugin::default())
         .insert_resource(ClearColor(Color::DARK_GRAY))
-        .add_startup_system(setup)
-        .add_systems((rotate_cube, draw_shapes))
+        .add_systems(Startup, setup)
+        .add_systems(Update, (rotate_cube, draw_shapes))
         .run();
 }
 

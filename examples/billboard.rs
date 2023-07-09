@@ -10,7 +10,7 @@ use gallery_3d::gallery;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(ShapePlugin {
+        .add_plugins(ShapePlugin {
             base_config: ShapeConfig {
                 alignment: Alignment::Billboard,
                 ..ShapeConfig::default_3d()
@@ -19,8 +19,8 @@ fn main() {
         })
         .insert_resource(ClearColor(Color::DARK_GRAY))
         .insert_resource(Msaa::Off)
-        .add_startup_system(setup)
-        .add_system(draw_gallery)
+        .add_systems(Startup, setup)
+        .add_systems(Update, draw_gallery)
         .run();
 }
 

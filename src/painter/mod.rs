@@ -45,11 +45,7 @@ pub struct PainterPlugin;
 impl Plugin for PainterPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ShapeStorage>()
-            .add_system(
-                update_canvases
-                    .in_base_set(CoreSet::PostUpdate)
-                    .before(CameraUpdateSystem),
-            )
-            .add_system(clear_storage.in_base_set(CoreSet::First));
+            .add_systems(First, clear_storage)
+            .add_systems(PostUpdate, update_canvases.before(CameraUpdateSystem));
     }
 }

@@ -9,14 +9,14 @@ use gallery_3d::gallery;
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugin(ShapePlugin::new(ShapeConfig {
+        .add_plugins(ShapePlugin::new(ShapeConfig {
             disable_laa: true,
             ..ShapeConfig::default_3d()
         }))
         .insert_resource(ClearColor(Color::DARK_GRAY))
         .insert_resource(Msaa::Off)
-        .add_startup_system(setup)
-        .add_system(draw_shapes)
+        .add_systems(Startup, setup)
+        .add_systems(Update, draw_shapes)
         .run();
 }
 
