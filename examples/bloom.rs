@@ -1,5 +1,4 @@
 // Demonstrates shapes respecting global bloom settings
-// TODO: Fix bloom
 
 use bevy::core_pipeline::bloom::BloomSettings;
 use bevy::prelude::*;

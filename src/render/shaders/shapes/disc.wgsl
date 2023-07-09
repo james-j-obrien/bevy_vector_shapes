@@ -120,15 +120,16 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
         in_shape = min(max(in_shape, mask), 1.0);
     }
 
-    // Discard fragments no longer in the shape
-    // if in_shape < 0.0001 {
-    //     discard;
-    // }
-
     var color = core::color_output(vec4<f32>(f.color.rgb, in_shape));
 #ifdef TEXTURED
     color = color * textureSample(image, image_sampler, f.texture_uv);
 #endif
+
+    // Discard fragments no longer in the shape
+    if in_shape < 0.0001 {
+        discard;
+    }
+
     return color;
 }
 #endif

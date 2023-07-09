@@ -165,16 +165,16 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
         in_shape = core::step_aa(abs(f.uv.x), 1.) * core::step_aa(abs(f.uv.y), 1.0);
     }
 
-    // TODO: Investigate
-    // Discard fragments no longer in the shape
-    // if in_shape < 0.0001 {
-    //     discard;
-    // }
-
     var color = core::color_output(vec4<f32>(f.color.rgb, in_shape));
 #ifdef TEXTURED
     color = color * textureSample(image, image_sampler, f.texture_uv);
 #endif
+    
+    // Discard fragments no longer in the shape
+    if in_shape < 0.0001 {
+        discard;
+    }
+
     return color;
 }
 #endif
