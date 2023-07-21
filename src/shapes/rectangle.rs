@@ -4,6 +4,7 @@ use bevy::{
     reflect::Reflect,
     render::render_resource::ShaderRef,
 };
+use serde::{Deserialize, Serialize};
 use wgpu::vertex_attr_array;
 
 use crate::{
@@ -12,7 +13,7 @@ use crate::{
 };
 
 /// Component containing the data for drawing a rectangle.
-#[derive(Component, Reflect)]
+#[derive(Serialize, Deserialize, Component, Reflect)]
 pub struct Rectangle {
     pub color: Color,
     pub thickness: f32,
@@ -38,6 +39,17 @@ impl Rectangle {
             size,
             corner_radii: config.corner_radii,
         }
+    }
+
+    pub fn draw(&self, painter: &mut ShapePainter) {
+        painter.color = self.color;
+        painter.hollow = self.hollow;
+        painter.thickness = self.thickness;
+        painter.alignment = self.alignment;
+        painter.corner_radii = self.corner_radii;
+        painter.thickness_type = self.thickness_type;
+
+        painter.rect(self.size);
     }
 }
 

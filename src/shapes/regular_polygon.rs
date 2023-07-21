@@ -4,6 +4,7 @@ use bevy::{
     reflect::Reflect,
     render::render_resource::ShaderRef,
 };
+use serde::{Deserialize, Serialize};
 use wgpu::vertex_attr_array;
 
 use crate::{
@@ -12,7 +13,7 @@ use crate::{
 };
 
 /// Component containing the data for drawing a regular polygon.
-#[derive(Component, Reflect)]
+#[derive(Serialize, Deserialize, Component, Reflect)]
 pub struct RegularPolygon {
     pub color: Color,
     pub thickness: f32,
@@ -41,6 +42,16 @@ impl RegularPolygon {
             radius,
             roundness: config.roundness,
         }
+    }
+
+    pub fn draw(&self, painter: &mut ShapePainter) {
+        painter.color = self.color;
+        painter.hollow = self.hollow;
+        painter.thickness = self.thickness;
+        painter.alignment = self.alignment;
+        painter.thickness_type = self.thickness_type;
+
+        painter.ngon(self.sides, self.radius);
     }
 }
 
