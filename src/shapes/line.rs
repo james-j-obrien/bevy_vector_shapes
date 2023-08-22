@@ -4,6 +4,7 @@ use bevy::{
     reflect::Reflect,
     render::render_resource::ShaderRef,
 };
+use serde::{Deserialize, Serialize};
 use wgpu::vertex_attr_array;
 
 use crate::{
@@ -12,7 +13,7 @@ use crate::{
 };
 
 /// Component containing the data for drawing a line.
-#[derive(Component, Reflect)]
+#[derive(Serialize, Deserialize, Component, Reflect)]
 pub struct Line {
     pub color: Color,
     pub thickness: f32,
@@ -38,6 +39,16 @@ impl Line {
             start,
             end,
         }
+    }
+
+    pub fn draw(&self, painter: &mut ShapePainter) {
+        painter.cap = self.cap;
+        painter.color = self.color;
+        painter.thickness = self.thickness;
+        painter.alignment = self.alignment;
+        painter.thickness_type = self.thickness_type;
+
+        painter.line(self.start, self.end);
     }
 }
 

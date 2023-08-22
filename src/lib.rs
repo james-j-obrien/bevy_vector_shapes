@@ -47,8 +47,12 @@ use render::{Shape3dRenderPlugin, ShapeRenderPlugin, ShapeType3dPlugin, ShapeTyp
 pub mod painter;
 use painter::*;
 
+/// Provides setup for serialization and deserialization of [`Shape`]s.
+pub mod json;
+
 /// `use bevy_vector_shapes::prelude::*` to import commonly used items.
 pub mod prelude {
+    pub use crate::json::*;
     pub use crate::painter::{
         BuildShapeChildren, Canvas, CanvasCommands, CanvasConfig, CanvasMode, ShapeChildBuilder,
         ShapeCommands, ShapeConfig, ShapeEntityCommands, ShapePainter, ShapeSpawner,

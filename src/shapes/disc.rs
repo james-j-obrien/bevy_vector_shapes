@@ -4,6 +4,7 @@ use bevy::{
     reflect::Reflect,
     render::render_resource::ShaderRef,
 };
+use serde::{Deserialize, Serialize};
 use wgpu::vertex_attr_array;
 
 use crate::{
@@ -14,7 +15,7 @@ use crate::{
 /// Component containing the data for drawing a disc.
 ///
 /// Discs include both arcs and circles
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, Serialize, Deserialize)]
 pub struct Disc {
     pub color: Color,
     pub thickness: f32,
@@ -56,6 +57,20 @@ impl Disc {
             start_angle,
             end_angle,
         }
+    }
+
+    pub fn draw(&self, painter: &mut ShapePainter) {
+        painter.cap = self.cap;
+        painter.color = self.color;
+        painter.hollow = self.hollow;
+        painter.alignment = self.alignment;
+        painter.thickness = self.thickness;
+        painter.thickness_type = self.thickness_type;
+
+        match self.arc {
+            true => painter.arc(self.radius, self.start_angle, self.end_angle),
+            false => painter.circle(self.radius),
+        };
     }
 
     pub fn circle(config: &ShapeConfig, radius: f32) -> Self {

@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::{prelude::*, render::ShapePipelineType};
 
@@ -83,7 +84,7 @@ impl<T: Component> ShapeBundle<T> {
 }
 
 /// Defines the way in which the thickness value of shape is interpreted.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Reflect)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Reflect)]
 pub enum ThicknessType {
     /// 1.0 thickness corresponds to 1.0 world unit.
     #[default]
@@ -101,7 +102,7 @@ impl From<ThicknessType> for u32 {
 }
 
 /// Defines the way in which caps will be rendered on a supported shape.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Reflect)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Reflect)]
 pub enum Cap {
     /// No caps
     None,
@@ -119,7 +120,7 @@ impl From<Cap> for u32 {
 }
 
 /// Defines how a shape will orient itself in relation to it's transform and the camera
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Reflect)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Reflect)]
 pub enum Alignment {
     /// Shapes will respect the rotation in their transform.
     #[default]
