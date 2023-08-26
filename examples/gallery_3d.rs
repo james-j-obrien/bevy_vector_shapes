@@ -15,7 +15,7 @@ pub trait Pastel {
 
 impl Pastel for Color {
     fn pastel(&self) -> Color {
-        *self + Color::WHITE * 0.25
+        (*self + Color::WHITE * 0.25).with_a(1.0)
     }
 }
 
