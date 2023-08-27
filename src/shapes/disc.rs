@@ -133,6 +133,7 @@ impl Default for Disc {
             arc: false,
 
             radius: 1.0,
+            extents: None,
             start_angle: 0.0,
             end_angle: 0.0,
         }
