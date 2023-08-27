@@ -104,7 +104,7 @@ impl ShapeComponent for Disc {
                 transform.scale.y *= extents.y / radius;
                 (radius, transform)
             }
-            None => (radius, tf.compute_transform()), // compute transform here too for matching types
+            None => (self.radius, tf.compute_transform()), // compute transform here too for matching types
         };
 
         DiscData {
@@ -294,7 +294,7 @@ impl DiscBundle for ShapeBundle<Disc> {
     }
 
     fn ellipse(config: &ShapeConfig, extents: Vec2) -> Self {
-        Self::new(config, Disc::ellipse(self.config(), extents))
+        Self::new(config, Disc::ellipse(config, extents))
     }
 }
 
