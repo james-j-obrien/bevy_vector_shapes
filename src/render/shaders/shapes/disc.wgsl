@@ -117,7 +117,7 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
         var dist = length(end_point - f.uv);
 
         var mask = core::step_aa(dist, f.thickness / 2.0);
-        in_shape = min(max(in_shape, mask), 1.0);
+        in_shape = min(max(in_shape, mask), f.color.a);
     }
 
     var color = core::color_output(vec4<f32>(f.color.rgb, in_shape));
