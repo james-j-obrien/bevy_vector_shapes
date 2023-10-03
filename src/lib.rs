@@ -92,7 +92,8 @@ impl Plugin for Shape2dPlugin {
             .add_plugins(ShapeTypePlugin::<Line>::default())
             .add_plugins(ShapeTypePlugin::<Disc>::default())
             .add_plugins(ShapeTypePlugin::<Rectangle>::default())
-            .add_plugins(ShapeTypePlugin::<RegularPolygon>::default());
+            .add_plugins(ShapeTypePlugin::<RegularPolygon>::default())
+            .add_plugins(ShapeTypePlugin::<Triangle>::default());
     }
 }
 
@@ -135,6 +136,7 @@ impl Plugin for ShapePlugin {
             .add_plugins(ShapeType3dPlugin::<Line>::default())
             .add_plugins(ShapeType3dPlugin::<Disc>::default())
             .add_plugins(ShapeType3dPlugin::<Rectangle>::default())
-            .add_plugins(ShapeType3dPlugin::<RegularPolygon>::default());
+            .add_plugins(ShapeType3dPlugin::<RegularPolygon>::default())
+            .add_plugins(ShapeType3dPlugin::<Triangle>::default());
     }
 }

@@ -58,6 +58,9 @@ pub const NGON_HANDLE: HandleUntyped =
 pub const RECT_HANDLE: HandleUntyped =
     HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 15069348348279052351);
 
+pub const TRIANGLE_HANDLE: HandleUntyped =
+    HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 12344032791831516511);
+
 /// Load the libraries shaders as internal assets.
 pub fn load_shaders(app: &mut App) {
     load_internal_asset!(app, CORE_HANDLE, "shaders/core.wgsl", Shader::from_wgsl);
@@ -89,6 +92,12 @@ pub fn load_shaders(app: &mut App) {
         app,
         RECT_HANDLE,
         "shaders/shapes/rect.wgsl",
+        Shader::from_wgsl
+    );
+    load_internal_asset!(
+        app,
+        TRIANGLE_HANDLE,
+        "shaders/shapes/tri.wgsl",
         Shader::from_wgsl
     );
 }
