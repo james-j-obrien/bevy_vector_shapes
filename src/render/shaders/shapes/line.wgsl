@@ -3,7 +3,11 @@
 #import bevy_vector_shapes::constants PI, TAU
 
 struct Vertex {
-    @builtin(vertex_index) index: u32,
+    @builtin(instance_index) index: u32,
+    @location(0) pos: vec3<f32>
+};
+
+struct Shape { 
     @location(0) matrix_0: vec4<f32>,
     @location(1) matrix_1: vec4<f32>,
     @location(2) matrix_2: vec4<f32>,
@@ -16,6 +20,12 @@ struct Vertex {
     @location(7) start: vec3<f32>,
     @location(8) end: vec3<f32>,
 };
+
+#ifdef PER_OBJECT_BUFFER_BATCH_SIZE
+@group(1) @binding(0) var<uniform> shapes: array<Shape, #{PER_OBJECT_BUFFER_BATCH_SIZE}u>;
+#else
+@group(1) @binding(0) var<storage> shapes: array<Shape>;
+#endif 
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -32,18 +42,19 @@ fn vertex(v: Vertex) -> VertexOutput {
     var out: VertexOutput;
 
     // Vertex positions for a basic quad
-    let vertex = core::get_quad_vertex(v.index);
+    let vertex = v.pos;
+    let shape = shapes[v.index];
 
     // Reconstruct our transformation matrix
     let matrix = mat4x4<f32>(
-        v.matrix_0,
-        v.matrix_1,
-        v.matrix_2,
-        v.matrix_3
+        shape.matrix_0,
+        shape.matrix_1,
+        shape.matrix_2,
+        shape.matrix_3
     );
 
     // Vector from start -> end
-    var line_vec = v.end - v.start;
+    var line_vec = shape.end - shape.start;
 
     // Center of line in world space
     var center = line_vec / 2.0;
@@ -52,8 +63,8 @@ fn vertex(v: Vertex) -> VertexOutput {
     var line_length = length(line_vec);
 
     // Get our start and end in world space
-    var world_start = (matrix * vec4<f32>(v.start, 1.0)).xyz;
-    var world_end = (matrix * vec4<f32>(v.end, 1.0)).xyz;
+    var world_start = (matrix * vec4<f32>(shape.start, 1.0)).xyz;
+    var world_end = (matrix * vec4<f32>(shape.end, 1.0)).xyz;
 
     // The y basis is the normalized vector along the line
     var y_basis = normalize(world_start - world_end);
@@ -62,16 +73,16 @@ fn vertex(v: Vertex) -> VertexOutput {
     var origin = select(world_end, world_start, vertex.y < 0.0);
 
     // Calculate the remainder of our basis vectors
-    var basis_vectors = core::get_basis_vectors_from_up(matrix, origin, y_basis, core::f_alignment(v.flags) << 1u);
+    var basis_vectors = core::get_basis_vectors_from_up(matrix, origin, y_basis, core::f_alignment(shape.flags) << 1u);
 
     // Calculate thickness data
-    var thickness_type = core::f_thickness_type(v.flags);
-    var thickness_data = core::get_thickness_data(v.thickness, thickness_type, origin, basis_vectors[1]);
+    var thickness_type = core::f_thickness_type(shape.flags);
+    var thickness_data = core::get_thickness_data(shape.thickness, thickness_type, origin, basis_vectors[1]);
 
     let scale = vec3<f32>(length(matrix[0].xyz), length(matrix[1].xyz), length(matrix[2].xyz));
 
     // If our thickness in pixels is less than 1, clamp to 1 and reduce the alpha instead
-    var out_color = v.color;
+    var out_color = shape.color;
     if thickness_data.thickness_p * max(scale.x, scale.y) < 1.0 {
         out_color.a = out_color.a * thickness_data.thickness_p * max(scale.x, scale.y);
         thickness_data.thickness_p = 1.;
@@ -81,7 +92,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     var thickness = thickness_data.thickness_p / thickness_data.pixels_per_u;
     var radius = thickness / 2.0;
 
-    var cap_type = core::f_cap(v.flags);
+    var cap_type = core::f_cap(shape.flags);
     var cap_length = 0.0;
 
     // If we have caps increase the cap length to our radius

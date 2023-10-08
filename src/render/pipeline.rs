@@ -5,6 +5,7 @@ use bevy::{
     render::{render_resource::*, renderer::RenderDevice, texture::BevyDefault, view::ViewUniform},
     utils::HashMap,
 };
+use wgpu::vertex_attr_array;
 
 use super::*;
 
@@ -114,6 +115,7 @@ impl FromWorld for ShapePipelines {
             ],
             label: Some("shape_texture_layout"),
         });
+
         Self {
             view_layout,
             texture_layout,
@@ -123,7 +125,7 @@ impl FromWorld for ShapePipelines {
 }
 
 impl ShapePipelines {
-    pub fn specialize<T: ShapeData>(
+    pub fn specialize<T: ShapeData + 'static>(
         &mut self,
         cache: &PipelineCache,
         pipeline: &ShapePipeline<T>,
@@ -138,7 +140,8 @@ impl ShapePipelines {
         *pipeline_cache
             .entry((key, TypeId::of::<T>()))
             .or_insert_with(|| {
-                let descriptor = pipeline.specialize(view_layout, texture_layout, key);
+                let descriptor =
+                    pipeline.specialize(view_layout, texture_layout, &pipeline.layout, key);
                 cache.queue_render_pipeline(descriptor)
             })
     }
@@ -146,17 +149,28 @@ impl ShapePipelines {
 
 #[derive(Resource)]
 pub struct ShapePipeline<T: ShapeData> {
-    shader: Handle<Shader>,
+    pub shader: Handle<Shader>,
+    pub layout: BindGroupLayout,
     _marker: PhantomData<T>,
 }
 
 impl<T: ShapeData> FromWorld for ShapePipeline<T> {
     fn from_world(world: &mut World) -> Self {
-        let asset_server = world.resource_mut::<AssetServer>();
+        let render_device = world.resource::<RenderDevice>();
+        let layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
+            entries: &[GpuArrayBuffer::<T>::binding_layout(
+                0,
+                ShaderStages::VERTEX,
+                render_device,
+            )],
+            label: Some("shape_layout"),
+        });
 
+        let asset_server = world.resource_mut::<AssetServer>();
         Self {
+            layout,
             shader: match T::shader() {
-                ShaderRef::Default => RECT_HANDLE.typed::<Shader>(),
+                ShaderRef::Default => RECT_HANDLE,
                 ShaderRef::Handle(handle) => handle,
                 ShaderRef::Path(path) => asset_server.load(path),
             },
@@ -170,6 +184,7 @@ impl<T: ShapeData> ShapePipeline<T> {
         &self,
         view_layout: &BindGroupLayout,
         texture_layout: &BindGroupLayout,
+        shape_layout: &BindGroupLayout,
         key: ShapePipelineKey,
     ) -> RenderPipelineDescriptor {
         let mut shader_defs = Vec::new();
@@ -251,7 +266,7 @@ impl<T: ShapeData> ShapePipeline<T> {
             false => TextureFormat::bevy_default(),
         };
 
-        let mut layout = vec![view_layout.clone()];
+        let mut layout = vec![view_layout.clone(), shape_layout.clone()];
         if key.contains(ShapePipelineKey::TEXTURED) {
             layout.push(texture_layout.clone());
             shader_defs.push("TEXTURED".into());
@@ -266,9 +281,9 @@ impl<T: ShapeData> ShapePipeline<T> {
                 entry_point: "vertex".into(),
                 shader_defs: shader_defs.clone(),
                 buffers: vec![VertexBufferLayout {
-                    array_stride: std::mem::size_of::<T>() as u64,
-                    step_mode: VertexStepMode::Instance,
-                    attributes: T::vertex_layout(),
+                    array_stride: std::mem::size_of::<[f32; 3]>() as u64,
+                    step_mode: VertexStepMode::Vertex,
+                    attributes: vertex_attr_array![0 => Float32x3].into(),
                 }],
             },
             fragment: Some(FragmentState {

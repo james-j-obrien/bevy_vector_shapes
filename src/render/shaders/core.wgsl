@@ -28,27 +28,14 @@ var<uniform> view: View;
 #ifdef TEXTURED
 #ifdef FRAGMENT
 
-@group(1) @binding(0)
+@group(2) @binding(0)
 var image: texture_2d<f32>;
 
-@group(1) @binding(1)
+@group(2) @binding(1)
 var image_sampler: sampler;
 
 #endif
 #endif
-
-// Vertex positions for a basic quad
-fn get_quad_vertex(index: u32) -> vec3<f32> {
-    var vertexes: array<vec3<f32>, 6u> = array<vec3<f32>, 6u>(
-        vec3<f32>(-1.0, 1.0, 0.0),
-        vec3<f32>(1.0, 1.0, 0.0),
-        vec3<f32>(1.0, -1.0, 0.0),
-        vec3<f32>(1.0, -1.0, 0.0),
-        vec3<f32>(-1.0, -1.0, 0.0),
-        vec3<f32>(-1.0, 1.0, 0.0),
-    );
-    return vertexes[index];
-}
 
 // Calculate pixels per world unit from a given position and up vector
 fn pixels_per_unit(pos: vec3<f32>, dir: vec3<f32>) -> f32 {

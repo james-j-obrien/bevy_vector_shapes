@@ -41,7 +41,7 @@ use shapes::*;
 
 /// Rendering specific traits and structs.
 pub mod render;
-use render::{Shape3dRenderPlugin, ShapeRenderPlugin, ShapeType3dPlugin, ShapeTypePlugin};
+use render::{ShapeRenderPlugin, ShapeType3dPlugin, ShapeTypePlugin};
 
 /// Structs and components used by the [`ShapePainter`], [`ShapeCommands`] and [`Canvas`] APIs.
 pub mod painter;
@@ -131,8 +131,7 @@ impl Plugin for ShapePlugin {
         if !self.exclude_2d {
             app.add_plugins(Shape2dPlugin::new(self.base_config.clone()));
         }
-        app.add_plugins(Shape3dRenderPlugin)
-            .add_plugins(ShapeType3dPlugin::<Line>::default())
+        app.add_plugins(ShapeType3dPlugin::<Line>::default())
             .add_plugins(ShapeType3dPlugin::<Disc>::default())
             .add_plugins(ShapeType3dPlugin::<Rectangle>::default())
             .add_plugins(ShapeType3dPlugin::<RegularPolygon>::default());

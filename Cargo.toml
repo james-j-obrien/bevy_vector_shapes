@@ -10,11 +10,11 @@ keywords = ["bevy", "gamedev", "graphics"]
 license = "MIT OR Apache-2.0"
 name = "bevy_vector_shapes"
 repository = "https://github.com/james-j-obrien/bevy_vector_shapes"
-version = "0.5.2"
+version = "0.6.0"
 
 [dependencies]
-any_vec = "0.12.0"
-bevy = {version = "0.11", default-features = false, features = [
+any_vec = "0.13.0"
+bevy = {git = "https://github.com/bevyengine/bevy.git", default-features = false, features = [
   "bevy_core_pipeline",
   "bevy_pbr",
   "bevy_render",

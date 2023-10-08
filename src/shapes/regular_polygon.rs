@@ -2,7 +2,7 @@ use bevy::{
     core::{Pod, Zeroable},
     prelude::*,
     reflect::Reflect,
-    render::render_resource::ShaderRef,
+    render::render_resource::{ShaderRef, ShaderType},
 };
 use wgpu::vertex_attr_array;
 
@@ -63,6 +63,8 @@ impl ShapeComponent for RegularPolygon {
             sides: self.sides,
             radius: self.radius,
             roundness: self.roundness,
+
+            padding: default(),
         }
     }
 }
@@ -84,7 +86,7 @@ impl Default for RegularPolygon {
 }
 
 /// Raw data sent to the regular polygon shader to draw a regular polygon
-#[derive(Clone, Copy, Reflect, Pod, Zeroable, Default, Debug)]
+#[derive(Clone, Copy, Reflect, Pod, Zeroable, Default, Debug, ShaderType)]
 #[repr(C)]
 pub struct NgonData {
     transform: [[f32; 4]; 4],
@@ -96,6 +98,8 @@ pub struct NgonData {
     sides: f32,
     radius: f32,
     roundness: f32,
+
+    padding: [f32; 3],
 }
 
 impl NgonData {
@@ -115,6 +119,8 @@ impl NgonData {
             sides,
             radius,
             roundness: config.roundness,
+
+            padding: default(),
         }
     }
 }
@@ -140,7 +146,7 @@ impl ShapeData for NgonData {
     }
 
     fn shader() -> ShaderRef {
-        NGON_HANDLE.typed::<Shader>().into()
+        NGON_HANDLE.into()
     }
 
     fn transform(&self) -> Mat4 {

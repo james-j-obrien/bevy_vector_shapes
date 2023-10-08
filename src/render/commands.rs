@@ -25,10 +25,11 @@ use bevy::{
 
 use crate::render::*;
 
-pub type DrawShapeCommand = (
+pub type DrawShapeCommand<T> = (
     SetItemPipeline,
     SetShapeViewBindGroup<0>,
-    SetShapeTextureBindGroup<1>,
+    SetShapeBindGroup<T, 1>,
+    SetShapeTextureBindGroup<2>,
     DrawShape,
 );
 
@@ -37,7 +38,7 @@ pub struct ShapeViewBindGroup {
     value: BindGroup,
 }
 
-pub fn queue_shape_view_bind_groups(
+pub fn prepare_shape_view_bind_groups(
     mut commands: Commands,
     render_device: Res<RenderDevice>,
     shape_pipeline: Res<ShapePipelines>,
@@ -62,44 +63,24 @@ pub fn queue_shape_view_bind_groups(
     }
 }
 
-pub struct SetShapeViewBindGroup<const I: usize>;
-
-impl<const I: usize, P: PhaseItem> RenderCommand<P> for SetShapeViewBindGroup<I> {
-    type ViewWorldQuery = (Read<ViewUniformOffset>, Read<ShapeViewBindGroup>);
-    type ItemWorldQuery = ();
-    type Param = ();
-
-    #[inline]
-    fn render<'w>(
-        _item: &P,
-        (view_uniform, shape_view_bind_group): ROQueryItem<'w, Self::ViewWorldQuery>,
-        _entity: ROQueryItem<'w, Self::ItemWorldQuery>,
-        _param: SystemParamItem<'w, '_, Self::Param>,
-        pass: &mut TrackedRenderPass<'w>,
-    ) -> RenderCommandResult {
-        pass.set_bind_group(I, &shape_view_bind_group.value, &[view_uniform.offset]);
-        RenderCommandResult::Success
-    }
-}
-
 #[derive(Resource, Default)]
 pub struct ShapeTextureBindGroups {
     values: HashMap<Handle<Image>, BindGroup>,
 }
 
-pub fn queue_shape_texture_bind_groups(
+pub fn prepare_shape_texture_bind_groups(
     render_device: Res<RenderDevice>,
     shape_pipelines: Res<ShapePipelines>,
-    batches: Query<&ShapeDataBuffer>,
+    batches: Query<&ShapePipelineMaterial>,
     gpu_images: Res<RenderAssets<Image>>,
     mut image_bind_groups: ResMut<ShapeTextureBindGroups>,
 ) {
-    for buffer in batches.iter() {
-        if let Some(handle) = &buffer.material.texture {
-            if let Some(gpu_image) = gpu_images.get(&handle.cast_weak()) {
+    for material in &batches {
+        if let Some(handle) = &material.texture {
+            if let Some(gpu_image) = gpu_images.get(handle.clone_weak()) {
                 image_bind_groups
                     .values
-                    .entry(handle.cast_weak())
+                    .entry(handle.clone_weak())
                     .or_insert_with(|| {
                         render_device.create_bind_group(&BindGroupDescriptor {
                             label: Some("shape_texture_bind_group"),
@@ -121,25 +102,108 @@ pub fn queue_shape_texture_bind_groups(
     }
 }
 
+#[derive(Resource)]
+pub struct ShapeBindGroup<T: ShapeData> {
+    pub value: BindGroup,
+    _marker: PhantomData<T>,
+}
+
+pub fn prepare_shape_bind_group<T: ShapeData + 'static>(
+    mut commands: Commands,
+    pipeline: Res<ShapePipeline<T>>,
+    render_device: Res<RenderDevice>,
+    shape_buffer: Res<GpuArrayBuffer<T>>,
+) {
+    if let Some(binding) = shape_buffer.binding() {
+        commands.insert_resource(ShapeBindGroup {
+            value: render_device.create_bind_group(&BindGroupDescriptor {
+                entries: &[BindGroupEntry {
+                    binding: 0,
+                    resource: binding,
+                }],
+                label: Some("shape_bind_group"),
+                layout: &pipeline.layout,
+            }),
+            _marker: PhantomData::<T>,
+        });
+    }
+}
+
+pub struct SetShapeViewBindGroup<const I: usize>;
+
+impl<const I: usize, P: PhaseItem> RenderCommand<P> for SetShapeViewBindGroup<I> {
+    type ViewWorldQuery = (Read<ViewUniformOffset>, Read<ShapeViewBindGroup>);
+    type ItemWorldQuery = ();
+    type Param = ();
+
+    #[inline]
+    fn render<'w>(
+        _item: &P,
+        (view_uniform, shape_view_bind_group): ROQueryItem<'w, Self::ViewWorldQuery>,
+        _entity: ROQueryItem<'w, Self::ItemWorldQuery>,
+        _param: SystemParamItem<'w, '_, Self::Param>,
+        pass: &mut TrackedRenderPass<'w>,
+    ) -> RenderCommandResult {
+        pass.set_bind_group(I, &shape_view_bind_group.value, &[view_uniform.offset]);
+        RenderCommandResult::Success
+    }
+}
+
 pub struct SetShapeTextureBindGroup<const I: usize>;
 
 impl<const I: usize, P: PhaseItem> RenderCommand<P> for SetShapeTextureBindGroup<I> {
     type ViewWorldQuery = ();
-    type ItemWorldQuery = Read<ShapeDataBuffer>;
+    type ItemWorldQuery = Read<ShapePipelineMaterial>;
     type Param = SRes<ShapeTextureBindGroups>;
 
     #[inline]
     fn render<'w>(
         _item: &P,
         _view: (),
-        shape_buffer: &'w ShapeDataBuffer,
+        material: &'w ShapePipelineMaterial,
         bind_groups: SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
-        if let Some(handle) = &shape_buffer.material.texture {
+        if let Some(handle) = &material.texture {
             let bind_groups = bind_groups.into_inner();
-            pass.set_bind_group(I, bind_groups.values.get(&handle.cast_weak()).unwrap(), &[]);
+            pass.set_bind_group(
+                I,
+                bind_groups.values.get(&handle.clone_weak()).unwrap(),
+                &[],
+            );
         }
+        RenderCommandResult::Success
+    }
+}
+
+pub struct SetShapeBindGroup<T: ShapeData, const I: usize>(PhantomData<T>);
+
+impl<const I: usize, T: ShapeData + 'static, P: PhaseItem> RenderCommand<P>
+    for SetShapeBindGroup<T, I>
+{
+    type Param = SRes<ShapeBindGroup<T>>;
+    type ViewWorldQuery = ();
+    type ItemWorldQuery = ();
+
+    #[inline]
+    fn render<'w>(
+        item: &P,
+        _view: (),
+        _item_query: (),
+        shape_bind_group: SystemParamItem<'w, '_, Self::Param>,
+        pass: &mut TrackedRenderPass<'w>,
+    ) -> RenderCommandResult {
+        let mut dynamic_offsets: [u32; 1] = Default::default();
+        let mut offset_count = 0;
+        if let Some(dynamic_offset) = item.dynamic_offset() {
+            dynamic_offsets[offset_count] = dynamic_offset.get();
+            offset_count += 1;
+        }
+        pass.set_bind_group(
+            I,
+            &shape_bind_group.into_inner().value,
+            &dynamic_offsets[..offset_count],
+        );
         RenderCommandResult::Success
     }
 }
@@ -147,20 +211,27 @@ impl<const I: usize, P: PhaseItem> RenderCommand<P> for SetShapeTextureBindGroup
 pub struct DrawShape;
 
 impl<P: PhaseItem> RenderCommand<P> for DrawShape {
-    type Param = ();
+    type Param = SRes<QuadVertices>;
     type ViewWorldQuery = ();
-    type ItemWorldQuery = Read<ShapeDataBuffer>;
+    type ItemWorldQuery = ();
 
     #[inline]
     fn render<'w>(
-        _item: &P,
+        item: &P,
         _view: (),
-        shape_buffer: &'w ShapeDataBuffer,
-        _param: SystemParamItem<'w, '_, Self::Param>,
+        _item_query: (),
+        quad: SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
-        pass.set_vertex_buffer(0, shape_buffer.buffer.slice(..));
-        pass.draw(0..6, 0..shape_buffer.length as u32);
+        let batch_range = item.batch_range();
+        #[cfg(all(feature = "webgl", target_arch = "wasm32"))]
+        pass.set_push_constants(
+            ShaderStages::VERTEX,
+            0,
+            &(batch_range.start as i32).to_le_bytes(),
+        );
+        pass.set_vertex_buffer(0, quad.into_inner().buffer.slice(..));
+        pass.draw(0..6, batch_range.clone());
 
         RenderCommandResult::Success
     }

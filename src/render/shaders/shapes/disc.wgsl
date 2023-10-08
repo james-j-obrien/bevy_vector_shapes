@@ -3,7 +3,11 @@
 #import bevy_vector_shapes::constants PI, TAU
 
 struct Vertex {
-    @builtin(vertex_index) index: u32,
+    @builtin(instance_index) index: u32,
+    @location(0) pos: vec3<f32>
+};
+
+struct Shape { 
     @location(0) matrix_0: vec4<f32>,
     @location(1) matrix_1: vec4<f32>,
     @location(2) matrix_2: vec4<f32>,
@@ -17,6 +21,12 @@ struct Vertex {
     @location(8) start_angle: f32, 
     @location(9) end_angle: f32,
 };
+
+#ifdef PER_OBJECT_BUFFER_BATCH_SIZE
+@group(1) @binding(0) var<uniform> shapes: array<Shape, #{PER_OBJECT_BUFFER_BATCH_SIZE}u>;
+#else
+@group(1) @binding(0) var<storage> shapes: array<Shape>;
+#endif 
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -36,31 +46,32 @@ fn vertex(v: Vertex) -> VertexOutput {
     var out: VertexOutput;
 
     // Vertex positions for a basic quad
-    let vertex = core::get_quad_vertex(v.index);
+    let vertex = v.pos;
+    let shape = shapes[v.index];
 
     let matrix = mat4x4<f32>(
-        v.matrix_0,
-        v.matrix_1,
-        v.matrix_2,
-        v.matrix_3
+        shape.matrix_0,
+        shape.matrix_1,
+        shape.matrix_2,
+        shape.matrix_3
     );
 
-    var vertex_data = core::get_vertex_data(matrix, vertex.xy * v.radius, v.thickness, v.flags);
+    var vertex_data = core::get_vertex_data(matrix, vertex.xy * shape.radius, shape.thickness, shape.flags);
 
     // Multiply the world space position by the view projection matrix to convert to our clip position
     out.clip_position = vertex_data.clip_pos;
     out.uv = vertex.xy * vertex_data.uv_ratio;
-    out.thickness = core::calculate_thickness(vertex_data.thickness_data, v.radius, v.flags);
+    out.thickness = core::calculate_thickness(vertex_data.thickness_data, shape.radius, shape.flags);
 
     // Extract cap type from flags
-    out.cap = core::f_cap(v.flags);
+    out.cap = core::f_cap(shape.flags);
 
     // Setup angles for the fragment shader if we are an arc
-    var arc = core::f_arc(v.flags);
+    var arc = core::f_arc(shape.flags);
     if arc > 0u {
         // Transform our angles such that 0 points towards y up
-        var delta = (v.end_angle - v.start_angle) / 2.0;
-        out.angle = (v.start_angle - PI / 2.0 + delta);
+        var delta = (shape.end_angle - shape.start_angle) / 2.0;
+        out.angle = (shape.start_angle - PI / 2.0 + delta);
         out.delta = delta;
 
         // Rotate our uv space such that y up is towards the center of our arc
@@ -70,7 +81,7 @@ fn vertex(v: Vertex) -> VertexOutput {
         out.delta = PI;
     }
 
-    out.color = v.color;
+    out.color = shape.color;
 #ifdef TEXTURED
     out.texture_uv = core::get_texture_uv(vertex.xy);
 #endif

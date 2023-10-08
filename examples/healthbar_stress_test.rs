@@ -53,7 +53,8 @@ fn draw_spheres(time: Res<Time>, mut painter: ShapePainter) {
             painter.color = Color::GRAY;
             painter.alignment = Alignment::Billboard;
             painter.transform.translation = position;
-            painter.circle(0.5);
+            painter.corner_radii = Vec4::splat(1.0);
+            painter.rect(Vec2::splat(1.0));
 
             let hp = (offset.sin() + 1.) / 2.0;
             draw_health_bar(&mut painter, hp);

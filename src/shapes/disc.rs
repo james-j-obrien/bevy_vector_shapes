@@ -2,7 +2,7 @@ use bevy::{
     core::{Pod, Zeroable},
     prelude::*,
     reflect::Reflect,
-    render::render_resource::ShaderRef,
+    render::render_resource::{ShaderRef, ShaderType},
 };
 use wgpu::vertex_attr_array;
 
@@ -88,6 +88,8 @@ impl ShapeComponent for Disc {
             radius: self.radius,
             start_angle: self.start_angle,
             end_angle: self.end_angle,
+
+            padding: default(),
         }
     }
 }
@@ -111,7 +113,7 @@ impl Default for Disc {
 }
 
 /// Raw data sent to the disc shader to draw a disc
-#[derive(Clone, Copy, Reflect, Pod, Zeroable, Default, Debug)]
+#[derive(Clone, Copy, Reflect, Pod, Zeroable, Default, Debug, ShaderType)]
 #[repr(C)]
 pub struct DiscData {
     transform: [[f32; 4]; 4],
@@ -123,6 +125,8 @@ pub struct DiscData {
     radius: f32,
     start_angle: f32,
     end_angle: f32,
+
+    padding: [f32; 3],
 }
 
 impl DiscData {
@@ -144,6 +148,8 @@ impl DiscData {
 
             start_angle: 0.0,
             end_angle: 0.0,
+
+            padding: default(),
         }
     }
 
@@ -166,6 +172,8 @@ impl DiscData {
 
             start_angle,
             end_angle,
+
+            padding: default(),
         }
     }
 }
@@ -191,7 +199,7 @@ impl ShapeData for DiscData {
     }
 
     fn shader() -> ShaderRef {
-        DISC_HANDLE.typed::<Shader>().into()
+        DISC_HANDLE.into()
     }
 
     fn transform(&self) -> Mat4 {

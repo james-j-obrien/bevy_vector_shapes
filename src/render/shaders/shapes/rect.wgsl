@@ -3,7 +3,11 @@
 #import bevy_vector_shapes::constants PI, TAU
 
 struct Vertex {
-    @builtin(vertex_index) index: u32,
+    @builtin(instance_index) index: u32,
+    @location(0) pos: vec3<f32>
+};
+
+struct Shape {
     @location(0) matrix_0: vec4<f32>,
     @location(1) matrix_1: vec4<f32>,
     @location(2) matrix_2: vec4<f32>,
@@ -15,7 +19,13 @@ struct Vertex {
 
     @location(7) size: vec2<f32>,
     @location(8) corner_radii: vec4<f32>,
-};
+}
+
+#ifdef PER_OBJECT_BUFFER_BATCH_SIZE
+@group(1) @binding(0) var<uniform> shapes: array<Shape, #{PER_OBJECT_BUFFER_BATCH_SIZE}u>;
+#else
+@group(1) @binding(0) var<storage> shapes: array<Shape>;
+#endif 
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -34,30 +44,31 @@ fn vertex(v: Vertex) -> VertexOutput {
     var out: VertexOutput;
 
     // Vertex positions for a basic quad
-    let vertex = core::get_quad_vertex(v.index);
+    let vertex = v.pos;
+    let shape = shapes[v.index];
 
     // Reconstruct our transformation matrix
     let matrix = mat4x4<f32>(
-        v.matrix_0,
-        v.matrix_1,
-        v.matrix_2,
-        v.matrix_3
+        shape.matrix_0,
+        shape.matrix_1,
+        shape.matrix_2,
+        shape.matrix_3
     );
     // Shortest of the two side lengths for the rectangle
-    var shortest_side = min(v.size.x, v.size.y);
+    var shortest_side = min(shape.size.x, shape.size.y);
 
-    var vertex_data = core::get_vertex_data(matrix, vertex.xy * v.size / 2.0, v.thickness, v.flags);
+    var vertex_data = core::get_vertex_data(matrix, vertex.xy * shape.size / 2.0, shape.thickness, shape.flags);
     out.clip_position = vertex_data.clip_pos;
 
     // Our vertex outputs should all be in uv space so scale our uv space such that the shortest side is of length 1
-    out.size = v.size / shortest_side;
+    out.size = shape.size / shortest_side;
     out.uv = vertex.xy * out.size * vertex_data.uv_ratio;
-    out.thickness = core::calculate_thickness(vertex_data.thickness_data, shortest_side / 2.0, v.flags);
+    out.thickness = core::calculate_thickness(vertex_data.thickness_data, shortest_side / 2.0, shape.flags);
 
     // Our corner radii cannot be more than half the shortest side so cap them
-    out.corner_radii = 2.0 * min(v.corner_radii / shortest_side, vec4<f32>(0.5));
+    out.corner_radii = 2.0 * min(shape.corner_radii / shortest_side, vec4<f32>(0.5));
 
-    out.color = v.color;
+    out.color = shape.color;
 #ifdef TEXTURED
     out.texture_uv = core::get_texture_uv(vertex.xy);
 #endif
