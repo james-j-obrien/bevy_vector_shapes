@@ -59,6 +59,9 @@ pub const NGON_HANDLE: Handle<Shader> = Handle::weak_from_u128(17394960287230910
 /// Handler to shader for drawing rectangles.
 pub const RECT_HANDLE: Handle<Shader> = Handle::weak_from_u128(15069348348279052351);
 
+pub const TRIANGLE_HANDLE: HandleUntyped =
+    HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 12344032791831516511);
+
 /// Load the libraries shaders as internal assets.
 pub fn load_shaders(app: &mut App) {
     load_internal_asset!(app, CORE_HANDLE, "shaders/core.wgsl", Shader::from_wgsl);
@@ -99,6 +102,12 @@ pub fn load_shaders(app: &mut App) {
         "shaders/shapes/rect.wgsl",
         Shader::from_wgsl_with_defs,
         defs
+    );
+    load_internal_asset!(
+        app,
+        TRIANGLE_HANDLE,
+        "shaders/shapes/tri.wgsl",
+        Shader::from_wgsl
     );
 }
 
