@@ -1,6 +1,5 @@
 use std::ops::DerefMut;
 
-use crate::prelude::*;
 use bevy::{prelude::*, render::camera::CameraUpdateSystem};
 
 mod config;
@@ -17,16 +16,6 @@ pub use shape_painter::*;
 
 mod canvas;
 pub use canvas::*;
-
-#[derive(Deref, DerefMut)]
-struct LocalShapeConfig(pub ShapeConfig);
-
-impl FromWorld for LocalShapeConfig {
-    fn from_world(world: &mut World) -> Self {
-        let config = world.resource::<BaseShapeConfig>();
-        Self(config.0.clone())
-    }
-}
 
 /// Trait that contains logic for spawning shape entities by type.
 ///

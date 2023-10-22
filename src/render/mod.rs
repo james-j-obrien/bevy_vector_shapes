@@ -59,8 +59,8 @@ pub const NGON_HANDLE: Handle<Shader> = Handle::weak_from_u128(17394960287230910
 /// Handler to shader for drawing rectangles.
 pub const RECT_HANDLE: Handle<Shader> = Handle::weak_from_u128(15069348348279052351);
 
-pub const TRIANGLE_HANDLE: HandleUntyped =
-    HandleUntyped::weak_from_u64(Shader::TYPE_UUID, 12344032791831516511);
+/// Handler to shader for drawing triangles.
+pub const TRIANGLE_HANDLE: Handle<Shader> = Handle::weak_from_u128(12344032791831516511);
 
 /// Load the libraries shaders as internal assets.
 pub fn load_shaders(app: &mut App) {
@@ -118,6 +118,8 @@ pub type ShapeInstance<T> = (ShapePipelineMaterial, T);
 pub trait ShapeData: Send + Sync + GpuArrayBufferable + 'static {
     /// Corresponding component representing the given shape.
     type Component: ShapeComponent<Data = Self>;
+
+    const VERTICES: u32 = 6;
     /// Vertex layout to be sent to the shader.
     fn vertex_layout() -> Vec<VertexAttribute>;
     /// Reference to the shader to be used when rendering the shape.

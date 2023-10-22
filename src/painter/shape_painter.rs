@@ -9,7 +9,6 @@ use bevy::{ecs::system::SystemParam, prelude::*, utils::HashMap};
 use any_vec::AnyVec;
 
 use crate::{
-    painter::LocalShapeConfig,
     prelude::*,
     render::{ShapeData, ShapeInstance, ShapePipelineMaterial, ShapePipelineType},
 };
@@ -65,24 +64,24 @@ pub fn clear_storage(mut storage: ResMut<ShapeStorage>) {
 /// Shapes are spawned via events which will be extracted for rendering.
 #[derive(SystemParam)]
 pub struct ShapePainter<'w, 's> {
-    config: Local<'s, LocalShapeConfig>,
-    event_writer: ResMut<'w, ShapeStorage>,
+    config: &'s mut ShapeConfig,
+    shapes: ResMut<'w, ShapeStorage>,
     default_config: Res<'w, BaseShapeConfig>,
 }
 
 impl<'w, 's> ShapePainter<'w, 's> {
     pub fn config(&self) -> &ShapeConfig {
-        &self.config.0
+        self.config
     }
 
     pub fn set_config(&mut self, config: ShapeConfig) {
-        self.config.0 = config;
+        *self.config = config;
     }
 
     pub fn send<T: ShapeData>(&mut self, data: T) -> &mut Self {
         let Self {
             config,
-            event_writer,
+            shapes: event_writer,
             ..
         } = self;
         event_writer.send(config, data);
@@ -90,7 +89,7 @@ impl<'w, 's> ShapePainter<'w, 's> {
     }
 
     pub fn send_with_config<T: ShapeData>(&mut self, config: &ShapeConfig, data: T) -> &mut Self {
-        self.event_writer.send(config, data);
+        self.shapes.send(config, data);
         self
     }
 
@@ -101,13 +100,13 @@ impl<'w, 's> ShapePainter<'w, 's> {
     pub fn with_children(&mut self, spawn_children: impl FnOnce(&mut ShapePainter)) -> &mut Self {
         let config = self.config.clone();
         spawn_children(self);
-        self.config.0 = config;
+        *self.config = config;
         self
     }
 
     /// Set the painter's [`ShapeConfig`] to the current value of the [`BaseShapeConfig`] resource.
     pub fn reset(&mut self) {
-        self.config.0 = self.default_config.0.clone();
+        *self.config = self.default_config.0.clone();
     }
 }
 

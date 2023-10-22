@@ -109,9 +109,9 @@ struct FragmentInput {
 
 // Given a position, a central angle and a half side length determine the distance
 //  between the point and a polygon with the given properties
-fn ngonSDF(pos: vec2<f32>, central_angle: f32, half_side_length: f32, apothem: f32) -> f32 {
+fn ngonSDF(position: vec2<f32>, central_angle: f32, half_side_length: f32, apothem: f32) -> f32 {
     // Rotate our position because pentagons look better when they point up :)
-    var pos = pos.yx;
+    var pos = position.yx;
 
     // Calculate the angle between our point and positive y
     var angle = atan2(pos.y, pos.x);

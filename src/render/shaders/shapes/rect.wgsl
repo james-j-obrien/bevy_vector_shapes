@@ -87,10 +87,10 @@ struct FragmentInput {
 };
 
 // Given a position, and a size determine the distance between a point and the rectangle with those side lengths
-fn rectSDF(pos: vec2<f32>, size: vec2<f32>) -> f32 {
+fn rectSDF(position: vec2<f32>, size: vec2<f32>) -> f32 {
     // Rectangles are symmetrical across both axis so we can mirror our point 
     // into the positive x and y axis by taking the absolute value
-    var pos = abs(pos);
+    var pos = abs(position);
 
     // Calculate the vector from the corner of the rect to our point
     var to_corner = pos - size;
@@ -109,8 +109,8 @@ fn rectSDF(pos: vec2<f32>, size: vec2<f32>) -> f32 {
 
 // Given a uv position get which quadrant that position is in
 // Return an integer from 0 to 3
-fn quadrant(uv: vec2<f32>) -> i32 {
-    var uv = vec2<i32>(sign(uv));
+fn quadrant(in: vec2<f32>) -> i32 {
+    var uv = vec2<i32>(sign(in));
     return -uv.y + (-uv.x * uv.y + 3) / 2;
 }
 

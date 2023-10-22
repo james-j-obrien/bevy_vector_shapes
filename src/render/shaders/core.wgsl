@@ -83,7 +83,7 @@ fn calculate_thickness(thickness_data: ThicknessData, uv_scale: f32, flags: u32)
     var hollow = f_hollow(flags);
     if hollow > 0u {
         // Convert from thickness in pixels to uv space, this requires the same scaling factor as size
-        return (thickness_data.thickness_p) / thickness_data.pixels_per_u / uv_scale;
+        return thickness_data.thickness_p / thickness_data.pixels_per_u / uv_scale;
     } else {
         return 1.0;
     }
@@ -156,9 +156,9 @@ fn step_aa(edge: f32, x: f32) -> f32 {
     return 1.0 - saturate(-value / pd);
 }
 
-fn step_aa_pd(edge: f32, x: f32, pd: f32) -> f32 {
+fn step_aa_pd(edge: f32, x: f32, in: f32) -> f32 {
     var value = x - edge;
-    var pd = partial_derivative(pd);
+    var pd = partial_derivative(in);
     return 1.0 - saturate(-value / pd);
 }
 #endif
@@ -268,15 +268,15 @@ fn get_texture_uv(vertex: vec2<f32>) -> vec2<f32> {
 
 #ifdef FRAGMENT
 // Transform our color output to respect the alpha mode set for our shape and combine with our texture if any
-fn color_output(color: vec4<f32>) -> vec4<f32> {
+fn color_output(in: vec4<f32>) -> vec4<f32> {
 #ifdef BLEND_MULTIPLY
-    var color = vec4<f32>(color.rgb * color.a, color.a);
+    var color = vec4<f32>(in.rgb * in.a, in.a);
 #endif
 #ifdef BLEND_ADD
-    var color = vec4<f32>(color.rgb * color.a, 0.0);
+    var color = vec4<f32>(in.rgb * in.a, 0.0);
 #endif
 #ifdef BLEND_ALPHA
-    var color = color;
+    var color = in;
 #endif
 
     return color;

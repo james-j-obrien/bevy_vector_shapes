@@ -30,7 +30,7 @@ pub type DrawShapeCommand<T> = (
     SetShapeViewBindGroup<0>,
     SetShapeBindGroup<T, 1>,
     SetShapeTextureBindGroup<2>,
-    DrawShape,
+    DrawShape<T>,
 );
 
 #[derive(Component, Debug)]
@@ -208,9 +208,9 @@ impl<const I: usize, T: ShapeData + 'static, P: PhaseItem> RenderCommand<P>
     }
 }
 
-pub struct DrawShape;
+pub struct DrawShape<T: ShapeData>(PhantomData<T>);
 
-impl<P: PhaseItem> RenderCommand<P> for DrawShape {
+impl<P: PhaseItem, T: ShapeData> RenderCommand<P> for DrawShape<T> {
     type Param = SRes<QuadVertices>;
     type ViewWorldQuery = ();
     type ItemWorldQuery = ();
@@ -231,7 +231,7 @@ impl<P: PhaseItem> RenderCommand<P> for DrawShape {
             &(batch_range.start as i32).to_le_bytes(),
         );
         pass.set_vertex_buffer(0, quad.into_inner().buffer.slice(..));
-        pass.draw(0..6, batch_range.clone());
+        pass.draw(0..T::VERTICES, batch_range.clone());
 
         RenderCommandResult::Success
     }

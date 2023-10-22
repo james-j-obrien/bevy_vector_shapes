@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use bevy::{ecs::system::SystemParam, prelude::*};
 
-use crate::{painter::LocalShapeConfig, prelude::*, render::ShapePipelineType};
+use crate::{prelude::*, render::ShapePipelineType};
 
 /// A system param that allows ergonomic spawning of shape entities.
 ///
@@ -12,7 +12,7 @@ use crate::{painter::LocalShapeConfig, prelude::*, render::ShapePipelineType};
 /// Shapes will be spawned with commands during the next instance of [`apply_system_buffers`]
 #[derive(SystemParam)]
 pub struct ShapeCommands<'w, 's> {
-    config: Local<'s, LocalShapeConfig>,
+    config: &'s mut ShapeConfig,
     commands: Commands<'w, 's>,
     default_config: Res<'w, BaseShapeConfig>,
 }
@@ -20,7 +20,7 @@ pub struct ShapeCommands<'w, 's> {
 impl<'w, 's> ShapeCommands<'w, 's> {
     /// Set the painter's [`ShapeConfig`] to the current value of the [`BaseShapeConfig`] resource.
     pub fn reset(&mut self) {
-        self.config.0 = self.default_config.0.clone();
+        *self.config = self.default_config.0.clone();
     }
 }
 
@@ -44,11 +44,11 @@ impl<'w, 's> ShapeSpawner<'w, 's> for ShapeCommands<'w, 's> {
     }
 
     fn config(&self) -> &ShapeConfig {
-        &self.config.0
+        self.config
     }
 
     fn set_config(&mut self, config: ShapeConfig) {
-        self.config.0 = config;
+        *self.config = config;
     }
 }
 

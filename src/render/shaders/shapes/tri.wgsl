@@ -3,7 +3,12 @@
 #import bevy_vector_shapes::constants PI, TAU
 
 struct Vertex {
-    @builtin(vertex_index) index: u32,
+    @builtin(instance_index) index: u32,
+    @builtin(vertex_index) vertex_index: u32,
+    @location(0) pos: vec3<f32>
+};
+
+struct Shape {
     @location(0) matrix_0: vec4<f32>,
     @location(1) matrix_1: vec4<f32>,
     @location(2) matrix_2: vec4<f32>,
@@ -13,11 +18,18 @@ struct Vertex {
     @location(5) thickness: f32,
     @location(6) flags: u32,
   
-    @location(7) vertex_0: vec2<f32>,
-    @location(8) vertex_1: vec2<f32>,
-    @location(9) vertex_2: vec2<f32>,
+    @location(7) v_0: vec2<f32>,
+    @location(8) v_1: vec2<f32>,
+    @location(9) v_2: vec2<f32>,
     @location(10) roundness: f32,
 };
+
+#ifdef PER_OBJECT_BUFFER_BATCH_SIZE
+@group(1) @binding(0) var<uniform> shapes: array<Shape, #{PER_OBJECT_BUFFER_BATCH_SIZE}u>;
+#else
+@group(1) @binding(0) var<storage> shapes: array<Shape>;
+#endif 
+
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -25,9 +37,9 @@ struct VertexOutput {
     @location(1) uv: vec2<f32>,
     @location(2) thickness: f32,
 
-    @location(3) vertex_0: vec2<f32>,
-    @location(4) vertex_1: vec2<f32>,
-    @location(5) vertex_2: vec2<f32>,
+    @location(3) v_0: vec2<f32>,
+    @location(4) v_1: vec2<f32>,
+    @location(5) v_2: vec2<f32>,
     @location(6) roundness: f32,
 #ifdef TEXTURED
     @location(7) texture_uv: vec2<f32>,
@@ -39,38 +51,88 @@ fn vertex(v: Vertex) -> VertexOutput {
     var out: VertexOutput;
 
     // Vertex positions for a basic quad
-    let vertex = core::get_quad_vertex(v.index);
+    let shape = shapes[v.index];
+    var vertex: vec2<f32>;
+    switch v.vertex_index {
+        default: {
+            vertex = shape.v_0;
+        }
+        case 1u: {
+            vertex = shape.v_1;
+        }
+        case 2u: {
+            vertex = shape.v_2;
+        }
+    }
 
     // Reconstruct our transformation matrix
     let matrix = mat4x4<f32>(
-        v.matrix_0,
-        v.matrix_1,
-        v.matrix_2,
-        v.matrix_3
+        shape.matrix_0,
+        shape.matrix_1,
+        shape.matrix_2,
+        shape.matrix_3
     );
 
-    // Scale so triangle is completely in clipping range
-    var scale = max(
-        max(
-            max(abs(v.vertex_0.x), abs(v.vertex_0.y)),
-            max(abs(v.vertex_1.x), abs(v.vertex_1.y)),
-        ),
-        max(abs(v.vertex_2.x), abs(v.vertex_2.y)),
+    let l_s_0 = length(shape.v_1 - shape.v_2);
+    let l_s_1 = length(shape.v_2 - shape.v_0);
+    let l_s_2 = length(shape.v_0 - shape.v_1);
+
+    let p = l_s_0 + l_s_1 + l_s_2;
+    let center = (l_s_0 * shape.v_0 + l_s_1 * shape.v_1 + l_s_2 * shape.v_2) / p; 
+    let s = p / 2.0;
+    let in_radius = sqrt((s - l_s_0) * (s - l_s_1) * (s - l_s_2) / s);
+
+    vertex = vertex - center;
+    let v_0 = shape.v_0 - center;
+    let v_1 = shape.v_1 - center;
+    let v_2 = shape.v_2 - center;
+
+    let l_v_0 = length(v_0);
+    let l_v_1 = length(v_1);
+    let l_v_2 = length(v_2);
+
+    let max_dist = max(
+        max(l_v_0, l_v_1),
+        l_v_2
     );
 
-    // Calculate vertex data shared between most shapes
-    var vertex_data = core::get_vertex_data(matrix, vertex.xy * scale, v.thickness, v.flags);
+    let min_dist = min(
+        min(l_v_0, l_v_1),
+        l_v_2
+    );
 
-    out.clip_position = vertex_data.clip_pos;
-    out.uv = vertex_data.local_pos / (scale * vertex_data.scale) * vertex_data.uv_ratio;
-    out.thickness = core::calculate_thickness(vertex_data.thickness_data, scale, v.flags);
-    out.roundness = min(v.roundness / scale, 1.0);
+    // Transform the origin into world space
+    let scale = core::get_scale(matrix);
+    var origin = (matrix * vec4<f32>(scale * center.xy, 0.0, 1.0)).xyz;
+    var basis_vectors = core::get_basis_vectors(matrix, origin, shape.flags);
 
-    out.vertex_0 = (1. - 2. * out.roundness) * v.vertex_0 / scale;
-    out.vertex_1 = (1. - 2. * out.roundness) * v.vertex_1 / scale;
-    out.vertex_2 = (1. - 2. * out.roundness) * v.vertex_2 / scale;
+    // Get thickness data at our origin given our up vector
+    var thickness_type = core::f_thickness_type(shape.flags);
+    let thickness_data = core::get_thickness_data(shape.thickness, thickness_type, origin, basis_vectors[1]);
 
-    out.color = v.color;
+    // Calculate the local position of our vertex by scaling it
+    let local_pos = vertex.xy * scale;
+
+    // Convert our padding into world space and match direction of our vertex
+    var aa_padding_u = core::AA_PADDING / thickness_data.pixels_per_u;
+    let uv_ratio = (in_radius + aa_padding_u) / in_radius;
+
+    // Pad our position and determine the ratio by which to scale uv such that uvs ignore padding
+    var padded_pos = local_pos * uv_ratio;
+
+    // Rotate the position based on our basis vectors and add the world position offset
+    var world_pos = origin + (padded_pos.x * basis_vectors[0]) - (padded_pos.y * basis_vectors[1]);
+    out.clip_position = view.view_proj * vec4<f32>(world_pos, 1.0);
+
+    out.uv = vertex.xy * uv_ratio / min_dist;
+    out.thickness = core::calculate_thickness(thickness_data, min_dist, shape.flags);
+    out.roundness = min(shape.roundness / min_dist, 1.0);
+
+    out.v_0 = (v_0 / min_dist) * ((min_dist - 2.0 * shape.roundness) / min_dist);
+    out.v_1 = (v_1 / min_dist) * ((min_dist - 2.0 * shape.roundness) / min_dist) ;
+    out.v_2 = (v_2 / min_dist) * ((min_dist - 2.0 * shape.roundness) / min_dist) ;
+
+    out.color = shape.color;
 #ifdef TEXTURED
     out.texture_uv = core::get_texture_uv(vertex.xy);
 #endif
@@ -82,9 +144,9 @@ struct FragmentInput {
     @location(1) uv: vec2<f32>,
     @location(2) thickness: f32,
 
-    @location(3) vertex_0: vec2<f32>,
-    @location(4) vertex_1: vec2<f32>,
-    @location(5) vertex_2: vec2<f32>,
+    @location(3) v_0: vec2<f32>,
+    @location(4) v_1: vec2<f32>,
+    @location(5) v_2: vec2<f32>,
     @location(6) roundness: f32,
 #ifdef TEXTURED
     @location(7) texture_uv: vec2<f32>,
@@ -136,7 +198,7 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
     var in_shape = f.color.a;
 
     // Calculate our positions distance from the polygon
-    var dist = triangleSDF(f.uv, f.vertex_0, f.vertex_1, f.vertex_2) - f.roundness;
+    var dist = triangleSDF(f.uv, f.v_0, f.v_1, f.v_2) - f.roundness;
 
     // Cut off points outside the shape or within the hollow area
     in_shape *= core::step_aa(-f.thickness, dist) * core::step_aa(dist, 0.);
@@ -148,7 +210,7 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
 
     // Discard fragments no longer in the shape
     if in_shape < 0.0001 {
-        discard;
+        //discard;
     }
 
     return color;

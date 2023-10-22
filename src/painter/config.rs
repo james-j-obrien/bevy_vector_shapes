@@ -1,5 +1,9 @@
+use bevy::ecs::component::Tick;
+use bevy::ecs::system::{SystemMeta, SystemParam};
+use bevy::ecs::world::unsafe_world_cell::UnsafeWorldCell;
 use bevy::prelude::*;
 use bevy::render::view::RenderLayers;
+use bevy::utils::synccell::SyncCell;
 
 use crate::prelude::*;
 use crate::render::ShapePipelineType;
@@ -139,5 +143,35 @@ impl ShapeConfig {
         let mut config = Self::default_2d();
         config.pipeline = ShapePipelineType::Shape3d;
         config
+    }
+}
+
+impl FromWorld for ShapeConfig {
+    fn from_world(world: &mut World) -> Self {
+        let config = world.resource::<BaseShapeConfig>();
+        config.0.clone()
+    }
+}
+
+unsafe impl<'r> SystemParam for &'r mut ShapeConfig {
+    type State = SyncCell<ShapeConfig>;
+    type Item<'w, 's> = &'s mut ShapeConfig;
+
+    fn init_state(world: &mut World, _system_meta: &mut SystemMeta) -> Self::State {
+        SyncCell::new(ShapeConfig::from_world(world))
+    }
+
+    #[inline]
+    unsafe fn get_param<'w, 's>(
+        state: &'s mut Self::State,
+        _system_meta: &SystemMeta,
+        _world: UnsafeWorldCell<'w>,
+        _change_tick: Tick,
+    ) -> Self::Item<'w, 's> {
+        state.get()
+    }
+
+    fn apply(state: &mut Self::State, _system_meta: &SystemMeta, world: &mut World) {
+        *state.get() = world.resource::<BaseShapeConfig>().0.clone();
     }
 }
