@@ -73,5 +73,4 @@ fn draw_gallery(
             child_painter.translate(Vec3::Y);
             draw_tree(time.elapsed_seconds(), child_painter, 10);
         });
-    painter.reset();
 }

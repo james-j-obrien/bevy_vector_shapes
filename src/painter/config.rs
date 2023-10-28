@@ -29,14 +29,14 @@ pub struct ShapeConfig {
     pub alpha_mode: AlphaMode,
     /// Forcibly disables local anti-aliasing.
     pub disable_laa: bool,
-    /// Forcibly disables local instancing.
-    pub instance_id: u16,
     /// [`Canvas`] to draw the shape to.
     pub canvas: Option<Entity>,
     /// Texture to apply to the shape, color is determined as color * sample.
     pub texture: Option<Handle<Image>>,
     /// Set with set_2d, set_3d and set_canvas.
     pub pipeline: ShapePipelineType,
+    /// Indicates whether or not the config will be reset after a system is run
+    pub reset: bool,
 }
 
 impl ShapeConfig {
@@ -129,10 +129,10 @@ impl ShapeConfig {
             render_layers: None,
             alpha_mode: AlphaMode::Blend,
             disable_laa: false,
-            instance_id: 0,
             canvas: None,
             texture: None,
             pipeline: ShapePipelineType::Shape2d,
+            reset: true,
         }
     }
 }
@@ -172,6 +172,9 @@ unsafe impl<'r> SystemParam for &'r mut ShapeConfig {
     }
 
     fn apply(state: &mut Self::State, _system_meta: &SystemMeta, world: &mut World) {
-        *state.get() = world.resource::<BaseShapeConfig>().0.clone();
+        let state = state.get();
+        if state.reset {
+            *state = world.resource::<BaseShapeConfig>().0.clone();
+        }
     }
 }

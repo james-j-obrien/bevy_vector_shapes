@@ -9,7 +9,7 @@ use crate::{prelude::*, render::ShapePipelineType};
 /// The [`ShapeConfig`] used is initially extracted from the [`BaseShapeConfig`] resource.
 /// Subsequent calls to `reset()` will reset the config back to whatever is currently stored within the [`BaseShapeConfig`] resource.
 ///
-/// Shapes will be spawned with commands during the next instance of [`apply_system_buffers`]
+/// Shapes will be spawned with commands during the next instance of [`apply_deferred`]
 #[derive(SystemParam)]
 pub struct ShapeCommands<'w, 's> {
     config: &'s mut ShapeConfig,

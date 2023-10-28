@@ -1,3 +1,4 @@
+use std::hash::Hasher;
 use std::marker::PhantomData;
 use std::{hash::Hash, ops::Deref};
 
@@ -162,20 +163,6 @@ pub enum ShapePipelineType {
     Shape2d,
 }
 
-/// Marker component to determine shape type for [`ShapeDataBuffer`] entities.
-#[derive(Component)]
-pub struct ShapeType<T: ShapeData> {
-    _marker: PhantomData<T>,
-}
-
-impl<T: ShapeData> Default for ShapeType<T> {
-    fn default() -> Self {
-        Self {
-            _marker: Default::default(),
-        }
-    }
-}
-
 bitfield! {
     /// Flags consumed in shape shaders
     pub struct Flags(u32);
@@ -228,7 +215,7 @@ impl From<&ShapeConfig> for ShapePipelineMaterial {
 struct RenderLayersHash(RenderLayers);
 
 impl Hash for RenderLayersHash {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    fn hash<H: Hasher>(&self, state: &mut H) {
         unsafe { std::mem::transmute::<_, &u32>(self).hash(state) }
     }
 }
@@ -250,7 +237,7 @@ impl AlphaModeOrd {
 }
 
 impl Hash for AlphaModeOrd {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    fn hash<H: Hasher>(&self, state: &mut H) {
         FloatOrd(self.ord()).hash(state);
     }
 }

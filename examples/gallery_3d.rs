@@ -330,7 +330,6 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
             _ => {}
         }
     }
-    painter.reset();
 }
 
 fn main() {
