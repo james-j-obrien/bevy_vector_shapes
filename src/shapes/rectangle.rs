@@ -44,7 +44,7 @@ impl Rectangle {
 impl ShapeComponent for Rectangle {
     type Data = RectData;
 
-    fn into_data(&self, tf: &GlobalTransform) -> RectData {
+    fn get_data(&self, tf: &GlobalTransform) -> RectData {
         let mut flags = Flags(0);
         flags.set_thickness_type(self.thickness_type);
         flags.set_alignment(self.alignment);

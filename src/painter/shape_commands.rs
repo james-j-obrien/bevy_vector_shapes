@@ -56,12 +56,12 @@ impl<'w, 's> Deref for ShapeCommands<'w, 's> {
     type Target = ShapeConfig;
 
     fn deref(&self) -> &Self::Target {
-        &self.config
+        self.config
     }
 }
 
 impl<'w, 's> DerefMut for ShapeCommands<'w, 's> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.config
+        self.config
     }
 }

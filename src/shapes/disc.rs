@@ -70,7 +70,7 @@ impl Disc {
 impl ShapeComponent for Disc {
     type Data = DiscData;
 
-    fn into_data(&self, tf: &GlobalTransform) -> DiscData {
+    fn get_data(&self, tf: &GlobalTransform) -> DiscData {
         let mut flags = Flags(0);
         flags.set_thickness_type(self.thickness_type);
         flags.set_alignment(self.alignment);

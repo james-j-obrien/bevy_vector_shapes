@@ -42,11 +42,7 @@ pub fn update_canvases(
                 }
             }
             CanvasMode::OnDemand => {
-                if canvas.redraw {
-                    camera.is_active = true;
-                } else {
-                    camera.is_active = false;
-                }
+                camera.is_active = canvas.redraw;
             }
         }
 
@@ -116,7 +112,7 @@ impl Canvas {
                     | TextureUsages::RENDER_ATTACHMENT,
                 view_formats: &[],
             },
-            sampler_descriptor: sampler,
+            sampler,
             ..default()
         };
 

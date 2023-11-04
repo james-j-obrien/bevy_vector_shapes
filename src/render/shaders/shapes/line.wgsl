@@ -1,6 +1,6 @@
-#import bevy_vector_shapes::core as core
-#import bevy_vector_shapes::core view, image, image_sampler
-#import bevy_vector_shapes::constants PI, TAU
+#import bevy_vector_shapes::core
+#import bevy_vector_shapes::core::{view, image, image_sampler}
+#import bevy_vector_shapes::constants::{PI, TAU}
 
 struct Vertex {
     @builtin(instance_index) index: u32,

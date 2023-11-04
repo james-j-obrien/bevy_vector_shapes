@@ -59,7 +59,7 @@ impl Default for Line {
 impl ShapeComponent for Line {
     type Data = LineData;
 
-    fn into_data(&self, tf: &GlobalTransform) -> LineData {
+    fn get_data(&self, tf: &GlobalTransform) -> LineData {
         let mut flags = Flags(0);
         flags.set_thickness_type(self.thickness_type);
         flags.set_alignment(self.alignment);

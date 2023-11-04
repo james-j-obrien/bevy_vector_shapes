@@ -153,7 +153,7 @@ pub trait ShapeData: Send + Sync + GpuArrayBufferable + 'static {
 /// Trait implemented by the corresponding component for each shape type.
 pub trait ShapeComponent: Component + GetTypeRegistration {
     type Data: ShapeData<Component = Self>;
-    fn into_data(&self, tf: &GlobalTransform) -> Self::Data;
+    fn get_data(&self, tf: &GlobalTransform) -> Self::Data;
 }
 
 /// Determines whether the shape is rendered in the 2D or 3D pipelines.

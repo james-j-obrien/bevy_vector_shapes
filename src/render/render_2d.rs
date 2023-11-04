@@ -56,7 +56,7 @@ pub fn extract_shapes_2d<T: ShapeData>(
         .iter()
         .filter_map(|(e, cp, tf, vis, flags, rl)| {
             if vis.get() {
-                Some((e, ShapePipelineMaterial::new(flags, rl), cp.into_data(tf)))
+                Some((e, ShapePipelineMaterial::new(flags, rl), cp.get_data(tf)))
             } else {
                 None
             }

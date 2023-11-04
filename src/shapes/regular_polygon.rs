@@ -47,7 +47,7 @@ impl RegularPolygon {
 impl ShapeComponent for RegularPolygon {
     type Data = NgonData;
 
-    fn into_data(&self, tf: &GlobalTransform) -> NgonData {
+    fn get_data(&self, tf: &GlobalTransform) -> NgonData {
         let mut flags = Flags(0);
         flags.set_thickness_type(self.thickness_type);
         flags.set_alignment(self.alignment);

@@ -47,14 +47,14 @@ pub fn prepare_shape_view_bind_groups(
 ) {
     if let Some(view_binding) = view_uniforms.uniforms.binding() {
         for entity in views.iter() {
-            let view_bind_group = render_device.create_bind_group(&BindGroupDescriptor {
-                entries: &[BindGroupEntry {
+            let view_bind_group = render_device.create_bind_group(
+                "shape_view_bind_group",
+                &shape_pipeline.view_layout,
+                &[BindGroupEntry {
                     binding: 0,
                     resource: view_binding.clone(),
                 }],
-                label: Some("shape_view_bind_group"),
-                layout: &shape_pipeline.view_layout,
-            });
+            );
 
             commands.entity(entity).insert(ShapeViewBindGroup {
                 value: view_bind_group,
@@ -82,10 +82,10 @@ pub fn prepare_shape_texture_bind_groups(
                     .values
                     .entry(handle.clone_weak())
                     .or_insert_with(|| {
-                        render_device.create_bind_group(&BindGroupDescriptor {
-                            label: Some("shape_texture_bind_group"),
-                            layout: &shape_pipelines.texture_layout,
-                            entries: &[
+                        render_device.create_bind_group(
+                            "shape_texture_bind_group",
+                            &shape_pipelines.texture_layout,
+                            &[
                                 BindGroupEntry {
                                     binding: 0,
                                     resource: BindingResource::TextureView(&gpu_image.texture_view),
@@ -95,7 +95,7 @@ pub fn prepare_shape_texture_bind_groups(
                                     resource: BindingResource::Sampler(&gpu_image.sampler),
                                 },
                             ],
-                        })
+                        )
                     });
             }
         }
@@ -116,14 +116,14 @@ pub fn prepare_shape_bind_group<T: ShapeData + 'static>(
 ) {
     if let Some(binding) = shape_buffer.binding() {
         commands.insert_resource(ShapeBindGroup {
-            value: render_device.create_bind_group(&BindGroupDescriptor {
-                entries: &[BindGroupEntry {
+            value: render_device.create_bind_group(
+                "shape_bind_group",
+                &pipeline.layout,
+                &[BindGroupEntry {
                     binding: 0,
                     resource: binding,
                 }],
-                label: Some("shape_bind_group"),
-                layout: &pipeline.layout,
-            }),
+            ),
             _marker: PhantomData::<T>,
         });
     }
