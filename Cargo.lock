@@ -832,7 +832,6 @@ dependencies = [
  "bevy",
  "bitfield",
  "bitflags 2.4.1",
- "bytemuck",
  "smallvec",
  "wgpu",
 ]

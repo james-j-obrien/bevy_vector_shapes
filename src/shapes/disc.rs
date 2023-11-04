@@ -1,5 +1,4 @@
 use bevy::{
-    core::{Pod, Zeroable},
     prelude::*,
     reflect::Reflect,
     render::render_resource::{ShaderRef, ShaderType},
@@ -113,7 +112,7 @@ impl Default for Disc {
 }
 
 /// Raw data sent to the disc shader to draw a disc
-#[derive(Clone, Copy, Reflect, Pod, Zeroable, Default, Debug, ShaderType)]
+#[derive(Clone, Copy, Reflect, Default, Debug, ShaderType)]
 #[repr(C)]
 pub struct DiscData {
     transform: [[f32; 4]; 4],

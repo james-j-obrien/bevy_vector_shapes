@@ -1,5 +1,4 @@
 use bevy::{
-    core::{Pod, Zeroable},
     prelude::*,
     reflect::Reflect,
     render::render_resource::{ShaderRef, ShaderType},
@@ -79,7 +78,7 @@ impl Default for Rectangle {
 }
 
 /// Raw data sent to the rectangle shader to draw a rectangle
-#[derive(Clone, Copy, Reflect, Pod, Zeroable, Default, Debug, ShaderType)]
+#[derive(Clone, Copy, Reflect, Default, Debug, ShaderType)]
 #[repr(C)]
 pub struct RectData {
     transform: [[f32; 4]; 4],

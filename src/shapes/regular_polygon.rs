@@ -1,5 +1,4 @@
 use bevy::{
-    core::{Pod, Zeroable},
     prelude::*,
     reflect::Reflect,
     render::render_resource::{ShaderRef, ShaderType},
@@ -86,7 +85,7 @@ impl Default for RegularPolygon {
 }
 
 /// Raw data sent to the regular polygon shader to draw a regular polygon
-#[derive(Clone, Copy, Reflect, Pod, Zeroable, Default, Debug, ShaderType)]
+#[derive(Clone, Copy, Reflect, Default, Debug, ShaderType)]
 #[repr(C)]
 pub struct NgonData {
     transform: [[f32; 4]; 4],

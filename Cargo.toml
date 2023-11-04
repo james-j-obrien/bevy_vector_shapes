@@ -28,6 +28,5 @@ bevy = { version = "0.12" , default-features = false, features = [
 ]}
 bitfield = "0.14.0"
 bitflags = "2.3"
-bytemuck = "1.13.1"
-smallvec = "1.10.0"
+smallvec = "1.11.1"
 wgpu = "0.17.1"

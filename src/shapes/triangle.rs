@@ -1,5 +1,4 @@
 use bevy::{
-    core::{Pod, Zeroable},
     math::vec2,
     prelude::*,
     reflect::Reflect,
@@ -82,7 +81,7 @@ impl Default for Triangle {
 }
 
 /// Raw data sent to the triangle shader to draw a triangle
-#[derive(Clone, Copy, Reflect, Pod, Zeroable, Default, Debug, ShaderType)]
+#[derive(Clone, Copy, Reflect, Default, Debug, ShaderType)]
 #[repr(C)]
 pub struct TriangleData {
     transform: [[f32; 4]; 4],

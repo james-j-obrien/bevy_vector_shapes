@@ -50,10 +50,7 @@ pub fn prepare_shape_view_bind_groups(
             let view_bind_group = render_device.create_bind_group(
                 "shape_view_bind_group",
                 &shape_pipeline.view_layout,
-                &[BindGroupEntry {
-                    binding: 0,
-                    resource: view_binding.clone(),
-                }],
+                &BindGroupEntries::single(view_binding.clone()),
             );
 
             commands.entity(entity).insert(ShapeViewBindGroup {
@@ -85,16 +82,10 @@ pub fn prepare_shape_texture_bind_groups(
                         render_device.create_bind_group(
                             "shape_texture_bind_group",
                             &shape_pipelines.texture_layout,
-                            &[
-                                BindGroupEntry {
-                                    binding: 0,
-                                    resource: BindingResource::TextureView(&gpu_image.texture_view),
-                                },
-                                BindGroupEntry {
-                                    binding: 1,
-                                    resource: BindingResource::Sampler(&gpu_image.sampler),
-                                },
-                            ],
+                            &BindGroupEntries::sequential((
+                                &gpu_image.texture_view,
+                                &gpu_image.sampler,
+                            )),
                         )
                     });
             }
@@ -119,10 +110,7 @@ pub fn prepare_shape_bind_group<T: ShapeData + 'static>(
             value: render_device.create_bind_group(
                 "shape_bind_group",
                 &pipeline.layout,
-                &[BindGroupEntry {
-                    binding: 0,
-                    resource: binding,
-                }],
+                &BindGroupEntries::single(binding),
             ),
             _marker: PhantomData::<T>,
         });
