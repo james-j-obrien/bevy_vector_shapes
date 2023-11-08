@@ -27,6 +27,8 @@ pub struct Disc {
 
     /// External radius of the disc
     pub radius: f32,
+    /// width and height of the disc, overwrites radius if set
+    pub extents: Option<Vec2>,
     /// Starting angle for an arc
     pub start_angle: f32,
     /// Ending angle for an arc
@@ -37,6 +39,7 @@ impl Disc {
     pub fn new(
         config: &ShapeConfig,
         radius: f32,
+        extents: Option<Vec2>,
         arc: bool,
         start_angle: f32,
         end_angle: f32,
@@ -52,17 +55,30 @@ impl Disc {
             arc,
 
             radius,
+            extents,
             start_angle,
             end_angle,
         }
     }
 
     pub fn circle(config: &ShapeConfig, radius: f32) -> Self {
-        Self::new(config, radius, false, 0.0, 0.0, Cap::None)
+        Self::new(config, radius, None, false, 0.0, 0.0, Cap::None)
     }
 
     pub fn arc(config: &ShapeConfig, radius: f32, start_angle: f32, end_angle: f32) -> Self {
-        Self::new(config, radius, true, start_angle, end_angle, config.cap)
+        Self::new(
+            config,
+            radius,
+            None,
+            true,
+            start_angle,
+            end_angle,
+            config.cap,
+        )
+    }
+
+    pub fn ellipse(config: &ShapeConfig, extents: Vec2) -> Self {
+        Self::new(config, 0.0, Some(extents), false, 0.0, 0.0, Cap::None)
     }
 }
 
@@ -77,14 +93,27 @@ impl ShapeComponent for Disc {
         flags.set_cap(self.cap);
         flags.set_arc(self.arc as u32);
 
+        // adjust transfom if extents are set
+        let (radius, transform) = match self.extents {
+            Some(extents) => {
+                let mut transform = tf.compute_transform(); // annoying, but makes it so much easier
+
+                let radius = (extents.x + extents.y) / 2.0; // base radius, will be distorted by scale to achieve ellipse
+                transform.scale.x *= extents.x / radius;
+                transform.scale.y *= extents.y / radius;
+                (radius, transform)
+            }
+            None => (self.radius, tf.compute_transform()), // compute transform here too for matching types
+        };
+
         DiscData {
-            transform: tf.compute_matrix().to_cols_array_2d(),
+            transform: transform.compute_matrix().to_cols_array_2d(),
 
             color: self.color.as_linear_rgba_f32(),
             thickness: self.thickness,
             flags: flags.0,
 
-            radius: self.radius,
+            radius: radius,
             start_angle: self.start_angle,
             end_angle: self.end_angle,
 
@@ -105,6 +134,7 @@ impl Default for Disc {
             arc: false,
 
             radius: 1.0,
+            extents: None,
             start_angle: 0.0,
             end_angle: 0.0,
         }
@@ -149,6 +179,33 @@ impl DiscData {
             end_angle: 0.0,
 
             padding: default(),
+        }
+    }
+
+    pub fn ellipse(config: &ShapeConfig, extents: Vec2) -> DiscData {
+        let mut flags = Flags(0);
+        flags.set_thickness_type(config.thickness_type);
+        flags.set_alignment(config.alignment);
+        flags.set_hollow(config.hollow as u32);
+        flags.set_arc(false as u32);
+
+        let mut transform = config.transform;
+
+        let radius = (extents.x + extents.y) / 2.0; // base radius, will be distorted by scale to achieve ellipse
+        transform.scale.x *= extents.x / radius;
+        transform.scale.y *= extents.y / radius;
+
+        DiscData {
+            transform: transform.compute_matrix().to_cols_array_2d(),
+
+            color: config.color.as_linear_rgba_f32(),
+            thickness: config.thickness,
+            flags: flags.0,
+
+            radius,
+
+            start_angle: 0.0,
+            end_angle: 0.0,
         }
     }
 
@@ -210,6 +267,7 @@ impl ShapeData for DiscData {
 pub trait DiscPainter {
     fn circle(&mut self, radius: f32) -> &mut Self;
     fn arc(&mut self, radius: f32, start_angle: f32, end_angle: f32) -> &mut Self;
+    fn ellipse(&mut self, extents: Vec2) -> &mut Self;
 }
 
 impl<'w, 's> DiscPainter for ShapePainter<'w, 's> {
@@ -221,12 +279,17 @@ impl<'w, 's> DiscPainter for ShapePainter<'w, 's> {
         self.send(DiscData::arc(self.config(), radius, start_angle, end_angle));
         self
     }
+
+    fn ellipse(&mut self, extents: Vec2) -> &mut Self {
+        self.send(DiscData::ellipse(self.config(), extents))
+    }
 }
 
 /// Extension trait for [`ShapeBundle`] to enable creation of bundles for disc type shapes.
 pub trait DiscBundle {
     fn circle(config: &ShapeConfig, radius: f32) -> Self;
     fn arc(config: &ShapeConfig, radius: f32, start_angle: f32, end_angle: f32) -> Self;
+    fn ellipse(config: &ShapeConfig, extents: Vec2) -> Self;
 }
 
 impl DiscBundle for ShapeBundle<Disc> {
@@ -236,6 +299,10 @@ impl DiscBundle for ShapeBundle<Disc> {
 
     fn arc(config: &ShapeConfig, radius: f32, start_angle: f32, end_angle: f32) -> Self {
         Self::new(config, Disc::arc(config, radius, start_angle, end_angle))
+    }
+
+    fn ellipse(config: &ShapeConfig, extents: Vec2) -> Self {
+        Self::new(config, Disc::ellipse(config, extents))
     }
 }
 
@@ -248,6 +315,7 @@ pub trait DiscSpawner<'w, 's> {
         start_angle: f32,
         end_angle: f32,
     ) -> ShapeEntityCommands<'w, 's, '_>;
+    fn ellipse(&mut self, extents: Vec2) -> ShapeEntityCommands<'w, 's, '_>;
 }
 
 impl<'w, 's, T: ShapeSpawner<'w, 's>> DiscSpawner<'w, 's> for T {
@@ -267,5 +335,8 @@ impl<'w, 's, T: ShapeSpawner<'w, 's>> DiscSpawner<'w, 's> for T {
             start_angle,
             end_angle,
         ))
+    }
+    fn ellipse(&mut self, extents: Vec2) -> ShapeEntityCommands<'w, 's, '_> {
+        self.spawn_shape(ShapeBundle::ellipse(self.config(), extents))
     }
 }
