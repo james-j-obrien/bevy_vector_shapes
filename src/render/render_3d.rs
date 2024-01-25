@@ -58,8 +58,20 @@ pub fn extract_shapes_3d<T: ShapeData>(
     entities
         .iter()
         .filter_map(|(e, cp, tf, vis, flags, rl)| {
+            let render_layers = match flags {
+                Some(flags) => flags.render_layers.0,
+                None => match rl {
+                    Some(rl) => *rl,
+                    None => RenderLayers::default(),
+                },
+            };
+
             if vis.get() {
-                Some((e, ShapePipelineMaterial::new(flags, rl), cp.get_data(tf)))
+                Some((
+                    e,
+                    ShapePipelineMaterial::new(flags, Some(&render_layers)),
+                    cp.get_data(tf),
+                ))
             } else {
                 None
             }

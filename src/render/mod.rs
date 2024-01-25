@@ -212,7 +212,7 @@ impl From<&ShapeConfig> for ShapePipelineMaterial {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Ord, PartialOrd)]
-struct RenderLayersHash(RenderLayers);
+pub struct RenderLayersHash(pub RenderLayers);
 
 impl Hash for RenderLayersHash {
     fn hash<H: Hasher>(&self, state: &mut H) {

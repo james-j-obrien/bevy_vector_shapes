@@ -1,6 +1,9 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, render::view::RenderLayers};
 
-use crate::{prelude::*, render::ShapePipelineType};
+use crate::{
+    prelude::*,
+    render::{RenderLayersHash, ShapePipelineType},
+};
 
 mod disc;
 pub use disc::*;
@@ -30,6 +33,8 @@ pub struct ShapeMaterial {
     pub canvas: Option<Entity>,
     /// Texture to apply to the shape.
     pub texture: Option<Handle<Image>>,
+    /// Render layers to use when rendering.
+    pub render_layers: RenderLayersHash,
 }
 
 impl Default for ShapeMaterial {
@@ -40,6 +45,7 @@ impl Default for ShapeMaterial {
             pipeline: ShapePipelineType::Shape2d,
             texture: None,
             canvas: None,
+            render_layers: RenderLayersHash(RenderLayers::default()),
         }
     }
 }
@@ -68,6 +74,7 @@ impl<T: Component> ShapeBundle<T> {
                 pipeline: config.pipeline,
                 canvas: config.canvas,
                 texture: config.texture.clone(),
+                render_layers: RenderLayersHash(config.render_layers.unwrap_or_default()),
             },
             shape_type: component,
         }
