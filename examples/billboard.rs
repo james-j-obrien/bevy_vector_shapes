@@ -33,7 +33,7 @@ fn draw_gallery(
     painter: ShapePainter,
     mut cameras: Query<&mut Transform, With<Camera3d>>,
 ) {
-    cameras.for_each_mut(|mut tf| {
+    cameras.iter_mut().for_each(|mut tf| {
         *tf = Transform::from_translation(
             Quat::from_rotation_y(time.elapsed_seconds()) * Vec3::new(0., 2.5, 16.),
         )

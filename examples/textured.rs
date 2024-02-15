@@ -1,7 +1,7 @@
 // Demonstrated shapes respecting render layers
 // Adapted directly from https://github.com/bevyengine/bevy/blob/main/examples/3d/render_to_texture.rs
 
-use bevy::{core_pipeline::clear_color::ClearColorConfig, prelude::*};
+use bevy::prelude::*;
 use bevy_vector_shapes::prelude::*;
 
 mod gallery_3d;

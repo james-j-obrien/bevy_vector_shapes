@@ -14,7 +14,19 @@ version = "0.6.0"
 
 [dependencies]
 any_vec = "0.13.0"
-bevy = { version = "0.12" , default-features = false, features = [
+# bevy = { version = "0.12" , default-features = false, features = [
+#   "bevy_core_pipeline",
+#   "bevy_pbr",
+#   "bevy_render",
+#   "bevy_sprite",
+#   "bevy_winit",
+#   "hdr",
+#   "ktx2",
+#   "tonemapping_luts",
+#   "x11",
+#   "zstd",
+# ]}
+bevy = { git="https://github.com/bevyengine/bevy.git" , default-features = false, features = [
   "bevy_core_pipeline",
   "bevy_pbr",
   "bevy_render",
@@ -28,5 +40,5 @@ bevy = { version = "0.12" , default-features = false, features = [
 ]}
 bitfield = "0.14.0"
 bitflags = "2.3"
-smallvec = "1.11.1"
-wgpu = "0.17.1"
+smallvec = "1.13.1"
+wgpu = { version = "0.19.1", default-features = false }

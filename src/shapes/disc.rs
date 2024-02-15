@@ -14,7 +14,7 @@ use crate::{
 ///
 /// Discs include both arcs and circles
 #[derive(Component, Reflect)]
-pub struct Disc {
+pub struct DiscComponent {
     pub color: Color,
     pub thickness: f32,
     pub thickness_type: ThicknessType,
@@ -33,7 +33,7 @@ pub struct Disc {
     pub end_angle: f32,
 }
 
-impl Disc {
+impl DiscComponent {
     pub fn new(
         config: &ShapeConfig,
         radius: f32,
@@ -66,7 +66,7 @@ impl Disc {
     }
 }
 
-impl ShapeComponent for Disc {
+impl ShapeComponent for DiscComponent {
     type Data = DiscData;
 
     fn get_data(&self, tf: &GlobalTransform) -> DiscData {
@@ -93,7 +93,7 @@ impl ShapeComponent for Disc {
     }
 }
 
-impl Default for Disc {
+impl Default for DiscComponent {
     fn default() -> Self {
         Self {
             color: Color::BLACK,
@@ -178,7 +178,7 @@ impl DiscData {
 }
 
 impl ShapeData for DiscData {
-    type Component = Disc;
+    type Component = DiscComponent;
 
     fn vertex_layout() -> Vec<wgpu::VertexAttribute> {
         vertex_attr_array![
@@ -229,29 +229,29 @@ pub trait DiscBundle {
     fn arc(config: &ShapeConfig, radius: f32, start_angle: f32, end_angle: f32) -> Self;
 }
 
-impl DiscBundle for ShapeBundle<Disc> {
+impl DiscBundle for ShapeBundle<DiscComponent> {
     fn circle(config: &ShapeConfig, radius: f32) -> Self {
-        Self::new(config, Disc::circle(config, radius))
+        Self::new(config, DiscComponent::circle(config, radius))
     }
 
     fn arc(config: &ShapeConfig, radius: f32, start_angle: f32, end_angle: f32) -> Self {
-        Self::new(config, Disc::arc(config, radius, start_angle, end_angle))
+        Self::new(config, DiscComponent::arc(config, radius, start_angle, end_angle))
     }
 }
 
 /// Extension trait for [`ShapeSpawner`] to enable spawning of entities for disc type shapes.
-pub trait DiscSpawner<'w, 's> {
-    fn circle(&mut self, radius: f32) -> ShapeEntityCommands<'w, 's, '_>;
+pub trait DiscSpawner<'w> {
+    fn circle(&mut self, radius: f32) -> ShapeEntityCommands;
     fn arc(
         &mut self,
         radius: f32,
         start_angle: f32,
         end_angle: f32,
-    ) -> ShapeEntityCommands<'w, 's, '_>;
+    ) -> ShapeEntityCommands;
 }
 
-impl<'w, 's, T: ShapeSpawner<'w, 's>> DiscSpawner<'w, 's> for T {
-    fn circle(&mut self, radius: f32) -> ShapeEntityCommands<'w, 's, '_> {
+impl<'w, T: ShapeSpawner<'w>> DiscSpawner<'w> for T {
+    fn circle(&mut self, radius: f32) -> ShapeEntityCommands {
         self.spawn_shape(ShapeBundle::circle(self.config(), radius))
     }
 
@@ -260,7 +260,7 @@ impl<'w, 's, T: ShapeSpawner<'w, 's>> DiscSpawner<'w, 's> for T {
         radius: f32,
         start_angle: f32,
         end_angle: f32,
-    ) -> ShapeEntityCommands<'w, 's, '_> {
+    ) -> ShapeEntityCommands {
         self.spawn_shape(ShapeBundle::arc(
             self.config(),
             radius,

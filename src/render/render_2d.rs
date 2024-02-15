@@ -1,16 +1,17 @@
 use crate::{painter::ShapeStorage, render::*, shapes::Shape3d};
 use bevy::{
+    ecs::entity::EntityHashMap,
     render::{
         render_phase::{DrawFunctions, RenderPhase},
         render_resource::*,
         view::{ExtractedView, RenderLayers},
         Extract,
     },
-    utils::{EntityHashMap, FloatOrd, HashMap},
+    utils::{FloatOrd, HashMap},
 };
 
 #[derive(Resource, Deref, DerefMut)]
-pub struct Shape2dInstances<T: ShapeData>(EntityHashMap<Entity, ShapeInstance<T>>);
+pub struct Shape2dInstances<T: ShapeData>(EntityHashMap<ShapeInstance<T>>);
 
 impl<T: ShapeData> Default for Shape2dInstances<T> {
     fn default() -> Self {

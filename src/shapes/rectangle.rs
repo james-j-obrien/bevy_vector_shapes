@@ -12,7 +12,7 @@ use crate::{
 
 /// Component containing the data for drawing a rectangle.
 #[derive(Component, Reflect)]
-pub struct Rectangle {
+pub struct RectangleComponent {
     pub color: Color,
     pub thickness: f32,
     pub thickness_type: ThicknessType,
@@ -25,7 +25,7 @@ pub struct Rectangle {
     pub corner_radii: Vec4,
 }
 
-impl Rectangle {
+impl RectangleComponent {
     pub fn new(config: &ShapeConfig, size: Vec2) -> Self {
         Self {
             color: config.color,
@@ -40,7 +40,7 @@ impl Rectangle {
     }
 }
 
-impl ShapeComponent for Rectangle {
+impl ShapeComponent for RectangleComponent {
     type Data = RectData;
 
     fn get_data(&self, tf: &GlobalTransform) -> RectData {
@@ -62,7 +62,7 @@ impl ShapeComponent for Rectangle {
     }
 }
 
-impl Default for Rectangle {
+impl Default for RectangleComponent {
     fn default() -> Self {
         Self {
             color: Color::BLACK,
@@ -112,7 +112,7 @@ impl RectData {
 }
 
 impl ShapeData for RectData {
-    type Component = Rectangle;
+    type Component = RectangleComponent;
 
     fn vertex_layout() -> Vec<wgpu::VertexAttribute> {
         vertex_attr_array![
@@ -165,19 +165,19 @@ pub trait RectangleBundle {
     fn rect(config: &ShapeConfig, size: Vec2) -> Self;
 }
 
-impl RectangleBundle for ShapeBundle<Rectangle> {
+impl RectangleBundle for ShapeBundle<RectangleComponent> {
     fn rect(config: &ShapeConfig, size: Vec2) -> Self {
-        Self::new(config, Rectangle::new(config, size))
+        Self::new(config, RectangleComponent::new(config, size))
     }
 }
 
 /// Extension trait for [`ShapeSpawner`] to enable spawning of rectangle entities.
-pub trait RectangleSpawner<'w, 's> {
-    fn rect(&mut self, size: Vec2) -> ShapeEntityCommands<'w, 's, '_>;
+pub trait RectangleSpawner<'w> {
+    fn rect(&mut self, size: Vec2) -> ShapeEntityCommands;
 }
 
-impl<'w, 's, T: ShapeSpawner<'w, 's>> RectangleSpawner<'w, 's> for T {
-    fn rect(&mut self, size: Vec2) -> ShapeEntityCommands<'w, 's, '_> {
+impl<'w, T: ShapeSpawner<'w>> RectangleSpawner<'w> for T {
+    fn rect(&mut self, size: Vec2) -> ShapeEntityCommands {
         self.spawn_shape(ShapeBundle::rect(self.config(), size))
     }
 }

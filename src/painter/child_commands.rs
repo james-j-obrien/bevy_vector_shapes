@@ -24,12 +24,12 @@ impl Command for PushChildren {
 }
 
 /// [`EntityCommands`] that also stores [`ShapeConfig`] for easier spawning of child shapes.
-pub struct ShapeEntityCommands<'w, 's, 'a> {
-    pub commands: EntityCommands<'w, 's, 'a>,
-    pub config: &'a ShapeConfig,
+pub struct ShapeEntityCommands<'w, 's> {
+    pub commands: EntityCommands<'w>,
+    pub config: &'s ShapeConfig,
 }
 
-impl<'w, 's, 'a> ShapeEntityCommands<'w, 's, 'a> {
+impl<'w, 's> ShapeEntityCommands<'w, 's> {
     /// Takes a closure which builds children for this entity using [`ShapeChildBuilder`].
     pub fn with_children(
         &mut self,
@@ -53,31 +53,31 @@ impl<'w, 's, 'a> ShapeEntityCommands<'w, 's, 'a> {
     }
 }
 
-impl<'w, 's, 'a> Deref for ShapeEntityCommands<'w, 's, 'a> {
-    type Target = EntityCommands<'w, 's, 'a>;
+impl<'w, 's> Deref for ShapeEntityCommands<'w, 's> {
+    type Target = EntityCommands<'w>;
 
     fn deref(&self) -> &Self::Target {
         &self.commands
     }
 }
 
-impl<'w, 's, 'a> DerefMut for ShapeEntityCommands<'w, 's, 'a> {
+impl<'w, 's> DerefMut for ShapeEntityCommands<'w, 's> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.commands
     }
 }
 
 /// [`ChildBuilder`] that also exposes shape spawning methods from [`ShapeCommands`].
-pub struct ShapeChildBuilder<'w, 's, 'a> {
-    commands: &'a mut Commands<'w, 's>,
+pub struct ShapeChildBuilder<'w> {
+    commands: Commands<'w, 'w>,
     config: ShapeConfig,
     push_children: PushChildren,
 }
 
-impl<'w, 's, 'a> ShapeChildBuilder<'w, 's, 'a> {
+impl<'w> ShapeChildBuilder<'w> {
     /// Spawns an entity with the given bundle and inserts it into the parent entity's [`Children`].
     /// Also adds [`Parent`] component to the created entity.
-    pub fn spawn(&mut self, bundle: impl Bundle) -> EntityCommands<'w, 's, '_> {
+    pub fn spawn(&mut self, bundle: impl Bundle) -> EntityCommands {
         let e = self.commands.spawn(bundle);
         self.push_children.children.push(e.id());
         e
@@ -85,7 +85,7 @@ impl<'w, 's, 'a> ShapeChildBuilder<'w, 's, 'a> {
 
     /// Spawns an [`Entity`] with no components and inserts it into the parent entity's [`Children`].
     /// Also adds [`Parent`] component to the created entity.
-    pub fn spawn_empty(&mut self) -> EntityCommands<'w, 's, '_> {
+    pub fn spawn_empty(&mut self) -> EntityCommands {
         let e = self.commands.spawn_empty();
         self.push_children.children.push(e.id());
         e
@@ -103,8 +103,8 @@ impl<'w, 's, 'a> ShapeChildBuilder<'w, 's, 'a> {
     }
 }
 
-impl<'w, 's, 'a> ShapeSpawner<'w, 's> for ShapeChildBuilder<'w, 's, 'a> {
-    fn spawn_shape(&mut self, bundle: impl Bundle) -> ShapeEntityCommands<'w, 's, '_> {
+impl<'w> ShapeSpawner<'w> for ShapeChildBuilder<'w> {
+    fn spawn_shape(&mut self, bundle: impl Bundle) -> ShapeEntityCommands {
         let Self {
             commands, config, ..
         } = self;
@@ -132,7 +132,7 @@ impl<'w, 's, 'a> ShapeSpawner<'w, 's> for ShapeChildBuilder<'w, 's, 'a> {
     }
 }
 
-impl<'w, 's, 'a> Deref for ShapeChildBuilder<'w, 's, 'a> {
+impl<'w> Deref for ShapeChildBuilder<'w> {
     type Target = ShapeConfig;
 
     fn deref(&self) -> &Self::Target {
@@ -140,7 +140,7 @@ impl<'w, 's, 'a> Deref for ShapeChildBuilder<'w, 's, 'a> {
     }
 }
 
-impl<'w, 's, 'a> DerefMut for ShapeChildBuilder<'w, 's, 'a> {
+impl<'w> DerefMut for ShapeChildBuilder<'w> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.config
     }
@@ -158,7 +158,7 @@ pub trait BuildShapeChildren {
     ) -> &mut Self;
 }
 
-impl<'w, 's, 'a> BuildShapeChildren for EntityCommands<'w, 's, 'a> {
+impl<'w> BuildShapeChildren for EntityCommands<'w> {
     fn with_shape_children(
         &mut self,
         config: &ShapeConfig,

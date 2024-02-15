@@ -34,7 +34,7 @@ fn setup(mut commands: Commands) {
 }
 
 fn update_shapes(time: Res<Time>, mut shapes: Query<&mut Transform, With<ShapeMaterial>>) {
-    shapes.for_each_mut(|mut tf| {
+    shapes.iter_mut().for_each(|mut tf| {
         tf.rotate_local_z(time.delta_seconds());
     })
 }

@@ -12,7 +12,7 @@ use crate::{
 
 /// Component containing the data for drawing a line.
 #[derive(Component, Reflect)]
-pub struct Line {
+pub struct LineComponent {
     pub color: Color,
     pub thickness: f32,
     pub thickness_type: ThicknessType,
@@ -25,7 +25,7 @@ pub struct Line {
     pub end: Vec3,
 }
 
-impl Line {
+impl LineComponent {
     pub fn new(config: &ShapeConfig, start: Vec3, end: Vec3) -> Self {
         Self {
             color: config.color,
@@ -40,7 +40,7 @@ impl Line {
     }
 }
 
-impl Default for Line {
+impl Default for LineComponent {
     fn default() -> Self {
         Self {
             color: Color::BLACK,
@@ -55,7 +55,7 @@ impl Default for Line {
     }
 }
 
-impl ShapeComponent for Line {
+impl ShapeComponent for LineComponent {
     type Data = LineData;
 
     fn get_data(&self, tf: &GlobalTransform) -> LineData {
@@ -112,7 +112,7 @@ impl LineData {
 }
 
 impl ShapeData for LineData {
-    type Component = Line;
+    type Component = LineComponent;
 
     fn vertex_layout() -> Vec<wgpu::VertexAttribute> {
         vertex_attr_array![
@@ -155,19 +155,19 @@ pub trait LineBundle {
     fn line(config: &ShapeConfig, start: Vec3, end: Vec3) -> Self;
 }
 
-impl LineBundle for ShapeBundle<Line> {
+impl LineBundle for ShapeBundle<LineComponent> {
     fn line(config: &ShapeConfig, start: Vec3, end: Vec3) -> Self {
-        Self::new(config, Line::new(config, start, end))
+        Self::new(config, LineComponent::new(config, start, end))
     }
 }
 
 /// Extension trait for [`ShapeSpawner`] to enable spawning of line entities.
-pub trait LineSpawner<'w, 's>: ShapeSpawner<'w, 's> {
-    fn line(&mut self, start: Vec3, end: Vec3) -> ShapeEntityCommands<'w, 's, '_>;
+pub trait LineSpawner<'w>: ShapeSpawner<'w> {
+    fn line(&mut self, start: Vec3, end: Vec3) -> ShapeEntityCommands;
 }
 
-impl<'w, 's, T: ShapeSpawner<'w, 's>> LineSpawner<'w, 's> for T {
-    fn line(&mut self, start: Vec3, end: Vec3) -> ShapeEntityCommands<'w, 's, '_> {
+impl<'w, T: ShapeSpawner<'w>> LineSpawner<'w> for T {
+    fn line(&mut self, start: Vec3, end: Vec3) -> ShapeEntityCommands {
         self.spawn_shape(ShapeBundle::line(self.config(), start, end))
     }
 }

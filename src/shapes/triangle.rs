@@ -13,7 +13,7 @@ use crate::{
 
 /// Component containing the data for drawing a triangle.
 #[derive(Component, Reflect)]
-pub struct Triangle {
+pub struct TriangleComponent {
     pub color: Color,
     pub thickness: f32,
     pub thickness_type: ThicknessType,
@@ -23,7 +23,7 @@ pub struct Triangle {
     pub roundness: f32,
 }
 
-impl Triangle {
+impl TriangleComponent {
     pub fn new(config: &ShapeConfig, v_a: Vec2, v_b: Vec2, v_c: Vec2) -> Self {
         Self {
             color: config.color,
@@ -37,7 +37,7 @@ impl Triangle {
     }
 }
 
-impl ShapeComponent for Triangle {
+impl ShapeComponent for TriangleComponent {
     type Data = TriangleData;
 
     fn get_data(&self, tf: &GlobalTransform) -> TriangleData {
@@ -65,7 +65,7 @@ impl ShapeComponent for Triangle {
     }
 }
 
-impl Default for Triangle {
+impl Default for TriangleComponent {
     fn default() -> Self {
         Self {
             color: Color::BLACK,
@@ -118,7 +118,7 @@ impl TriangleData {
 }
 
 impl ShapeData for TriangleData {
-    type Component = Triangle;
+    type Component = TriangleComponent;
     const VERTICES: u32 = 3;
 
     fn vertex_layout() -> Vec<wgpu::VertexAttribute> {
@@ -165,19 +165,19 @@ pub trait TriangleBundle {
     fn triangle(config: &ShapeConfig, v_a: Vec2, v_b: Vec2, v_c: Vec2) -> Self;
 }
 
-impl TriangleBundle for ShapeBundle<Triangle> {
+impl TriangleBundle for ShapeBundle<TriangleComponent> {
     fn triangle(config: &ShapeConfig, v_a: Vec2, v_b: Vec2, v_c: Vec2) -> Self {
-        Self::new(config, Triangle::new(config, v_a, v_b, v_c))
+        Self::new(config, TriangleComponent::new(config, v_a, v_b, v_c))
     }
 }
 
 /// Extension trait for [`ShapeSpawner`] to enable spawning of triangle entities.
-pub trait TriangleSpawner<'w, 's> {
-    fn triangle(&mut self, v_a: Vec2, v_b: Vec2, v_c: Vec2) -> ShapeEntityCommands<'w, 's, '_>;
+pub trait TriangleSpawner<'w> {
+    fn triangle(&mut self, v_a: Vec2, v_b: Vec2, v_c: Vec2) -> ShapeEntityCommands;
 }
 
-impl<'w, 's, T: ShapeSpawner<'w, 's>> TriangleSpawner<'w, 's> for T {
-    fn triangle(&mut self, v_a: Vec2, v_b: Vec2, v_c: Vec2) -> ShapeEntityCommands<'w, 's, '_> {
+impl<'w, T: ShapeSpawner<'w>> TriangleSpawner<'w> for T {
+    fn triangle(&mut self, v_a: Vec2, v_b: Vec2, v_c: Vec2) -> ShapeEntityCommands {
         self.spawn_shape(ShapeBundle::triangle(self.config(), v_a, v_b, v_c))
     }
 }

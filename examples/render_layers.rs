@@ -4,7 +4,6 @@
 use std::f32::consts::PI;
 
 use bevy::{
-    core_pipeline::clear_color::ClearColorConfig,
     prelude::*,
     render::{camera::RenderTarget, texture::ImageSampler, view::RenderLayers},
 };
@@ -45,11 +44,8 @@ fn setup(
 
     commands.spawn((
         Camera3dBundle {
-            camera_3d: Camera3d {
-                clear_color: ClearColorConfig::Custom(Color::WHITE),
-                ..default()
-            },
             camera: Camera {
+                clear_color: ClearColorConfig::Custom(Color::WHITE),
                 // render before the "main pass" camera
                 order: -1,
                 target: RenderTarget::Image(image_handle.clone()),
@@ -63,7 +59,7 @@ fn setup(
     ));
 
     let cube_size = 4.0;
-    let cube_handle = meshes.add(Mesh::from(shape::Box::new(cube_size, cube_size, cube_size)));
+    let cube_handle = meshes.add(Mesh::from(Cuboid::new(cube_size, cube_size, cube_size)));
 
     // This material has the texture that has been rendered.
     let material_handle = materials.add(StandardMaterial {

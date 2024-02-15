@@ -78,8 +78,9 @@ pub struct ShapePipelines {
 impl FromWorld for ShapePipelines {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
-        let view_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            entries: &[
+        let view_layout = render_device.create_bind_group_layout(
+            Some("shape_view_layout"),
+            &[
                 // View
                 BindGroupLayoutEntry {
                     binding: 0,
@@ -92,10 +93,10 @@ impl FromWorld for ShapePipelines {
                     count: None,
                 },
             ],
-            label: Some("shape_view_layout"),
-        });
-        let texture_layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            entries: &[
+        );
+        let texture_layout = render_device.create_bind_group_layout(
+            Some("shape_texture_layout"),
+            &[
                 BindGroupLayoutEntry {
                     binding: 0,
                     visibility: ShaderStages::FRAGMENT,
@@ -113,8 +114,7 @@ impl FromWorld for ShapePipelines {
                     count: None,
                 },
             ],
-            label: Some("shape_texture_layout"),
-        });
+        );
 
         Self {
             view_layout,
@@ -157,14 +157,10 @@ pub struct ShapePipeline<T: ShapeData> {
 impl<T: ShapeData> FromWorld for ShapePipeline<T> {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
-        let layout = render_device.create_bind_group_layout(&BindGroupLayoutDescriptor {
-            entries: &[GpuArrayBuffer::<T>::binding_layout(
-                0,
-                ShaderStages::VERTEX,
-                render_device,
-            )],
-            label: Some("shape_layout"),
-        });
+        let layout = render_device.create_bind_group_layout(
+            Some("shape_layout"),
+            &[GpuArrayBuffer::<T>::binding_layout(render_device).build(0, ShaderStages::VERTEX)],
+        );
 
         let asset_server = world.resource_mut::<AssetServer>();
         Self {

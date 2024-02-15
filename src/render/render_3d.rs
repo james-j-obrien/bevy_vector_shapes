@@ -1,5 +1,6 @@
 use bevy::{
     core_pipeline::core_3d::*,
+    ecs::entity::EntityHashMap,
     prelude::*,
     render::{
         render_phase::{DrawFunctions, RenderPhase},
@@ -7,13 +8,13 @@ use bevy::{
         view::{ExtractedView, RenderLayers},
         Extract,
     },
-    utils::{EntityHashMap, HashMap},
+    utils::HashMap,
 };
 
 use crate::{painter::ShapeStorage, render::*, shapes::Shape3d};
 
 #[derive(Resource, Deref, DerefMut)]
-pub struct Shape3dInstances<T: ShapeData>(EntityHashMap<Entity, ShapeInstance<T>>);
+pub struct Shape3dInstances<T: ShapeData>(EntityHashMap<ShapeInstance<T>>);
 
 impl<T: ShapeData> Default for Shape3dInstances<T> {
     fn default() -> Self {
@@ -141,10 +142,10 @@ pub fn queue_shapes_3d<T: ShapeData>(
                 match material.alpha_mode.0 {
                     AlphaMode::Opaque => {
                         opaque_phase.add(Opaque3d {
+                            asset_id: AssetId::Uuid { uuid: AssetId::<Mesh>::DEFAULT_UUID },
                             entity,
                             draw_function: draw_opaque,
                             pipeline,
-                            distance,
                             batch_range: 0..1,
                             dynamic_offset: None,
                         });
