@@ -31,7 +31,7 @@ impl ShapePipelineKey {
     const MSAA_MASK_BITS: u32 = 0b111;
     const MSAA_SHIFT_BITS: u32 = 32 - Self::MSAA_MASK_BITS.count_ones();
     const BLEND_MASK_BITS: u32 = 0b11;
-    const BLEND_SHIFT_BITS: u32 = Self::MSAA_MASK_BITS - Self::BLEND_MASK_BITS.count_ones();
+    const BLEND_SHIFT_BITS: u32 = Self::MSAA_SHIFT_BITS - Self::BLEND_MASK_BITS.count_ones();
 
     pub fn from_msaa_samples(msaa_samples: u32) -> Self {
         let msaa_bits =
