@@ -1,5 +1,4 @@
 use bevy::{
-    core_pipeline::clear_color::ClearColorConfig,
     ecs::system::EntityCommands,
     prelude::*,
     render::{
@@ -14,40 +13,37 @@ use wgpu::{Extent3d, TextureDescriptor, TextureDimension, TextureFormat, Texture
 ///
 /// Replaces the image handle when the canvas is resized and applies [`CanvasMode`] behaviours.
 pub fn update_canvases(
-    mut canvases: Query<(
-        &mut Canvas,
-        &mut Camera,
-        &mut Camera2d,
-        &mut OrthographicProjection,
-    )>,
+    mut canvases: Query<(&mut Canvas, &mut Camera, &mut OrthographicProjection)>,
 ) {
-    canvases.for_each_mut(|(mut canvas, mut camera, mut camera_2d, mut projection)| {
-        if let RenderTarget::Image(camera_handle) = &camera.target {
-            if camera_handle != &canvas.image {
-                camera.target = RenderTarget::Image(canvas.image.clone());
-                projection.set_changed();
-            }
-        }
-
-        match canvas.mode {
-            CanvasMode::Continuous => {
-                camera_2d.clear_color = canvas.clear_color.clone();
-                camera.is_active = true;
-            }
-            CanvasMode::Persistent => {
-                if canvas.redraw {
-                    camera_2d.clear_color = canvas.clear_color.clone();
-                } else {
-                    camera_2d.clear_color = ClearColorConfig::None;
+    canvases
+        .iter_mut()
+        .for_each(|(mut canvas, mut camera, mut projection)| {
+            if let RenderTarget::Image(camera_handle) = &camera.target {
+                if camera_handle != &canvas.image {
+                    camera.target = RenderTarget::Image(canvas.image.clone());
+                    projection.set_changed();
                 }
             }
-            CanvasMode::OnDemand => {
-                camera.is_active = canvas.redraw;
-            }
-        }
 
-        canvas.redraw = false;
-    })
+            match canvas.mode {
+                CanvasMode::Continuous => {
+                    camera.clear_color = canvas.clear_color.clone();
+                    camera.is_active = true;
+                }
+                CanvasMode::Persistent => {
+                    if canvas.redraw {
+                        camera.clear_color = canvas.clear_color.clone();
+                    } else {
+                        camera.clear_color = ClearColorConfig::None;
+                    }
+                }
+                CanvasMode::OnDemand => {
+                    camera.is_active = canvas.redraw;
+                }
+            }
+
+            canvas.redraw = false;
+        })
 }
 
 /// Enum that determines when canvases are cleared and redrawn.
@@ -195,13 +191,12 @@ impl CanvasBundle {
     pub fn new(image: Handle<Image>, config: CanvasConfig) -> Self {
         Self {
             camera: Camera2dBundle {
-                camera_2d: Camera2d {
-                    clear_color: config.clear_color.clone(),
-                },
+                camera_2d: Camera2d,
                 camera: Camera {
                     order: config.order,
                     hdr: config.hdr,
                     target: RenderTarget::Image(image.clone()),
+                    clear_color: config.clear_color.clone(),
                     ..default()
                 },
                 ..default()
@@ -221,7 +216,7 @@ impl CanvasBundle {
 }
 
 /// Extension trait for [`Commands`] to allow spawning of [`CanvasBundle`] entities.
-pub trait CanvasCommands<'w, 's> {
+pub trait CanvasCommands<'w> {
     /// Spawns a [`CanvasBundle`] according to the given [`CanvasConfig`].
     ///
     /// Returns the created [`Handle<Image>`] and [`EntityCommands`].
@@ -229,15 +224,15 @@ pub trait CanvasCommands<'w, 's> {
         &mut self,
         assets: &mut Assets<Image>,
         config: CanvasConfig,
-    ) -> (Handle<Image>, EntityCommands<'w, 's, '_>);
+    ) -> (Handle<Image>, EntityCommands);
 }
 
-impl<'w, 's> CanvasCommands<'w, 's> for Commands<'w, 's> {
+impl<'w, 's> CanvasCommands<'w> for Commands<'w, 's> {
     fn spawn_canvas(
         &mut self,
         assets: &mut Assets<Image>,
         config: CanvasConfig,
-    ) -> (Handle<Image>, EntityCommands<'w, 's, '_>) {
+    ) -> (Handle<Image>, EntityCommands) {
         let handle = Canvas::create_image(
             assets,
             config.width,

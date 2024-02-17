@@ -12,10 +12,7 @@ use crate::{
 
 /// Component containing the data for drawing a line.
 #[derive(Component, Reflect)]
-pub struct Line {
-    pub color: Color,
-    pub thickness: f32,
-    pub thickness_type: ThicknessType,
+pub struct LineComponent {
     pub alignment: Alignment,
     pub cap: Cap,
 
@@ -25,12 +22,9 @@ pub struct Line {
     pub end: Vec3,
 }
 
-impl Line {
+impl LineComponent {
     pub fn new(config: &ShapeConfig, start: Vec3, end: Vec3) -> Self {
         Self {
-            color: config.color,
-            thickness: config.thickness,
-            thickness_type: config.thickness_type,
             alignment: config.alignment,
             cap: config.cap,
 
@@ -40,12 +34,9 @@ impl Line {
     }
 }
 
-impl Default for Line {
+impl Default for LineComponent {
     fn default() -> Self {
         Self {
-            color: Color::BLACK,
-            thickness: 1.0,
-            thickness_type: default(),
             alignment: default(),
             cap: default(),
 
@@ -55,20 +46,27 @@ impl Default for Line {
     }
 }
 
-impl ShapeComponent for Line {
+impl ShapeComponent for LineComponent {
     type Data = LineData;
 
-    fn get_data(&self, tf: &GlobalTransform) -> LineData {
+    fn get_data(&self, tf: &GlobalTransform, fill: &ShapeFill) -> LineData {
         let mut flags = Flags(0);
-        flags.set_thickness_type(self.thickness_type);
+        let thickness = match fill.ty {
+            FillType::Stroke(thickness, thickness_type) => {
+                flags.set_thickness_type(thickness_type);
+                flags.set_hollow(1);
+                thickness
+            }
+            FillType::Fill => 1.0,
+        };
         flags.set_alignment(self.alignment);
         flags.set_cap(self.cap);
 
         LineData {
             transform: tf.compute_matrix().to_cols_array_2d(),
 
-            color: self.color.as_linear_rgba_f32(),
-            thickness: self.thickness,
+            color: fill.color.as_linear_rgba_f32(),
+            thickness,
             flags: flags.0,
 
             start: self.start,
@@ -112,7 +110,7 @@ impl LineData {
 }
 
 impl ShapeData for LineData {
-    type Component = Line;
+    type Component = LineComponent;
 
     fn vertex_layout() -> Vec<wgpu::VertexAttribute> {
         vertex_attr_array![
@@ -155,19 +153,21 @@ pub trait LineBundle {
     fn line(config: &ShapeConfig, start: Vec3, end: Vec3) -> Self;
 }
 
-impl LineBundle for ShapeBundle<Line> {
+impl LineBundle for ShapeBundle<LineComponent> {
     fn line(config: &ShapeConfig, start: Vec3, end: Vec3) -> Self {
-        Self::new(config, Line::new(config, start, end))
+        let mut bundle = Self::new(config, LineComponent::new(config, start, end));
+        bundle.fill.ty = FillType::Stroke(config.thickness, config.thickness_type);
+        bundle
     }
 }
 
 /// Extension trait for [`ShapeSpawner`] to enable spawning of line entities.
-pub trait LineSpawner<'w, 's>: ShapeSpawner<'w, 's> {
-    fn line(&mut self, start: Vec3, end: Vec3) -> ShapeEntityCommands<'w, 's, '_>;
+pub trait LineSpawner<'w>: ShapeSpawner<'w> {
+    fn line(&mut self, start: Vec3, end: Vec3) -> ShapeEntityCommands;
 }
 
-impl<'w, 's, T: ShapeSpawner<'w, 's>> LineSpawner<'w, 's> for T {
-    fn line(&mut self, start: Vec3, end: Vec3) -> ShapeEntityCommands<'w, 's, '_> {
+impl<'w, T: ShapeSpawner<'w>> LineSpawner<'w> for T {
+    fn line(&mut self, start: Vec3, end: Vec3) -> ShapeEntityCommands {
         self.spawn_shape(ShapeBundle::line(self.config(), start, end))
     }
 }

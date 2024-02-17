@@ -44,6 +44,38 @@ impl Default for ShapeMaterial {
     }
 }
 
+/// Used in [`ShapeFill`] to determine how a shape is rendered.
+#[derive(Default, Clone, Copy)]
+pub enum FillType {
+    /// Fully colored shape
+    #[default]
+    Fill,
+    /// An outline with the given thickness and [`ThicknessType`].
+    ///
+    /// Note: all [`LineComponent`] should use `Stroke`, otherwise they will default to thickness `1.0`.
+    Stroke(f32, ThicknessType),
+}
+
+/// Component attached to each shape to determine how it is rendered.
+#[derive(Default, Component, Clone, Copy)]
+pub struct ShapeFill {
+    pub color: Color,
+    pub ty: FillType,
+}
+
+impl ShapeFill {
+    pub fn new(config: &ShapeConfig) -> Self {
+        Self {
+            color: config.color,
+            ty: if config.hollow {
+                FillType::Stroke(config.thickness, config.thickness_type)
+            } else {
+                FillType::Fill
+            },
+        }
+    }
+}
+
 /// Marker component for entities that should be drawn by the 3D pipeline.
 #[derive(Component)]
 pub struct Shape3d;
@@ -55,6 +87,7 @@ pub struct Shape3d;
 pub struct ShapeBundle<T: Component> {
     pub spatial_bundle: SpatialBundle,
     pub shape: ShapeMaterial,
+    pub fill: ShapeFill,
     pub shape_type: T,
 }
 
@@ -69,6 +102,7 @@ impl<T: Component> ShapeBundle<T> {
                 canvas: config.canvas,
                 texture: config.texture.clone(),
             },
+            fill: ShapeFill::new(config),
             shape_type: component,
         }
     }

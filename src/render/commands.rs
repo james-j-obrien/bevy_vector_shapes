@@ -120,15 +120,15 @@ pub fn prepare_shape_bind_group<T: ShapeData + 'static>(
 pub struct SetShapeViewBindGroup<const I: usize>;
 
 impl<const I: usize, P: PhaseItem> RenderCommand<P> for SetShapeViewBindGroup<I> {
-    type ViewWorldQuery = (Read<ViewUniformOffset>, Read<ShapeViewBindGroup>);
-    type ItemWorldQuery = ();
+    type ViewQuery = (Read<ViewUniformOffset>, Read<ShapeViewBindGroup>);
+    type ItemQuery = ();
     type Param = ();
 
     #[inline]
     fn render<'w>(
         _item: &P,
-        (view_uniform, shape_view_bind_group): ROQueryItem<'w, Self::ViewWorldQuery>,
-        _entity: ROQueryItem<'w, Self::ItemWorldQuery>,
+        (view_uniform, shape_view_bind_group): ROQueryItem<'w, Self::ViewQuery>,
+        _entity: Option<()>,
         _param: SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
@@ -140,18 +140,21 @@ impl<const I: usize, P: PhaseItem> RenderCommand<P> for SetShapeViewBindGroup<I>
 pub struct SetShapeTextureBindGroup<const I: usize>;
 
 impl<const I: usize, P: PhaseItem> RenderCommand<P> for SetShapeTextureBindGroup<I> {
-    type ViewWorldQuery = ();
-    type ItemWorldQuery = Read<ShapePipelineMaterial>;
+    type ViewQuery = ();
+    type ItemQuery = Read<ShapePipelineMaterial>;
     type Param = SRes<ShapeTextureBindGroups>;
 
     #[inline]
     fn render<'w>(
         _item: &P,
         _view: (),
-        material: &'w ShapePipelineMaterial,
+        material: Option<&'w ShapePipelineMaterial>,
         bind_groups: SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
+        let Some(material) = material else {
+            return RenderCommandResult::Success;
+        };
         if let Some(handle) = &material.texture {
             let bind_groups = bind_groups.into_inner();
             pass.set_bind_group(
@@ -170,14 +173,14 @@ impl<const I: usize, T: ShapeData + 'static, P: PhaseItem> RenderCommand<P>
     for SetShapeBindGroup<T, I>
 {
     type Param = SRes<ShapeBindGroup<T>>;
-    type ViewWorldQuery = ();
-    type ItemWorldQuery = ();
+    type ViewQuery = ();
+    type ItemQuery = ();
 
     #[inline]
     fn render<'w>(
         item: &P,
         _view: (),
-        _item_query: (),
+        _item_query: Option<()>,
         shape_bind_group: SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
@@ -200,14 +203,14 @@ pub struct DrawShape<T: ShapeData>(PhantomData<T>);
 
 impl<P: PhaseItem, T: ShapeData> RenderCommand<P> for DrawShape<T> {
     type Param = SRes<QuadVertices>;
-    type ViewWorldQuery = ();
-    type ItemWorldQuery = ();
+    type ViewQuery = ();
+    type ItemQuery = ();
 
     #[inline]
     fn render<'w>(
         item: &P,
         _view: (),
-        _item_query: (),
+        _item_query: Option<()>,
         quad: SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {

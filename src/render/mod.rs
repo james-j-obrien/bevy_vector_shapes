@@ -2,13 +2,13 @@ use std::hash::Hasher;
 use std::marker::PhantomData;
 use std::{hash::Hash, ops::Deref};
 
-use bevy::utils::EntityHashMap;
 use bevy::{
     asset::load_internal_asset,
     core_pipeline::{
         core_2d::Transparent2d,
         core_3d::{AlphaMask3d, Opaque3d, Transparent3d},
     },
+    ecs::entity::EntityHashMap,
     prelude::*,
     reflect::GetTypeRegistration,
     render::{
@@ -153,7 +153,7 @@ pub trait ShapeData: Send + Sync + GpuArrayBufferable + 'static {
 /// Trait implemented by the corresponding component for each shape type.
 pub trait ShapeComponent: Component + GetTypeRegistration {
     type Data: ShapeData<Component = Self>;
-    fn get_data(&self, tf: &GlobalTransform) -> Self::Data;
+    fn get_data(&self, tf: &GlobalTransform, fill: &ShapeFill) -> Self::Data;
 }
 
 /// Determines whether the shape is rendered in the 2D or 3D pipelines.
@@ -244,7 +244,7 @@ impl Hash for AlphaModeOrd {
 
 impl PartialOrd for AlphaModeOrd {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.ord().partial_cmp(&other.ord())
+        Some(self.cmp(other))
     }
 }
 
@@ -446,7 +446,7 @@ impl<T: PartialEq> BatchMeta<T> {
 
 pub fn batch_and_prepare_render_phase<
     T: ShapeData,
-    R: Resource + Deref<Target = EntityHashMap<Entity, ShapeInstance<T>>>,
+    R: Resource + Deref<Target = EntityHashMap<ShapeInstance<T>>>,
     P: CachedRenderPipelinePhaseItem,
 >(
     mut commands: Commands,

@@ -3,6 +3,7 @@
 // Alternatively see the `bundles` example to spawn shapes as bundles and bypass ShapeCommands entirely.
 use std::f32::consts::PI;
 
+use bevy::math::primitives::Cuboid;
 use bevy::prelude::*;
 use bevy_vector_shapes::prelude::*;
 
@@ -38,7 +39,7 @@ fn setup(mut commands: Commands, mut shapes: ShapeCommands, mut meshes: ResMut<A
             }
         });
 
-    let cube_handle = meshes.add(Mesh::from(shape::Box::new(0.2, 0.2, 0.2)));
+    let cube_handle = meshes.add(Mesh::from(Cuboid::new(0.2, 0.2, 0.2)));
 
     // When spawning non-shapes as children of shapes you can use `with_children` like normal
     shapes
@@ -60,5 +61,7 @@ fn setup(mut commands: Commands, mut shapes: ShapeCommands, mut meshes: ResMut<A
 }
 
 fn rotate_targets(time: Res<Time>, mut target: Query<&mut Transform, With<Target>>) {
-    target.for_each_mut(|mut tf| tf.rotation *= Quat::from_rotation_z(time.delta_seconds()))
+    target
+        .iter_mut()
+        .for_each(|mut tf| tf.rotation *= Quat::from_rotation_z(time.delta_seconds()))
 }

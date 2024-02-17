@@ -24,21 +24,21 @@ impl<'w, 's> ShapeCommands<'w, 's> {
     }
 }
 
-impl<'w, 's> ShapeSpawner<'w, 's> for ShapeCommands<'w, 's> {
-    fn spawn_shape(&mut self, bundle: impl Bundle) -> ShapeEntityCommands<'w, 's, '_> {
+impl<'w, 's> ShapeSpawner<'w> for ShapeCommands<'w, 's> {
+    fn spawn_shape(&mut self, bundle: impl Bundle) -> ShapeEntityCommands {
         let Self {
             commands, config, ..
         } = self;
-        let mut e = commands.spawn(bundle);
+        let mut entity = commands.spawn(bundle);
         if let Some(layers) = config.render_layers {
-            e.insert(layers);
+            entity.insert(layers);
         }
         if let ShapePipelineType::Shape3d = config.pipeline {
-            e.insert(Shape3d);
+            entity.insert(Shape3d);
         }
 
         ShapeEntityCommands {
-            commands: e,
+            commands: entity,
             config,
         }
     }

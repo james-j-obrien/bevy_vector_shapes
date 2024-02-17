@@ -1,16 +1,17 @@
 use crate::{painter::ShapeStorage, render::*, shapes::Shape3d};
 use bevy::{
+    ecs::entity::EntityHashMap,
     render::{
         render_phase::{DrawFunctions, RenderPhase},
         render_resource::*,
         view::{ExtractedView, RenderLayers},
         Extract,
     },
-    utils::{EntityHashMap, FloatOrd, HashMap},
+    utils::{FloatOrd, HashMap},
 };
 
 #[derive(Resource, Deref, DerefMut)]
-pub struct Shape2dInstances<T: ShapeData>(EntityHashMap<Entity, ShapeInstance<T>>);
+pub struct Shape2dInstances<T: ShapeData>(EntityHashMap<ShapeInstance<T>>);
 
 impl<T: ShapeData> Default for Shape2dInstances<T> {
     fn default() -> Self {
@@ -37,6 +38,7 @@ pub fn extract_shapes_2d<T: ShapeData>(
             (
                 Entity,
                 &T::Component,
+                &ShapeFill,
                 &GlobalTransform,
                 &InheritedVisibility,
                 Option<&ShapeMaterial>,
@@ -54,9 +56,13 @@ pub fn extract_shapes_2d<T: ShapeData>(
 
     entities
         .iter()
-        .filter_map(|(e, cp, tf, vis, flags, rl)| {
+        .filter_map(|(e, cp, fill, tf, vis, flags, rl)| {
             if vis.get() {
-                Some((e, ShapePipelineMaterial::new(flags, rl), cp.get_data(tf)))
+                Some((
+                    e,
+                    ShapePipelineMaterial::new(flags, rl),
+                    cp.get_data(tf, fill),
+                ))
             } else {
                 None
             }

@@ -12,7 +12,7 @@ use crate::{
 
 /// Component containing the data for drawing a regular polygon.
 #[derive(Component, Reflect)]
-pub struct RegularPolygon {
+pub struct RegularPolygonComponent {
     pub color: Color,
     pub thickness: f32,
     pub thickness_type: ThicknessType,
@@ -27,7 +27,7 @@ pub struct RegularPolygon {
     pub roundness: f32,
 }
 
-impl RegularPolygon {
+impl RegularPolygonComponent {
     pub fn new(config: &ShapeConfig, sides: f32, radius: f32) -> Self {
         Self {
             color: config.color,
@@ -43,20 +43,26 @@ impl RegularPolygon {
     }
 }
 
-impl ShapeComponent for RegularPolygon {
+impl ShapeComponent for RegularPolygonComponent {
     type Data = NgonData;
 
-    fn get_data(&self, tf: &GlobalTransform) -> NgonData {
+    fn get_data(&self, tf: &GlobalTransform, fill: &ShapeFill) -> NgonData {
         let mut flags = Flags(0);
-        flags.set_thickness_type(self.thickness_type);
+        let thickness = match fill.ty {
+            FillType::Stroke(thickness, thickness_type) => {
+                flags.set_thickness_type(thickness_type);
+                flags.set_hollow(1);
+                thickness
+            }
+            FillType::Fill => 1.0,
+        };
         flags.set_alignment(self.alignment);
-        flags.set_hollow(self.hollow as u32);
 
         NgonData {
             transform: tf.compute_matrix().to_cols_array_2d(),
 
-            color: self.color.as_linear_rgba_f32(),
-            thickness: self.thickness,
+            color: fill.color.as_linear_rgba_f32(),
+            thickness,
             flags: flags.0,
 
             sides: self.sides,
@@ -68,7 +74,7 @@ impl ShapeComponent for RegularPolygon {
     }
 }
 
-impl Default for RegularPolygon {
+impl Default for RegularPolygonComponent {
     fn default() -> Self {
         Self {
             color: Color::BLACK,
@@ -125,7 +131,7 @@ impl NgonData {
 }
 
 impl ShapeData for NgonData {
-    type Component = RegularPolygon;
+    type Component = RegularPolygonComponent;
 
     fn vertex_layout() -> Vec<wgpu::VertexAttribute> {
         vertex_attr_array![
@@ -169,19 +175,19 @@ pub trait RegularPolygonBundle {
     fn ngon(config: &ShapeConfig, sides: f32, radius: f32) -> Self;
 }
 
-impl RegularPolygonBundle for ShapeBundle<RegularPolygon> {
+impl RegularPolygonBundle for ShapeBundle<RegularPolygonComponent> {
     fn ngon(config: &ShapeConfig, sides: f32, radius: f32) -> Self {
-        Self::new(config, RegularPolygon::new(config, sides, radius))
+        Self::new(config, RegularPolygonComponent::new(config, sides, radius))
     }
 }
 
 /// Extension trait for [`ShapeSpawner`] to enable spawning of regular polygon entities.
-pub trait RegularPolygonSpawner<'w, 's> {
-    fn ngon(&mut self, sides: f32, radius: f32) -> ShapeEntityCommands<'w, 's, '_>;
+pub trait RegularPolygonSpawner<'w> {
+    fn ngon(&mut self, sides: f32, radius: f32) -> ShapeEntityCommands;
 }
 
-impl<'w, 's, T: ShapeSpawner<'w, 's>> RegularPolygonSpawner<'w, 's> for T {
-    fn ngon(&mut self, sides: f32, radius: f32) -> ShapeEntityCommands<'w, 's, '_> {
+impl<'w, T: ShapeSpawner<'w>> RegularPolygonSpawner<'w> for T {
+    fn ngon(&mut self, sides: f32, radius: f32) -> ShapeEntityCommands {
         self.spawn_shape(ShapeBundle::ngon(self.config(), sides, radius))
     }
 }

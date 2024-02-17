@@ -24,14 +24,14 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     });
 }
 
-fn update_canvas(keys: Res<Input<KeyCode>>, mut canvas: Query<&mut Canvas>) {
+fn update_canvas(keys: Res<ButtonInput<KeyCode>>, mut canvas: Query<&mut Canvas>) {
     let mut canvas = canvas.single_mut();
 
     if keys.just_pressed(KeyCode::Space) {
         canvas.redraw();
     }
 
-    if keys.just_pressed(KeyCode::M) {
+    if keys.just_pressed(KeyCode::KeyM) {
         canvas.mode = match canvas.mode {
             CanvasMode::Continuous => CanvasMode::Persistent,
             CanvasMode::Persistent => CanvasMode::OnDemand,

@@ -12,12 +12,8 @@ use crate::{
 
 /// Component containing the data for drawing a rectangle.
 #[derive(Component, Reflect)]
-pub struct Rectangle {
-    pub color: Color,
-    pub thickness: f32,
-    pub thickness_type: ThicknessType,
+pub struct RectangleComponent {
     pub alignment: Alignment,
-    pub hollow: bool,
 
     /// Size of the rectangle on the x and y axis.
     pub size: Vec2,
@@ -25,14 +21,10 @@ pub struct Rectangle {
     pub corner_radii: Vec4,
 }
 
-impl Rectangle {
+impl RectangleComponent {
     pub fn new(config: &ShapeConfig, size: Vec2) -> Self {
         Self {
-            color: config.color,
-            thickness: config.thickness,
-            thickness_type: config.thickness_type,
             alignment: config.alignment,
-            hollow: config.hollow,
 
             size,
             corner_radii: config.corner_radii,
@@ -40,20 +32,26 @@ impl Rectangle {
     }
 }
 
-impl ShapeComponent for Rectangle {
+impl ShapeComponent for RectangleComponent {
     type Data = RectData;
 
-    fn get_data(&self, tf: &GlobalTransform) -> RectData {
+    fn get_data(&self, tf: &GlobalTransform, fill: &ShapeFill) -> RectData {
         let mut flags = Flags(0);
-        flags.set_thickness_type(self.thickness_type);
+        let thickness = match fill.ty {
+            FillType::Stroke(thickness, thickness_type) => {
+                flags.set_thickness_type(thickness_type);
+                flags.set_hollow(1);
+                thickness
+            }
+            FillType::Fill => 1.0,
+        };
         flags.set_alignment(self.alignment);
-        flags.set_hollow(self.hollow as u32);
 
         RectData {
             transform: tf.compute_matrix().to_cols_array_2d(),
 
-            color: self.color.as_linear_rgba_f32(),
-            thickness: self.thickness,
+            color: fill.color.as_linear_rgba_f32(),
+            thickness,
             flags: flags.0,
 
             size: self.size.into(),
@@ -62,14 +60,10 @@ impl ShapeComponent for Rectangle {
     }
 }
 
-impl Default for Rectangle {
+impl Default for RectangleComponent {
     fn default() -> Self {
         Self {
-            color: Color::BLACK,
-            thickness: 1.0,
-            thickness_type: default(),
             alignment: default(),
-            hollow: false,
 
             size: Vec2::ONE,
             corner_radii: default(),
@@ -112,7 +106,7 @@ impl RectData {
 }
 
 impl ShapeData for RectData {
-    type Component = Rectangle;
+    type Component = RectangleComponent;
 
     fn vertex_layout() -> Vec<wgpu::VertexAttribute> {
         vertex_attr_array![
@@ -165,19 +159,19 @@ pub trait RectangleBundle {
     fn rect(config: &ShapeConfig, size: Vec2) -> Self;
 }
 
-impl RectangleBundle for ShapeBundle<Rectangle> {
+impl RectangleBundle for ShapeBundle<RectangleComponent> {
     fn rect(config: &ShapeConfig, size: Vec2) -> Self {
-        Self::new(config, Rectangle::new(config, size))
+        Self::new(config, RectangleComponent::new(config, size))
     }
 }
 
 /// Extension trait for [`ShapeSpawner`] to enable spawning of rectangle entities.
-pub trait RectangleSpawner<'w, 's> {
-    fn rect(&mut self, size: Vec2) -> ShapeEntityCommands<'w, 's, '_>;
+pub trait RectangleSpawner<'w> {
+    fn rect(&mut self, size: Vec2) -> ShapeEntityCommands;
 }
 
-impl<'w, 's, T: ShapeSpawner<'w, 's>> RectangleSpawner<'w, 's> for T {
-    fn rect(&mut self, size: Vec2) -> ShapeEntityCommands<'w, 's, '_> {
+impl<'w, T: ShapeSpawner<'w>> RectangleSpawner<'w> for T {
+    fn rect(&mut self, size: Vec2) -> ShapeEntityCommands {
         self.spawn_shape(ShapeBundle::rect(self.config(), size))
     }
 }

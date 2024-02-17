@@ -89,11 +89,11 @@ impl Plugin for Shape2dPlugin {
         app.insert_resource(BaseShapeConfig(self.base_config.clone()))
             .add_plugins(PainterPlugin)
             .add_plugins(ShapeRenderPlugin)
-            .add_plugins(ShapeTypePlugin::<Line>::default())
-            .add_plugins(ShapeTypePlugin::<Disc>::default())
-            .add_plugins(ShapeTypePlugin::<Rectangle>::default())
-            .add_plugins(ShapeTypePlugin::<RegularPolygon>::default())
-            .add_plugins(ShapeTypePlugin::<Triangle>::default());
+            .add_plugins(ShapeTypePlugin::<LineComponent>::default())
+            .add_plugins(ShapeTypePlugin::<DiscComponent>::default())
+            .add_plugins(ShapeTypePlugin::<RectangleComponent>::default())
+            .add_plugins(ShapeTypePlugin::<RegularPolygonComponent>::default())
+            .add_plugins(ShapeTypePlugin::<TriangleComponent>::default());
     }
 }
 
@@ -132,10 +132,10 @@ impl Plugin for ShapePlugin {
         if !self.exclude_2d {
             app.add_plugins(Shape2dPlugin::new(self.base_config.clone()));
         }
-        app.add_plugins(ShapeType3dPlugin::<Line>::default())
-            .add_plugins(ShapeType3dPlugin::<Disc>::default())
-            .add_plugins(ShapeType3dPlugin::<Rectangle>::default())
-            .add_plugins(ShapeType3dPlugin::<RegularPolygon>::default())
-            .add_plugins(ShapeType3dPlugin::<Triangle>::default());
+        app.add_plugins(ShapeType3dPlugin::<LineComponent>::default())
+            .add_plugins(ShapeType3dPlugin::<DiscComponent>::default())
+            .add_plugins(ShapeType3dPlugin::<RectangleComponent>::default())
+            .add_plugins(ShapeType3dPlugin::<RegularPolygonComponent>::default())
+            .add_plugins(ShapeType3dPlugin::<TriangleComponent>::default());
     }
 }

@@ -20,6 +20,9 @@ fn setup(mut commands: Commands) {
         ..default()
     },));
 
+    // Note: [`ShapeBundle`] does not include `RenderLayers` by default so the associated field
+    // on [`ShapeConfig`] will be ignored, add the component manually or use [`ShapeCommands::rect`]
+    // instead which will handle adding the `RenderLayers` component
     commands.spawn(
         ShapeBundle::rect(
             &ShapeConfig {
@@ -34,7 +37,7 @@ fn setup(mut commands: Commands) {
 }
 
 fn update_shapes(time: Res<Time>, mut shapes: Query<&mut Transform, With<ShapeMaterial>>) {
-    shapes.for_each_mut(|mut tf| {
+    shapes.iter_mut().for_each(|mut tf| {
         tf.rotate_local_z(time.delta_seconds());
     })
 }

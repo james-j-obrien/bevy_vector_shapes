@@ -24,7 +24,7 @@ fn draw_gallery(
     mut cameras: Query<&mut Transform, With<Camera3d>>,
 ) {
     painter.reset();
-    cameras.for_each_mut(|mut tf| {
+    cameras.iter_mut().for_each(|mut tf| {
         *tf = Transform::from_xyz(0., 0., 20. + 10.0 * time.elapsed_seconds().sin())
             .looking_at(Vec3::ZERO, Vec3::Y);
     });
