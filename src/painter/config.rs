@@ -13,13 +13,16 @@ use crate::render::ShapePipelineType;
 pub struct ShapeConfig {
     /// Transform with which the shape will be spawned.
     pub transform: Transform,
+    pub alignment: Alignment,
 
     pub color: Color,
+    
+    /// If true spawned shape will have a [`ShapeFill`] with [`FillType::Stroke`], taking into account thickness and thickness_type.
+    /// This doesn't use [`FillType`] directly in order to avoid unnecessary shuffling of thickness values when using both types of shape.
+    pub hollow: bool,
     pub thickness: f32,
     pub thickness_type: ThicknessType,
-    pub alignment: Alignment,
-    /// If true spawned shape will be hollow, taking into account thickness and thickness_type.
-    pub hollow: bool,
+
     pub cap: Cap,
     pub roundness: f32,
     pub corner_radii: Vec4,

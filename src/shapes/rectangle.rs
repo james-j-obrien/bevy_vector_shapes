@@ -13,11 +13,7 @@ use crate::{
 /// Component containing the data for drawing a rectangle.
 #[derive(Component, Reflect)]
 pub struct RectangleComponent {
-    pub color: Color,
-    pub thickness: f32,
-    pub thickness_type: ThicknessType,
     pub alignment: Alignment,
-    pub hollow: bool,
 
     /// Size of the rectangle on the x and y axis.
     pub size: Vec2,
@@ -28,11 +24,7 @@ pub struct RectangleComponent {
 impl RectangleComponent {
     pub fn new(config: &ShapeConfig, size: Vec2) -> Self {
         Self {
-            color: config.color,
-            thickness: config.thickness,
-            thickness_type: config.thickness_type,
             alignment: config.alignment,
-            hollow: config.hollow,
 
             size,
             corner_radii: config.corner_radii,
@@ -43,17 +35,23 @@ impl RectangleComponent {
 impl ShapeComponent for RectangleComponent {
     type Data = RectData;
 
-    fn get_data(&self, tf: &GlobalTransform) -> RectData {
+    fn get_data(&self, tf: &GlobalTransform, fill: &ShapeFill) -> RectData {
         let mut flags = Flags(0);
-        flags.set_thickness_type(self.thickness_type);
+        let thickness = match fill.ty {
+            FillType::Stroke(thickness, thickness_type)  => {
+                flags.set_thickness_type(thickness_type);
+                flags.set_hollow(1);
+                thickness
+            },
+            FillType::Fill => 1.0,
+        };        
         flags.set_alignment(self.alignment);
-        flags.set_hollow(self.hollow as u32);
 
         RectData {
             transform: tf.compute_matrix().to_cols_array_2d(),
 
-            color: self.color.as_linear_rgba_f32(),
-            thickness: self.thickness,
+            color: fill.color.as_linear_rgba_f32(),
+            thickness,
             flags: flags.0,
 
             size: self.size.into(),
@@ -65,11 +63,7 @@ impl ShapeComponent for RectangleComponent {
 impl Default for RectangleComponent {
     fn default() -> Self {
         Self {
-            color: Color::BLACK,
-            thickness: 1.0,
-            thickness_type: default(),
             alignment: default(),
-            hollow: false,
 
             size: Vec2::ONE,
             corner_radii: default(),

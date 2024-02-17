@@ -15,11 +15,7 @@ use crate::{
 /// Discs include both arcs and circles
 #[derive(Component, Reflect)]
 pub struct DiscComponent {
-    pub color: Color,
-    pub thickness: f32,
-    pub thickness_type: ThicknessType,
     pub alignment: Alignment,
-    pub hollow: bool,
     /// Cap type for an arc, only supports None or Round
     pub cap: Cap,
     /// Whether to treat this disc like an arc
@@ -43,11 +39,7 @@ impl DiscComponent {
         cap: Cap,
     ) -> Self {
         Self {
-            color: config.color,
-            thickness: config.thickness,
-            thickness_type: config.thickness_type,
             alignment: config.alignment,
-            hollow: config.hollow,
             cap,
             arc,
 
@@ -69,19 +61,25 @@ impl DiscComponent {
 impl ShapeComponent for DiscComponent {
     type Data = DiscData;
 
-    fn get_data(&self, tf: &GlobalTransform) -> DiscData {
+    fn get_data(&self, tf: &GlobalTransform, fill: &ShapeFill) -> DiscData {
         let mut flags = Flags(0);
-        flags.set_thickness_type(self.thickness_type);
+        let thickness = match fill.ty {
+            FillType::Stroke(thickness, thickness_type)  => {
+                flags.set_thickness_type(thickness_type);
+                flags.set_hollow(1);
+                thickness
+            },
+            FillType::Fill => 1.0,
+        };
         flags.set_alignment(self.alignment);
-        flags.set_hollow(self.hollow as u32);
         flags.set_cap(self.cap);
         flags.set_arc(self.arc as u32);
 
         DiscData {
             transform: tf.compute_matrix().to_cols_array_2d(),
 
-            color: self.color.as_linear_rgba_f32(),
-            thickness: self.thickness,
+            color: fill.color.as_linear_rgba_f32(),
+            thickness,
             flags: flags.0,
 
             radius: self.radius,
@@ -96,11 +94,7 @@ impl ShapeComponent for DiscComponent {
 impl Default for DiscComponent {
     fn default() -> Self {
         Self {
-            color: Color::BLACK,
-            thickness: 1.0,
-            thickness_type: default(),
             alignment: default(),
-            hollow: false,
             cap: Cap::None,
             arc: false,
 

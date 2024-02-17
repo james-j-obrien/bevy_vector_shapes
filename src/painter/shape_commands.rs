@@ -29,16 +29,16 @@ impl<'w, 's> ShapeSpawner<'w> for ShapeCommands<'w, 's> {
         let Self {
             commands, config, ..
         } = self;
-        let mut e = commands.spawn(bundle);
+        let mut entity = commands.spawn(bundle);
         if let Some(layers) = config.render_layers {
-            e.insert(layers);
+            entity.insert(layers);
         }
         if let ShapePipelineType::Shape3d = config.pipeline {
-            e.insert(Shape3d);
+            entity.insert(Shape3d);
         }
 
         ShapeEntityCommands {
-            commands: e,
+            commands: entity,
             config,
         }
     }

@@ -25,6 +25,9 @@ pub trait ShapeSpawner<'w>: DerefMut<Target = ShapeConfig> {
 
     fn set_config(&mut self, config: ShapeConfig);
 
+    /// Note: [`ShapeBundle`](crate::ShapeBundle) does not include [`RenderLayers`](bevy::render::view::RenderLayers) as there is no support for optional components
+    /// so instead it is inserted in this function conditionally depending on the [`ShapeConfig`] in `self`
+    /// Prefer the function for the shape you want over [`ShapeSpawner::spawn_shape`], e.g. `commands.rect(...)`
     fn spawn_shape(&mut self, bundle: impl Bundle) -> ShapeEntityCommands;
 }
 

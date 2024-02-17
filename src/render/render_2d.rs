@@ -38,6 +38,7 @@ pub fn extract_shapes_2d<T: ShapeData>(
             (
                 Entity,
                 &T::Component,
+                &ShapeFill,
                 &GlobalTransform,
                 &InheritedVisibility,
                 Option<&ShapeMaterial>,
@@ -55,9 +56,9 @@ pub fn extract_shapes_2d<T: ShapeData>(
 
     entities
         .iter()
-        .filter_map(|(e, cp, tf, vis, flags, rl)| {
+        .filter_map(|(e, cp, fill, tf, vis, flags, rl)| {
             if vis.get() {
-                Some((e, ShapePipelineMaterial::new(flags, rl), cp.get_data(tf)))
+                Some((e, ShapePipelineMaterial::new(flags, rl), cp.get_data(tf, fill)))
             } else {
                 None
             }

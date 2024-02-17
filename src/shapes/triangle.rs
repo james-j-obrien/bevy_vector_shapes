@@ -40,17 +40,23 @@ impl TriangleComponent {
 impl ShapeComponent for TriangleComponent {
     type Data = TriangleData;
 
-    fn get_data(&self, tf: &GlobalTransform) -> TriangleData {
+    fn get_data(&self, tf: &GlobalTransform, fill: &ShapeFill) -> TriangleData {
         let mut flags = Flags(0);
-        flags.set_thickness_type(self.thickness_type);
+        let thickness = match fill.ty {
+            FillType::Stroke(thickness, thickness_type)  => {
+                flags.set_thickness_type(thickness_type);
+                flags.set_hollow(1);
+                thickness
+            },
+            FillType::Fill => 1.0,
+        };          
         flags.set_alignment(self.alignment);
-        flags.set_hollow(self.hollow as u32);
 
         TriangleData {
             transform: tf.compute_matrix().to_cols_array_2d(),
 
-            color: self.color.as_linear_rgba_f32(),
-            thickness: self.thickness,
+            color: fill.color.as_linear_rgba_f32(),
+            thickness,
             flags: flags.0,
 
             vertices: [
