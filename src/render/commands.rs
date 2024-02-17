@@ -153,7 +153,7 @@ impl<const I: usize, P: PhaseItem> RenderCommand<P> for SetShapeTextureBindGroup
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
         let Some(material) = material else {
-            return RenderCommandResult::Success
+            return RenderCommandResult::Success;
         };
         if let Some(handle) = &material.texture {
             let bind_groups = bind_groups.into_inner();

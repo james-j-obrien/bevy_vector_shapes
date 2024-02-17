@@ -32,5 +32,7 @@ fn setup(mut commands: Commands, mut shapes: ShapeCommands) {
 }
 
 fn rotate_circle(time: Res<Time>, mut circle: Query<&mut Transform, With<DiscComponent>>) {
-    circle.iter_mut().for_each(|mut tf| tf.rotation *= Quat::from_rotation_z(time.delta_seconds()))
+    circle
+        .iter_mut()
+        .for_each(|mut tf| tf.rotation *= Quat::from_rotation_z(time.delta_seconds()))
 }

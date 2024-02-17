@@ -20,6 +20,9 @@ fn setup(mut commands: Commands) {
         ..default()
     },));
 
+    // Note: [`ShapeBundle`] does not include `RenderLayers` by default so the associated field
+    // on [`ShapeConfig`] will be ignored, add the component manually or use [`ShapeCommands::rect`]
+    // instead which will handle adding the `RenderLayers` component
     commands.spawn(
         ShapeBundle::rect(
             &ShapeConfig {

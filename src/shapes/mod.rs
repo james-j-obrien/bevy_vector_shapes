@@ -53,14 +53,14 @@ pub enum FillType {
     /// An outline with the given thickness and [`ThicknessType`].
     ///
     /// Note: all [`LineComponent`] should use `Stroke`, otherwise they will default to thickness `1.0`.
-    Stroke(f32, ThicknessType)
+    Stroke(f32, ThicknessType),
 }
 
 /// Component attached to each shape to determine how it is rendered.
 #[derive(Default, Component, Clone, Copy)]
 pub struct ShapeFill {
-    color: Color,
-    ty: FillType,
+    pub color: Color,
+    pub ty: FillType,
 }
 
 impl ShapeFill {
@@ -71,7 +71,7 @@ impl ShapeFill {
                 FillType::Stroke(config.thickness, config.thickness_type)
             } else {
                 FillType::Fill
-            }
+            },
         }
     }
 }

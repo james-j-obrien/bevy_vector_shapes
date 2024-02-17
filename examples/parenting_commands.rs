@@ -3,8 +3,8 @@
 // Alternatively see the `bundles` example to spawn shapes as bundles and bypass ShapeCommands entirely.
 use std::f32::consts::PI;
 
-use bevy::prelude::*;
 use bevy::math::primitives::Cuboid;
+use bevy::prelude::*;
 use bevy_vector_shapes::prelude::*;
 
 fn main() {
@@ -61,5 +61,7 @@ fn setup(mut commands: Commands, mut shapes: ShapeCommands, mut meshes: ResMut<A
 }
 
 fn rotate_targets(time: Res<Time>, mut target: Query<&mut Transform, With<Target>>) {
-    target.iter_mut().for_each(|mut tf| tf.rotation *= Quat::from_rotation_z(time.delta_seconds()))
+    target
+        .iter_mut()
+        .for_each(|mut tf| tf.rotation *= Quat::from_rotation_z(time.delta_seconds()))
 }

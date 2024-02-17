@@ -64,11 +64,11 @@ impl ShapeComponent for DiscComponent {
     fn get_data(&self, tf: &GlobalTransform, fill: &ShapeFill) -> DiscData {
         let mut flags = Flags(0);
         let thickness = match fill.ty {
-            FillType::Stroke(thickness, thickness_type)  => {
+            FillType::Stroke(thickness, thickness_type) => {
                 flags.set_thickness_type(thickness_type);
                 flags.set_hollow(1);
                 thickness
-            },
+            }
             FillType::Fill => 1.0,
         };
         flags.set_alignment(self.alignment);
@@ -229,19 +229,17 @@ impl DiscBundle for ShapeBundle<DiscComponent> {
     }
 
     fn arc(config: &ShapeConfig, radius: f32, start_angle: f32, end_angle: f32) -> Self {
-        Self::new(config, DiscComponent::arc(config, radius, start_angle, end_angle))
+        Self::new(
+            config,
+            DiscComponent::arc(config, radius, start_angle, end_angle),
+        )
     }
 }
 
 /// Extension trait for [`ShapeSpawner`] to enable spawning of entities for disc type shapes.
 pub trait DiscSpawner<'w> {
     fn circle(&mut self, radius: f32) -> ShapeEntityCommands;
-    fn arc(
-        &mut self,
-        radius: f32,
-        start_angle: f32,
-        end_angle: f32,
-    ) -> ShapeEntityCommands;
+    fn arc(&mut self, radius: f32, start_angle: f32, end_angle: f32) -> ShapeEntityCommands;
 }
 
 impl<'w, T: ShapeSpawner<'w>> DiscSpawner<'w> for T {
@@ -249,12 +247,7 @@ impl<'w, T: ShapeSpawner<'w>> DiscSpawner<'w> for T {
         self.spawn_shape(ShapeBundle::circle(self.config(), radius))
     }
 
-    fn arc(
-        &mut self,
-        radius: f32,
-        start_angle: f32,
-        end_angle: f32,
-    ) -> ShapeEntityCommands {
+    fn arc(&mut self, radius: f32, start_angle: f32, end_angle: f32) -> ShapeEntityCommands {
         self.spawn_shape(ShapeBundle::arc(
             self.config(),
             radius,

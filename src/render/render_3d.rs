@@ -61,7 +61,11 @@ pub fn extract_shapes_3d<T: ShapeData>(
         .iter()
         .filter_map(|(e, cp, fill, tf, vis, flags, rl)| {
             if vis.get() {
-                Some((e, ShapePipelineMaterial::new(flags, rl), cp.get_data(tf, fill)))
+                Some((
+                    e,
+                    ShapePipelineMaterial::new(flags, rl),
+                    cp.get_data(tf, fill),
+                ))
             } else {
                 None
             }
@@ -143,7 +147,9 @@ pub fn queue_shapes_3d<T: ShapeData>(
                 match material.alpha_mode.0 {
                     AlphaMode::Opaque => {
                         opaque_phase.add(Opaque3d {
-                            asset_id: AssetId::Uuid { uuid: AssetId::<Mesh>::DEFAULT_UUID },
+                            asset_id: AssetId::Uuid {
+                                uuid: AssetId::<Mesh>::DEFAULT_UUID,
+                            },
                             entity,
                             draw_function: draw_opaque,
                             pipeline,

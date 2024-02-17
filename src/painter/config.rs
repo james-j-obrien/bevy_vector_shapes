@@ -16,7 +16,7 @@ pub struct ShapeConfig {
     pub alignment: Alignment,
 
     pub color: Color,
-    
+
     /// If true spawned shape will have a [`ShapeFill`] with [`FillType::Stroke`], taking into account thickness and thickness_type.
     /// This doesn't use [`FillType`] directly in order to avoid unnecessary shuffling of thickness values when using both types of shape.
     pub hollow: bool,

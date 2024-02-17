@@ -38,13 +38,13 @@ impl ShapeComponent for RectangleComponent {
     fn get_data(&self, tf: &GlobalTransform, fill: &ShapeFill) -> RectData {
         let mut flags = Flags(0);
         let thickness = match fill.ty {
-            FillType::Stroke(thickness, thickness_type)  => {
+            FillType::Stroke(thickness, thickness_type) => {
                 flags.set_thickness_type(thickness_type);
                 flags.set_hollow(1);
                 thickness
-            },
+            }
             FillType::Fill => 1.0,
-        };        
+        };
         flags.set_alignment(self.alignment);
 
         RectData {

@@ -13,39 +13,37 @@ use wgpu::{Extent3d, TextureDescriptor, TextureDimension, TextureFormat, Texture
 ///
 /// Replaces the image handle when the canvas is resized and applies [`CanvasMode`] behaviours.
 pub fn update_canvases(
-    mut canvases: Query<(
-        &mut Canvas,
-        &mut Camera,
-        &mut OrthographicProjection,
-    )>,
+    mut canvases: Query<(&mut Canvas, &mut Camera, &mut OrthographicProjection)>,
 ) {
-    canvases.iter_mut().for_each(|(mut canvas, mut camera, mut projection)| {
-        if let RenderTarget::Image(camera_handle) = &camera.target {
-            if camera_handle != &canvas.image {
-                camera.target = RenderTarget::Image(canvas.image.clone());
-                projection.set_changed();
-            }
-        }
-
-        match canvas.mode {
-            CanvasMode::Continuous => {
-                camera.clear_color = canvas.clear_color.clone();
-                camera.is_active = true;
-            }
-            CanvasMode::Persistent => {
-                if canvas.redraw {
-                    camera.clear_color = canvas.clear_color.clone();
-                } else {
-                    camera.clear_color = ClearColorConfig::None;
+    canvases
+        .iter_mut()
+        .for_each(|(mut canvas, mut camera, mut projection)| {
+            if let RenderTarget::Image(camera_handle) = &camera.target {
+                if camera_handle != &canvas.image {
+                    camera.target = RenderTarget::Image(canvas.image.clone());
+                    projection.set_changed();
                 }
             }
-            CanvasMode::OnDemand => {
-                camera.is_active = canvas.redraw;
-            }
-        }
 
-        canvas.redraw = false;
-    })
+            match canvas.mode {
+                CanvasMode::Continuous => {
+                    camera.clear_color = canvas.clear_color.clone();
+                    camera.is_active = true;
+                }
+                CanvasMode::Persistent => {
+                    if canvas.redraw {
+                        camera.clear_color = canvas.clear_color.clone();
+                    } else {
+                        camera.clear_color = ClearColorConfig::None;
+                    }
+                }
+                CanvasMode::OnDemand => {
+                    camera.is_active = canvas.redraw;
+                }
+            }
+
+            canvas.redraw = false;
+        })
 }
 
 /// Enum that determines when canvases are cleared and redrawn.
