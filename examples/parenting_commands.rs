@@ -3,6 +3,7 @@
 // Alternatively see the `bundles` example to spawn shapes as bundles and bypass ShapeCommands entirely.
 use std::f32::consts::PI;
 
+use bevy::color::palettes::css::*;
 use bevy::math::primitives::Cuboid;
 use bevy::prelude::*;
 use bevy_vector_shapes::prelude::*;
@@ -11,7 +12,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(ShapePlugin::default())
-        .insert_resource(ClearColor(Color::DARK_GRAY))
+        .insert_resource(ClearColor(DIM_GRAY.into()))
         .insert_resource(Msaa::Off)
         .add_systems(Startup, setup)
         .add_systems(Update, rotate_targets)

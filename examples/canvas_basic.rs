@@ -1,6 +1,6 @@
 // Demonstrates use of the canvas API by drawing the gallery from gallery_3d onto a canvas and drawing the canvas to the screen
 
-use bevy::prelude::*;
+use bevy::{color::palettes::css::*, prelude::*};
 use bevy_vector_shapes::prelude::*;
 
 mod gallery_3d;
@@ -10,7 +10,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(ShapePlugin::default())
-        .insert_resource(ClearColor(Color::DARK_GRAY))
+        .insert_resource(ClearColor(DIM_GRAY.into()))
         .add_systems(Startup, setup)
         .add_systems(Update, draw_shapes)
         .run();

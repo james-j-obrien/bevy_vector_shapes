@@ -1,20 +1,22 @@
+use std::hash::Hash;
 use std::hash::Hasher;
 use std::marker::PhantomData;
-use std::{hash::Hash, ops::Deref};
 
+use bevy::ecs::system::StaticSystemParam;
+use bevy::math::FloatOrd;
+use bevy::render::batching::no_gpu_preprocessing::BatchedInstanceBuffer;
+use bevy::render::batching::GetBatchData;
+use bevy::render::render_phase::{PhaseItemExtraIndex, SortedPhaseItem, ViewSortedRenderPhases};
 use bevy::{
     asset::load_internal_asset,
     core_pipeline::{
         core_2d::Transparent2d,
         core_3d::{AlphaMask3d, Opaque3d, Transparent3d},
     },
-    ecs::entity::EntityHashMap,
     prelude::*,
     reflect::GetTypeRegistration,
     render::{
-        render_phase::{
-            AddRenderCommand, CachedRenderPipelinePhaseItem, DrawFunctionId, RenderPhase,
-        },
+        render_phase::{AddRenderCommand, CachedRenderPipelinePhaseItem, DrawFunctionId},
         render_resource::{
             Buffer, CachedRenderPipelineId, GpuArrayBuffer, GpuArrayBufferable, ShaderDefVal,
             ShaderRef,
@@ -23,9 +25,9 @@ use bevy::{
         view::RenderLayers,
         Extract, Render, RenderApp, RenderSet,
     },
-    utils::{nonmax::NonMaxU32, FloatOrd},
 };
 use bitfield::bitfield;
+use nonmax::NonMaxU32;
 use wgpu::{util::BufferInitDescriptor, BufferUsages, VertexAttribute};
 
 use crate::prelude::*;
@@ -135,9 +137,9 @@ pub trait ShapeData: Send + Sync + GpuArrayBufferable + 'static {
     fn shader_defs(app: &App) -> Vec<ShaderDefVal> {
         let mut shader_defs = Vec::with_capacity(1);
 
-        if let Ok(render_app) = app.get_sub_app(RenderApp) {
+        if let Some(render_app) = app.get_sub_app(RenderApp) {
             if let Some(per_object_buffer_batch_size) =
-                GpuArrayBuffer::<Self>::batch_size(render_app.world.resource::<RenderDevice>())
+                GpuArrayBuffer::<Self>::batch_size(render_app.world().resource::<RenderDevice>())
             {
                 shader_defs.push(ShaderDefVal::UInt(
                     "PER_OBJECT_BUFFER_BATCH_SIZE".into(),
@@ -201,7 +203,7 @@ impl ShapePipelineMaterial {
 impl From<&ShapeConfig> for ShapePipelineMaterial {
     fn from(config: &ShapeConfig) -> Self {
         Self {
-            render_layers: RenderLayersHash(config.render_layers.unwrap_or_default()),
+            render_layers: RenderLayersHash(config.render_layers.clone().unwrap_or_default()),
             alpha_mode: AlphaModeOrd(config.alpha_mode),
             disable_laa: config.disable_laa || config.alpha_mode == AlphaMode::Opaque,
             texture: config.texture.clone(),
@@ -211,7 +213,7 @@ impl From<&ShapeConfig> for ShapePipelineMaterial {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Ord, PartialOrd)]
+#[derive(Clone, PartialEq, Eq, Debug, Ord, PartialOrd)]
 struct RenderLayersHash(RenderLayers);
 
 impl Hash for RenderLayersHash {
@@ -231,7 +233,8 @@ impl AlphaModeOrd {
             AlphaMode::Premultiplied => 3.0,
             AlphaMode::Add => 4.0,
             AlphaMode::Multiply => 5.0,
-            AlphaMode::Mask(m) => 6.0 + m,
+            AlphaMode::AlphaToCoverage => 6.0,
+            AlphaMode::Mask(m) => 7.0 + m,
         }
     }
 }
@@ -295,7 +298,7 @@ pub fn extract_render_layers(
     cameras: Extract<Query<(Entity, &RenderLayers), With<Camera>>>,
 ) {
     for (entity, render_layers) in &cameras {
-        commands.get_or_spawn(entity).insert(*render_layers);
+        commands.get_or_spawn(entity).insert(render_layers.clone());
     }
 }
 
@@ -316,54 +319,53 @@ fn setup_pipeline(app: &mut App) {
 }
 
 fn setup_type_pipeline<T: ShapeData + 'static>(app: &mut App) {
-    app.sub_app_mut(RenderApp)
-        .init_resource::<ShapePipeline<T>>()
-        .add_systems(
-            Render,
-            (
-                write_batched_instance_buffer::<T>.in_set(RenderSet::PrepareResourcesFlush),
-                prepare_shape_bind_group::<T>.in_set(RenderSet::PrepareBindGroups),
-            ),
-        );
+    app.sub_app_mut(RenderApp).add_systems(
+        Render,
+        write_batched_instance_buffer::<T>.in_set(RenderSet::PrepareResourcesFlush),
+    );
 }
 
 fn setup_type_pipeline_3d<T: ShapeData + 'static>(app: &mut App) {
     app.sub_app_mut(RenderApp)
-        .add_render_command::<Opaque3d, DrawShapeCommand<T>>()
-        .add_render_command::<Transparent3d, DrawShapeCommand<T>>()
-        .add_render_command::<AlphaMask3d, DrawShapeCommand<T>>()
+        .add_render_command::<Opaque3d, DrawShape3dCommand<T>>()
+        .add_render_command::<Transparent3d, DrawShape3dCommand<T>>()
+        .add_render_command::<AlphaMask3d, DrawShape3dCommand<T>>()
         .init_resource::<Shape3dInstances<T>>()
         .init_resource::<Shape3dMaterials<T>>()
+        .init_resource::<Shape3dPipeline<T>>()
         .add_systems(ExtractSchedule, extract_shapes_3d::<T>)
         .add_systems(
             Render,
             (
+                prepare_shape_3d_bind_group::<T>.in_set(RenderSet::PrepareBindGroups),
                 queue_shapes_3d::<T>.in_set(RenderSet::Queue),
-                batch_and_prepare_render_phase::<T, Shape3dInstances<T>, Opaque3d>
-                    .in_set(RenderSet::PrepareResources),
-                batch_and_prepare_render_phase::<T, Shape3dInstances<T>, AlphaMask3d>
-                    .in_set(RenderSet::PrepareResources),
-                batch_and_prepare_render_phase::<T, Shape3dInstances<T>, Transparent3d>
+                // batch_and_prepare_render_phase::<Opaque3d, ShapePipeline<T>>
+                //     .in_set(RenderSet::PrepareResources),
+                // batch_and_prepare_render_phase::<AlphaMask3d, ShapePipeline<T>>
+                //     .in_set(RenderSet::PrepareResources),
+                batch_and_prepare_render_phase::<Transparent3d, Shape3dPipeline<T>>
                     .in_set(RenderSet::PrepareResources),
             ),
         );
 }
 
 fn setup_type_pipeline_2d<T: ShapeData + 'static>(app: &mut App) {
-    if let Ok(render_app) = app.get_sub_app_mut(RenderApp) {
+    if let Some(render_app) = app.get_sub_app_mut(RenderApp) {
         render_app
-            .insert_resource(GpuArrayBuffer::<T>::new(
-                render_app.world.resource::<RenderDevice>(),
+            .insert_resource(BatchedInstanceBuffer::<T>::new(
+                render_app.world().resource::<RenderDevice>(),
             ))
-            .add_render_command::<Transparent2d, DrawShapeCommand<T>>()
+            .add_render_command::<Transparent2d, DrawShape2dCommand<T>>()
             .init_resource::<Shape2dInstances<T>>()
             .init_resource::<Shape2dMaterials<T>>()
+            .init_resource::<Shape2dPipeline<T>>()
             .add_systems(ExtractSchedule, extract_shapes_2d::<T>)
             .add_systems(
                 Render,
                 (
+                    prepare_shape_2d_bind_group::<T>.in_set(RenderSet::PrepareBindGroups),
                     queue_shapes_2d::<T>.in_set(RenderSet::Queue),
-                    batch_and_prepare_render_phase::<T, Shape2dInstances<T>, Transparent2d>
+                    batch_and_prepare_render_phase::<Transparent2d, Shape2dPipeline<T>>
                         .in_set(RenderSet::PrepareResources),
                 ),
             );
@@ -373,7 +375,7 @@ fn setup_type_pipeline_2d<T: ShapeData + 'static>(app: &mut App) {
 pub fn write_batched_instance_buffer<T: ShapeData + 'static>(
     render_device: Res<RenderDevice>,
     render_queue: Res<RenderQueue>,
-    gpu_array_buffer: ResMut<GpuArrayBuffer<T>>,
+    gpu_array_buffer: ResMut<BatchedInstanceBuffer<T>>,
 ) {
     let gpu_array_buffer = gpu_array_buffer.into_inner();
     gpu_array_buffer.write_buffer(&render_device, &render_queue);
@@ -402,7 +404,9 @@ impl<T: ShapeComponent> Plugin for ShapeTypePlugin<T> {
 pub struct ShapeType3dPlugin<T: ShapeComponent>(PhantomData<T>);
 
 impl<T: ShapeComponent> Plugin for ShapeType3dPlugin<T> {
-    fn build(&self, app: &mut App) {
+    fn build(&self, _app: &mut App) {}
+
+    fn finish(&self, app: &mut App) {
         setup_type_pipeline_3d::<T::Data>(app);
     }
 }
@@ -438,56 +442,48 @@ impl<T: PartialEq> BatchMeta<T> {
         BatchMeta {
             pipeline_id: item.cached_pipeline(),
             draw_function_id: item.draw_function(),
-            dynamic_offset: item.dynamic_offset(),
+            dynamic_offset: item.extra_index().as_dynamic_offset(),
             user_data,
         }
     }
 }
 
 pub fn batch_and_prepare_render_phase<
-    T: ShapeData,
-    R: Resource + Deref<Target = EntityHashMap<ShapeInstance<T>>>,
-    P: CachedRenderPipelinePhaseItem,
+    I: CachedRenderPipelinePhaseItem + SortedPhaseItem,
+    GBD: GetBatchData,
 >(
-    mut commands: Commands,
-    mut gpu_array_buffer: ResMut<GpuArrayBuffer<T>>,
-    mut views: Query<&mut RenderPhase<P>>,
-    instance_data: Res<R>,
+    mut gpu_array_buffer: ResMut<BatchedInstanceBuffer<GBD::BufferData>>,
+    mut phases: ResMut<ViewSortedRenderPhases<I>>,
+    param: StaticSystemParam<GBD::Param>,
 ) {
-    let mut process_item = |item: &mut P| {
-        let (material, data) = instance_data.get(&item.entity())?;
+    let system_param_item = param.into_inner();
+
+    let mut process_item = |item: &mut I| {
+        let (data, compare) = GBD::get_batch_data(&system_param_item, item.entity())?;
         let buffer_index = gpu_array_buffer.push(data.clone());
 
-        let index = buffer_index.index.get();
-        *item.batch_range_mut() = index..index + 1;
-        *item.dynamic_offset_mut() = buffer_index.dynamic_offset;
+        let index = buffer_index.index;
+        let (item_batch, item_index) = item.batch_range_and_extra_index_mut();
+        *item_batch = index..index + 1;
+        *item_index = PhaseItemExtraIndex::maybe_dynamic_offset(buffer_index.dynamic_offset);
 
-        Some(BatchMeta::new(item, material))
+        compare
     };
 
-    let mut batches = Vec::new();
-    for mut phase in &mut views {
+    for phase in phases.values_mut() {
         let items = phase.items.iter_mut().map(|item| {
-            let batch_data = process_item(item);
-            (item.entity(), item.batch_range_mut(), batch_data)
-        });
-        let last = items.reduce(
-            |(prev_entity, start_range, prev_batch_meta), (entity, range, batch_meta)| {
-                if batch_meta.is_some() && prev_batch_meta == batch_meta {
-                    start_range.end = range.end;
-                    (prev_entity, start_range, prev_batch_meta)
-                } else {
-                    if let Some(prev_batch_meta) = prev_batch_meta {
-                        batches.push((prev_entity, prev_batch_meta.user_data.clone()));
-                    }
-                    (entity, range, batch_meta)
-                }
-            },
-        );
-        if let Some((entity, _, Some(batch_meta))) = last {
-            batches.push((entity, batch_meta.user_data.clone()));
-        }
-    }
+            let batch_data = process_item(item).map(|c| BatchMeta::new(item, c));
 
-    commands.insert_or_spawn_batch(batches);
+            (item.batch_range_mut(), batch_data)
+        });
+
+        items.reduce(|(start_range, prev_batch_meta), (range, batch_meta)| {
+            if batch_meta.is_some() && prev_batch_meta == batch_meta {
+                start_range.end = range.end;
+                (start_range, prev_batch_meta)
+            } else {
+                (range, batch_meta)
+            }
+        });
+    }
 }

@@ -112,6 +112,11 @@ impl ShapeConfig {
         config.transform = Transform::IDENTITY;
         config
     }
+
+    // Helper method to set color from any or bevy's color variants
+    pub fn set_color(&mut self, color: impl Into<Color>) {
+        self.color = color.into();
+    }
 }
 
 impl ShapeConfig {
@@ -120,7 +125,7 @@ impl ShapeConfig {
         Self {
             transform: default(),
 
-            color: Color::GRAY,
+            color: Color::WHITE,
             thickness: 0.1,
             thickness_type: default(),
             alignment: default(),

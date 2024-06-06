@@ -50,7 +50,7 @@ impl ShapeComponent for RectangleComponent {
         RectData {
             transform: tf.compute_matrix().to_cols_array_2d(),
 
-            color: fill.color.as_linear_rgba_f32(),
+            color: fill.color.linear().to_f32_array(),
             thickness,
             flags: flags.0,
 
@@ -95,7 +95,7 @@ impl RectData {
         Self {
             transform: config.transform.compute_matrix().to_cols_array_2d(),
 
-            color: config.color.as_linear_rgba_f32(),
+            color: config.color.linear().to_f32_array(),
             thickness: config.thickness,
             flags: flags.0,
 

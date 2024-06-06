@@ -2,6 +2,7 @@
 
 use std::f32::consts::TAU;
 
+use bevy::color::palettes::css::*;
 use bevy::prelude::*;
 use bevy::render::camera::ScalingMode;
 use bevy_vector_shapes::prelude::*;
@@ -10,7 +11,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(Shape2dPlugin::default())
-        .insert_resource(ClearColor(Color::DARK_GRAY))
+        .insert_resource(ClearColor(DIM_GRAY.into()))
         .insert_resource(Msaa::Off)
         .add_systems(Startup, setup)
         .add_systems(Update, draw_gallery)
@@ -33,17 +34,17 @@ fn setup(mut commands: Commands) {
 
 fn draw_circles(painter: &mut ShapePainter, radius: f32) {
     painter.translate(-(Vec3::X + Vec3::NEG_Y) * f32::sqrt(radius) * 0.5);
-    painter.color = Color::rgba(1.0, 0.0, 0.0, 0.5);
+    painter.color = Color::srgba(1.0, 0.0, 0.0, 0.5);
     painter.circle(radius);
 
     painter.rotate_z(-TAU / 3.0);
     painter.translate(Vec3::Y * radius * 1.2 + Vec3::Z * 0.0001);
-    painter.color = Color::rgba(0.0, 1.0, 0.0, 0.5);
+    painter.color = Color::srgba(0.0, 1.0, 0.0, 0.5);
     painter.circle(radius);
 
     painter.rotate_z(-TAU / 3.0);
     painter.translate(Vec3::Y * radius * 1.2 + Vec3::Z * 0.0001);
-    painter.color = Color::rgba(0.0, 0.0, 1.0, 0.5);
+    painter.color = Color::srgba(0.0, 0.0, 1.0, 0.5);
     painter.circle(radius);
 }
 

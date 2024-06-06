@@ -1,7 +1,7 @@
 // Demonstrates building across each type of shape
 // NOTE: Lines billboard across their axis instead of directly to the camera
 
-use bevy::prelude::*;
+use bevy::{color::palettes::css::*, prelude::*};
 use bevy_vector_shapes::prelude::*;
 
 mod gallery_3d;
@@ -17,7 +17,7 @@ fn main() {
             },
             ..default()
         })
-        .insert_resource(ClearColor(Color::DARK_GRAY))
+        .insert_resource(ClearColor(DIM_GRAY.into()))
         .insert_resource(Msaa::Off)
         .add_systems(Startup, setup)
         .add_systems(Update, draw_gallery)

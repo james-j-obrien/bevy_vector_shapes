@@ -1,6 +1,6 @@
 // Demonstrated use of a canvas to render low resolutions shapes on a small canvas
 
-use bevy::{prelude::*, render::texture::ImageSampler};
+use bevy::{color::palettes::css::*, prelude::*, render::texture::ImageSampler};
 use bevy_vector_shapes::prelude::*;
 
 mod gallery_3d;
@@ -13,7 +13,7 @@ fn main() {
             disable_laa: true,
             ..ShapeConfig::default_3d()
         }))
-        .insert_resource(ClearColor(Color::DARK_GRAY))
+        .insert_resource(ClearColor(DIM_GRAY.into()))
         .insert_resource(Msaa::Off)
         .add_systems(Startup, setup)
         .add_systems(Update, draw_shapes)

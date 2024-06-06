@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use bevy::{
-    ecs::system::{Command, EntityCommands},
+    ecs::{system::EntityCommands, world::Command},
     prelude::*,
 };
 use smallvec::SmallVec;
@@ -110,8 +110,8 @@ impl<'w> ShapeSpawner<'w> for ShapeChildBuilder<'w> {
         } = self;
         let mut e = commands.spawn(bundle);
         self.push_children.children.push(e.id());
-        if let Some(layers) = config.render_layers {
-            e.insert(layers);
+        if let Some(layers) = &config.render_layers {
+            e.insert(layers.clone());
         }
         if let ShapePipelineType::Shape3d = config.pipeline {
             e.insert(Shape3d);

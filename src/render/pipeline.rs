@@ -1,6 +1,7 @@
 use std::any::TypeId;
 
 use bevy::{
+    ecs::system::{lifetimeless::SRes, SystemParamItem},
     prelude::*,
     render::{render_resource::*, renderer::RenderDevice, texture::BevyDefault, view::ViewUniform},
     utils::HashMap,
@@ -55,6 +56,7 @@ impl ShapePipelineKey {
         let mut key = match material.alpha_mode.0 {
             AlphaMode::Opaque => Self::BLEND_OPAQUE,
             AlphaMode::Mask(_) => Self::BLEND_OPAQUE,
+            AlphaMode::AlphaToCoverage => Self::BLEND_ALPHA,
             AlphaMode::Blend => Self::BLEND_ALPHA,
             AlphaMode::Premultiplied => Self::BLEND_ALPHA,
             AlphaMode::Add => Self::BLEND_ADD,
@@ -128,7 +130,7 @@ impl ShapePipelines {
     pub fn specialize<T: ShapeData + 'static>(
         &mut self,
         cache: &PipelineCache,
-        pipeline: &ShapePipeline<T>,
+        pipeline: &Shape2dPipeline<T>,
         key: ShapePipelineKey,
     ) -> CachedRenderPipelineId {
         let Self {
@@ -148,13 +150,13 @@ impl ShapePipelines {
 }
 
 #[derive(Resource)]
-pub struct ShapePipeline<T: ShapeData> {
+pub struct Shape2dPipeline<T: ShapeData> {
     pub shader: Handle<Shader>,
     pub layout: BindGroupLayout,
     _marker: PhantomData<T>,
 }
 
-impl<T: ShapeData> FromWorld for ShapePipeline<T> {
+impl<T: ShapeData> FromWorld for Shape2dPipeline<T> {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
         let layout = render_device.create_bind_group_layout(
@@ -175,7 +177,7 @@ impl<T: ShapeData> FromWorld for ShapePipeline<T> {
     }
 }
 
-impl<T: ShapeData> ShapePipeline<T> {
+impl<T: ShapeData> Shape2dPipeline<T> {
     fn specialize(
         &self,
         view_layout: &BindGroupLayout,
@@ -311,5 +313,42 @@ impl<T: ShapeData> ShapePipeline<T> {
             label: Some(label),
             push_constant_ranges: vec![],
         }
+    }
+}
+
+impl<T: ShapeData> GetBatchData for Shape2dPipeline<T> {
+    type Param = SRes<Shape2dInstances<T>>;
+    type CompareData = ShapePipelineMaterial;
+    type BufferData = T;
+
+    fn get_batch_data(
+        instances: &SystemParamItem<Self::Param>,
+        entity: Entity,
+    ) -> Option<(Self::BufferData, Option<Self::CompareData>)> {
+        let instance = instances.get(&entity)?;
+        Some((instance.1.clone(), Some(instance.0.clone())))
+    }
+}
+
+#[derive(Resource, Deref, DerefMut)]
+pub struct Shape3dPipeline<T: ShapeData>(Shape2dPipeline<T>);
+
+impl<T: ShapeData> FromWorld for Shape3dPipeline<T> {
+    fn from_world(world: &mut World) -> Self {
+        Self(Shape2dPipeline::<T>::from_world(world))
+    }
+}
+
+impl<T: ShapeData> GetBatchData for Shape3dPipeline<T> {
+    type Param = SRes<Shape3dInstances<T>>;
+    type CompareData = ShapePipelineMaterial;
+    type BufferData = T;
+
+    fn get_batch_data(
+        instances: &SystemParamItem<Self::Param>,
+        entity: Entity,
+    ) -> Option<(Self::BufferData, Option<Self::CompareData>)> {
+        let instance = instances.get(&entity)?;
+        Some((instance.1.clone(), Some(instance.0.clone())))
     }
 }

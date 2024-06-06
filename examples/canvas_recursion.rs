@@ -1,13 +1,13 @@
 // Demonstrates drawing a canvas image inside itself
 
-use bevy::prelude::*;
+use bevy::{color::palettes::css::*, prelude::*};
 use bevy_vector_shapes::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(ShapePlugin::default())
-        .insert_resource(ClearColor(Color::DARK_GRAY))
+        .insert_resource(ClearColor(DIM_GRAY.into()))
         .add_systems(Startup, setup)
         .add_systems(Update, draw_shapes)
         .run();
@@ -30,7 +30,7 @@ fn draw_shapes(time: Res<Time>, mut painter: ShapePainter, canvas: Query<(Entity
     painter.set_canvas(canvas_e);
     painter.hollow = true;
     painter.thickness = 16.0;
-    painter.color = Color::SEA_GREEN + Color::WHITE * 0.25;
+    painter.set_color(SEA_GREEN + Srgba::WHITE * 0.25);
     painter.rect(Vec2::splat(1024.0));
 
     painter.rotate_z(time.elapsed_seconds().sin());

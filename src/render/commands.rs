@@ -12,23 +12,28 @@ use bevy::{
         render_phase::{
             PhaseItem, RenderCommand, RenderCommandResult, SetItemPipeline, TrackedRenderPass,
         },
-        render_resource::BindGroup,
-        view::ViewUniformOffset,
-    },
-    render::{
-        render_resource::*,
+        render_resource::{BindGroup, *},
         renderer::RenderDevice,
-        view::{ExtractedView, ViewUniforms},
+        texture::GpuImage,
+        view::{ExtractedView, ViewUniformOffset, ViewUniforms},
     },
     utils::HashMap,
 };
 
 use crate::render::*;
 
-pub type DrawShapeCommand<T> = (
+pub type DrawShape2dCommand<T> = (
     SetItemPipeline,
     SetShapeViewBindGroup<0>,
-    SetShapeBindGroup<T, 1>,
+    SetShape2dBindGroup<T, 1>,
+    SetShapeTextureBindGroup<2>,
+    DrawShape<T>,
+);
+
+pub type DrawShape3dCommand<T> = (
+    SetItemPipeline,
+    SetShapeViewBindGroup<0>,
+    SetShape3dBindGroup<T, 1>,
     SetShapeTextureBindGroup<2>,
     DrawShape<T>,
 );
@@ -69,12 +74,12 @@ pub fn prepare_shape_texture_bind_groups(
     render_device: Res<RenderDevice>,
     shape_pipelines: Res<ShapePipelines>,
     batches: Query<&ShapePipelineMaterial>,
-    gpu_images: Res<RenderAssets<Image>>,
+    gpu_images: Res<RenderAssets<GpuImage>>,
     mut image_bind_groups: ResMut<ShapeTextureBindGroups>,
 ) {
     for material in &batches {
         if let Some(handle) = &material.texture {
-            if let Some(gpu_image) = gpu_images.get(handle.clone_weak()) {
+            if let Some(gpu_image) = gpu_images.get(handle.id()) {
                 image_bind_groups
                     .values
                     .entry(handle.clone_weak())
@@ -90,30 +95,6 @@ pub fn prepare_shape_texture_bind_groups(
                     });
             }
         }
-    }
-}
-
-#[derive(Resource)]
-pub struct ShapeBindGroup<T: ShapeData> {
-    pub value: BindGroup,
-    _marker: PhantomData<T>,
-}
-
-pub fn prepare_shape_bind_group<T: ShapeData + 'static>(
-    mut commands: Commands,
-    pipeline: Res<ShapePipeline<T>>,
-    render_device: Res<RenderDevice>,
-    shape_buffer: Res<GpuArrayBuffer<T>>,
-) {
-    if let Some(binding) = shape_buffer.binding() {
-        commands.insert_resource(ShapeBindGroup {
-            value: render_device.create_bind_group(
-                "shape_bind_group",
-                &pipeline.layout,
-                &BindGroupEntries::single(binding),
-            ),
-            _marker: PhantomData::<T>,
-        });
     }
 }
 
@@ -167,12 +148,12 @@ impl<const I: usize, P: PhaseItem> RenderCommand<P> for SetShapeTextureBindGroup
     }
 }
 
-pub struct SetShapeBindGroup<T: ShapeData, const I: usize>(PhantomData<T>);
+pub struct SetShape2dBindGroup<T: ShapeData, const I: usize>(PhantomData<T>);
 
 impl<const I: usize, T: ShapeData + 'static, P: PhaseItem> RenderCommand<P>
-    for SetShapeBindGroup<T, I>
+    for SetShape2dBindGroup<T, I>
 {
-    type Param = SRes<ShapeBindGroup<T>>;
+    type Param = SRes<Shape2dBindGroup<T>>;
     type ViewQuery = ();
     type ItemQuery = ();
 
@@ -186,7 +167,39 @@ impl<const I: usize, T: ShapeData + 'static, P: PhaseItem> RenderCommand<P>
     ) -> RenderCommandResult {
         let mut dynamic_offsets: [u32; 1] = Default::default();
         let mut offset_count = 0;
-        if let Some(dynamic_offset) = item.dynamic_offset() {
+        if let Some(dynamic_offset) = item.extra_index().as_dynamic_offset() {
+            dynamic_offsets[offset_count] = dynamic_offset.get();
+            offset_count += 1;
+        }
+        pass.set_bind_group(
+            I,
+            &shape_bind_group.into_inner().value,
+            &dynamic_offsets[..offset_count],
+        );
+        RenderCommandResult::Success
+    }
+}
+
+pub struct SetShape3dBindGroup<T: ShapeData, const I: usize>(PhantomData<T>);
+
+impl<const I: usize, T: ShapeData + 'static, P: PhaseItem> RenderCommand<P>
+    for SetShape3dBindGroup<T, I>
+{
+    type Param = SRes<Shape3dBindGroup<T>>;
+    type ViewQuery = ();
+    type ItemQuery = ();
+
+    #[inline]
+    fn render<'w>(
+        item: &P,
+        _view: (),
+        _item_query: Option<()>,
+        shape_bind_group: SystemParamItem<'w, '_, Self::Param>,
+        pass: &mut TrackedRenderPass<'w>,
+    ) -> RenderCommandResult {
+        let mut dynamic_offsets: [u32; 1] = Default::default();
+        let mut offset_count = 0;
+        if let Some(dynamic_offset) = item.extra_index().as_dynamic_offset() {
             dynamic_offsets[offset_count] = dynamic_offset.get();
             offset_count += 1;
         }

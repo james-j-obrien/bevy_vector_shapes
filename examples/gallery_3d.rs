@@ -6,16 +6,18 @@ use std::{
     ops::Range,
 };
 
-use bevy::{prelude::*, render::view::RenderLayers};
+use bevy::{color::palettes::css::*, prelude::*, render::view::RenderLayers};
 use bevy_vector_shapes::prelude::*;
 
 pub trait Pastel {
-    fn pastel(&self) -> Color;
+    fn pastel(&self) -> Srgba;
 }
 
-impl Pastel for Color {
-    fn pastel(&self) -> Color {
-        (*self + Color::WHITE * 0.25).with_a(1.0)
+impl Pastel for Srgba {
+    fn pastel(&self) -> Srgba {
+        let mut out = *self + Srgba::WHITE * 0.25;
+        out.set_alpha(1.0);
+        out
     }
 }
 
@@ -33,21 +35,21 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
             // Line examples
             0 => {
                 painter.thickness = 0.5;
-                painter.color = Color::MIDNIGHT_BLUE.pastel();
+                painter.set_color(MIDNIGHT_BLUE.pastel());
                 painter.cap = Cap::None;
                 painter.line(Vec3::new(-1.0, 1.0, 0.0), Vec3::new(1.0, 1.0, 0.0));
 
-                painter.color = Color::MIDNIGHT_BLUE.pastel() * 1.2;
+                painter.set_color(MIDNIGHT_BLUE.pastel() * 1.2);
                 painter.cap = Cap::Square;
                 painter.line(Vec3::new(-1.0, 0.0, 0.0), Vec3::new(1.0, 0.0, 0.0));
 
-                painter.color = Color::MIDNIGHT_BLUE.pastel() * 1.6;
+                painter.set_color(MIDNIGHT_BLUE.pastel() * 1.6);
                 painter.cap = Cap::Round;
                 painter.line(Vec3::new(-1.0, -1.0, 0.0), Vec3::new(1.0, -1.0, 0.0));
             }
             5 => {
                 painter.thickness = 0.5;
-                painter.color = Color::MIDNIGHT_BLUE.pastel() * 1.4;
+                painter.set_color(MIDNIGHT_BLUE.pastel() * 1.4);
                 painter.cap = Cap::Round;
                 let rotation = Quat::from_rotation_z(seconds * 2.5);
                 let radius = ((seconds * 3.0).sin() + 0.5) / 2.0 * 1.5;
@@ -58,13 +60,13 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
             }
             10 => {
                 painter.thickness = 0.4;
-                painter.color = Color::MIDNIGHT_BLUE.pastel();
+                painter.set_color(MIDNIGHT_BLUE.pastel());
                 painter.cap = Cap::Round;
                 painter.line((Vec3::X + Vec3::Y) * 0.2, (Vec3::NEG_X + Vec3::NEG_Y) * 0.2);
                 painter.line((Vec3::X + Vec3::NEG_Y) * 0.2, (Vec3::NEG_X + Vec3::Y) * 0.2);
 
                 painter.translate(Vec3::Z * 0.001);
-                painter.color = Color::WHITE;
+                painter.set_color(WHITE);
                 painter.thickness = 0.2;
                 painter.cap = Cap::Square;
                 let radius = 0.5 + ((seconds * 2.0).sin() + 1.0) / 4.0;
@@ -84,17 +86,17 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
             }
             // Rect examples
             1 => {
-                painter.color = Color::SEA_GREEN.pastel() * 0.7;
+                painter.set_color(SEA_GREEN.pastel() * 0.7);
                 painter.corner_radii = Vec4::ZERO;
                 painter.translate(Vec3::Y);
                 painter.rect(Vec2::new(2.0, 0.7));
 
-                painter.color = Color::SEA_GREEN.pastel();
+                painter.set_color(SEA_GREEN.pastel());
                 painter.translate(-Vec3::Y);
                 painter.corner_radii = Vec4::splat(0.2);
                 painter.rect(Vec2::new(2.0, 0.7));
 
-                painter.color = Color::SEA_GREEN.pastel() * 1.2;
+                painter.set_color(SEA_GREEN.pastel() * 1.2);
                 painter.corner_radii = Vec4::new(0.0, 0.2, 0.35, 0.0);
                 painter.translate(-Vec3::Y);
                 painter.rect(Vec2::new(2.0, 0.7));
@@ -104,7 +106,7 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
                 let square_fill = ((seconds * 3.).sin() + 1.0) / 2.0;
 
                 painter.hollow = true;
-                painter.color = Color::SEA_GREEN.pastel();
+                painter.set_color(SEA_GREEN.pastel());
                 painter.thickness = 0.2 + 1.3 * square_fill;
                 painter.corner_radii = Vec4::splat(1.0);
                 painter.rotate_z(bar_fill * TAU);
@@ -117,11 +119,11 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
 
                 painter.hollow = true;
                 painter.thickness = bar_border;
-                painter.color = Color::WHITE;
+                painter.set_color(WHITE);
                 painter.corner_radii = Vec4::new(0.5, 0.5, 0.5, 0.8);
                 painter.rect(bar_size + bar_border * 3.0);
 
-                painter.color = Color::SEA_GREEN.pastel() * (1.0 / (0.8 + bar_fill * 0.6));
+                painter.set_color(SEA_GREEN.pastel() * (1.0 / (0.8 + bar_fill * 0.6)));
                 painter.hollow = false;
                 painter.corner_radii -= 0.5 * Vec4::splat(bar_border * 3.0);
                 painter.translate(-Vec3::Y * (1.0 - bar_fill) * bar_size.y / 2.0);
@@ -130,13 +132,13 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
             // Circle examples
             2 => {
                 painter.hollow = false;
-                painter.color = Color::ORANGE.pastel() * 0.7;
+                painter.set_color(ORANGE.pastel() * 0.7);
                 painter.translate(diag_vec * 0.8);
                 painter.circle(0.8);
 
                 painter.hollow = true;
                 painter.thickness = 0.4;
-                painter.color = Color::ORANGE.pastel() * 1.4;
+                painter.set_color(ORANGE.pastel() * 1.4);
                 painter.translate(-diag_vec * 1.6);
                 painter.circle(0.8);
             }
@@ -144,7 +146,7 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
                 let circle_fill = ((seconds * 2.).sin() + 1.0) / 2.0;
 
                 painter.hollow = true;
-                painter.color = Color::ORANGE.pastel();
+                painter.set_color(ORANGE.pastel());
                 painter.thickness = 0.5;
                 painter.circle(1.5 * circle_fill);
             }
@@ -160,7 +162,7 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
 
                     painter.thickness = f32::powf(2.5, 2.8) / 40.0 * scale - circle_size;
                     painter.hollow = true;
-                    painter.color = Color::ORANGE.pastel() + Color::WHITE * circle_size;
+                    painter.set_color(ORANGE.pastel() + WHITE * circle_size);
                     painter.translate(position + Vec3::Y * circle_size * 2.0 * scale);
                     painter.circle(circle_size);
                 }
@@ -195,14 +197,14 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
             3 => {
                 painter.hollow = false;
                 painter.cap = Cap::None;
-                painter.color = Color::CRIMSON.pastel() * 0.7;
+                painter.set_color(CRIMSON.pastel() * 0.7);
                 painter.translate(diag_vec * 0.8);
                 painter.arc(0.8, 0.0, TAU * (2. / 3.));
 
                 painter.hollow = true;
                 painter.cap = Cap::Round;
                 painter.thickness = 0.4;
-                painter.color = Color::CRIMSON.pastel() * 1.4;
+                painter.set_color(CRIMSON.pastel() * 1.4);
                 painter.translate(-diag_vec * 1.6);
                 painter.arc(0.8, 0.0, TAU * (2. / 3.));
             }
@@ -212,7 +214,7 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
 
                 painter.thickness = 0.5;
                 painter.hollow = true;
-                painter.color = Color::CRIMSON.pastel();
+                painter.set_color(CRIMSON.pastel());
                 painter.cap = Cap::None;
                 painter.arc(1.5, start_angle, end_angle);
             }
@@ -226,12 +228,12 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
                 painter.hollow = true;
                 painter.cap = Cap::Round;
                 painter.thickness = 0.4;
-                painter.color = Color::CRIMSON.pastel() * (1.0 / (0.8 + meter_fill * 0.6));
+                painter.set_color(CRIMSON.pastel() * (1.0 / (0.8 + meter_fill * 0.6)));
                 painter.arc(1.3, start_angle, end_angle);
 
                 painter.cap = Cap::None;
                 painter.thickness = 0.2;
-                painter.color = Color::WHITE;
+                painter.set_color(WHITE);
                 painter.arc(1.6, start_angle, -start_angle);
                 painter.arc(0.8, start_angle, -start_angle);
 
@@ -247,31 +249,31 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
             4 => {
                 painter.thickness = 0.4;
                 painter.hollow = true;
-                painter.color = Color::PURPLE.pastel() * 0.6;
+                painter.set_color(PURPLE.pastel() * 0.6);
                 painter.translate(diag_vec);
                 painter.ngon(4., 0.8);
 
                 painter.roundness = 0.1;
                 painter.hollow = false;
-                painter.color = Color::PURPLE.pastel() * 0.8;
+                painter.set_color(PURPLE.pastel() * 0.8);
                 painter.translate(-Vec3::X * 2.0);
                 painter.ngon(3., 0.8);
 
                 painter.hollow = true;
-                painter.color = Color::PURPLE.pastel();
+                painter.set_color(PURPLE.pastel());
                 painter.translate(-Vec3::Y * 2.0);
                 painter.ngon(5., 0.8);
 
                 painter.roundness = 0.0;
                 painter.hollow = false;
-                painter.color = Color::PURPLE.pastel() * 1.2;
+                painter.set_color(PURPLE.pastel() * 1.2);
                 painter.translate(Vec3::X * 2.0);
                 painter.ngon(6., 0.8);
             }
             9 => {
                 painter.hollow = true;
                 painter.thickness = 0.5;
-                painter.color = Color::PURPLE.pastel();
+                painter.set_color(PURPLE.pastel());
                 painter.roundness = 0.5;
                 painter.ngon(3. + (seconds.sin() + 1.) * 3., 1.5);
             }
@@ -287,8 +289,8 @@ pub fn gallery(mut painter: ShapePainter, seconds: f32, entries: Range<i32>) {
                         .length();
                     if dist <= BOUNDS {
                         let ratio = 1.0 - f32::max(dist, 0.5) / BOUNDS;
-                        painter.color = Color::PURPLE.pastel();
-                        painter.color.set_a(ratio);
+                        painter.set_color(PURPLE.pastel());
+                        painter.color.set_alpha(ratio);
                         painter.ngon(sides, radius * f32::powf(ratio, 0.2) * 0.8);
                     }
                 }
@@ -336,7 +338,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(ShapePlugin::default())
-        .insert_resource(ClearColor(Color::DARK_GRAY))
+        .insert_resource(ClearColor(DIM_GRAY.into()))
         .insert_resource(Msaa::Off)
         .add_systems(Startup, setup)
         .add_systems(Update, draw_gallery)
