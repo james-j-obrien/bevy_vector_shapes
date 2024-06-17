@@ -15,6 +15,13 @@ pub struct ShapeConfig {
     pub transform: Transform,
     pub alignment: Alignment,
 
+    /// When in 3D, overrides the point in global space that is used to determine the draw order of spawned shapes.
+    ///
+    /// Can be modified to ensure that complex 3D UIs layer properly at oblique camera angles.
+    ///
+    /// Defaults to `None`.
+    pub origin: Option<Vec3>,
+
     pub color: Color,
 
     /// If true spawned shape will have a [`ShapeFill`] with [`FillType::Stroke`], taking into account thickness and thickness_type.
@@ -119,6 +126,7 @@ impl ShapeConfig {
     pub fn default_2d() -> Self {
         Self {
             transform: default(),
+            origin: None,
 
             color: Color::GRAY,
             thickness: 0.1,

@@ -69,14 +69,24 @@ pub fn extract_shapes_2d<T: ShapeData>(
         })
         .for_each(|(entity, material, data)| {
             materials.entry(material.clone()).or_default().push(entity);
-            instance_data.insert(entity, (material, data));
+            instance_data.insert(
+                entity,
+                ShapeInstance {
+                    material,
+                    origin: Vec3::ZERO,
+                    data,
+                },
+            );
         });
 
     if let Some(iter) = storage.get::<T>(ShapePipelineType::Shape2d) {
-        iter.cloned().for_each(|(material, data)| {
+        iter.cloned().for_each(|instance| {
             let entity = commands.spawn_empty().id();
-            materials.entry(material.clone()).or_default().push(entity);
-            instance_data.insert(entity, (material, data));
+            materials
+                .entry(instance.material.clone())
+                .or_default()
+                .push(entity);
+            instance_data.insert(entity, instance);
         });
     }
 }
@@ -131,12 +141,12 @@ pub fn queue_shapes_2d<T: ShapeData>(
 
             for entity in entities {
                 // SAFETY: we insert this alongside inserting into the vector we are currently iterating
-                let (_, data) = unsafe { instance_data.get(entity).unwrap_unchecked() };
+                let instance = unsafe { instance_data.get(entity).unwrap_unchecked() };
                 transparent_phase.add(Transparent2d {
                     entity: *entity,
                     pipeline,
                     draw_function,
-                    sort_key: FloatOrd(data.distance()),
+                    sort_key: FloatOrd(instance.data.distance()),
                     batch_range: 0..1,
                     dynamic_offset: None,
                 });

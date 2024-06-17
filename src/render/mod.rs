@@ -112,8 +112,19 @@ pub fn load_shaders(app: &mut App) {
     );
 }
 
-/// A pair of [`ShapePipelineMaterial`] and [`ShapeData`] to be used for rendering.
-pub type ShapeInstance<T> = (ShapePipelineMaterial, T);
+/// Contains data necessary to render a single shape.
+#[derive(Clone)]
+pub struct ShapeInstance<T> {
+    /// This shape's material.
+    pub material: ShapePipelineMaterial,
+
+    /// The point in space used for ordering this point.
+    /// Ignored by the 3D pipeline.
+    pub origin: Vec3,
+
+    /// The [`ShapeData`] of this shape.
+    pub data: T,
+}
 
 /// Trait implemented by each shapes shader data, defines common methods used in the rendering pipeline.
 pub trait ShapeData: Send + Sync + GpuArrayBufferable + 'static {
@@ -455,14 +466,14 @@ pub fn batch_and_prepare_render_phase<
     instance_data: Res<R>,
 ) {
     let mut process_item = |item: &mut P| {
-        let (material, data) = instance_data.get(&item.entity())?;
-        let buffer_index = gpu_array_buffer.push(data.clone());
+        let instance = instance_data.get(&item.entity())?;
+        let buffer_index = gpu_array_buffer.push(instance.data.clone());
 
         let index = buffer_index.index.get();
         *item.batch_range_mut() = index..index + 1;
         *item.dynamic_offset_mut() = buffer_index.dynamic_offset;
 
-        Some(BatchMeta::new(item, material))
+        Some(BatchMeta::new(item, &instance.material))
     };
 
     let mut batches = Vec::new();

@@ -80,6 +80,12 @@ impl ShapeFill {
 #[derive(Component)]
 pub struct Shape3d;
 
+/// Overrides the origin of a 3D shape so that transparent drawing order can be overridden.
+///
+/// This is in local space.
+#[derive(Component)]
+pub struct ShapeOrigin(pub Vec3);
+
 /// Bundle that is required to render a shape.
 ///
 /// Shape specific methods will additionally add the component representing the corresponding shape.
