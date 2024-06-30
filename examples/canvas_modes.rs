@@ -1,14 +1,14 @@
 // Demonstrates the various canvas modes
 // Press Space to request a redraw and M to cycle through the various modes
 
-use bevy::prelude::*;
+use bevy::{color::palettes::css::*, prelude::*};
 use bevy_vector_shapes::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(ShapePlugin::default())
-        .insert_resource(ClearColor(Color::DARK_GRAY))
+        .insert_resource(ClearColor(DIM_GRAY.into()))
         .add_systems(Startup, setup)
         .add_systems(Update, (draw_shapes, update_canvas))
         .run();
@@ -47,7 +47,7 @@ fn draw_shapes(time: Res<Time>, mut painter: ShapePainter, canvas: Query<(Entity
     painter.set_canvas(canvas_e);
     painter.hollow = true;
     painter.thickness = 6.0;
-    painter.color = Color::CRIMSON;
+    painter.set_color(CRIMSON);
     painter.translate(Vec3::Y * time.elapsed_seconds().sin() * 256.0);
     painter.circle(48.0);
 

@@ -1,6 +1,7 @@
 // A stress test drawing a large number of shapes
 
 use bevy::{
+    color::palettes::css::*,
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     prelude::*,
 };
@@ -12,7 +13,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(ShapePlugin::default())
-        .insert_resource(ClearColor(Color::DARK_GRAY))
+        .insert_resource(ClearColor(DIM_GRAY.into()))
         .add_plugins(FrameTimeDiagnosticsPlugin)
         .add_plugins(LogDiagnosticsPlugin::default())
         .add_systems(Startup, setup)
@@ -33,7 +34,7 @@ fn draw_health_bar(painter: &mut ShapePainter, hp: f32) {
     painter.translate(Vec3::Y * 0.7);
     painter.corner_radii = Vec4::splat(0.3);
 
-    painter.color = Color::GREEN * hp + Color::RED * (1. - hp);
+    painter.set_color(GREEN * hp + RED * (1. - hp));
     painter.rect(Vec2::new(0.2 + 0.8 * hp, 0.2));
 
     painter.thickness = 0.02;
@@ -50,7 +51,7 @@ fn draw_spheres(time: Res<Time>, mut painter: ShapePainter) {
             let position = Vec3::new(x * 2.0, offset.sin(), y * 2.0);
 
             painter.hollow = false;
-            painter.color = Color::GRAY;
+            painter.set_color(GRAY);
             painter.alignment = Alignment::Billboard;
             painter.transform.translation = position;
             painter.corner_radii = Vec4::splat(1.0);

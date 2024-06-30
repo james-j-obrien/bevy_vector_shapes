@@ -230,7 +230,7 @@ struct VertexData {
     scale: vec2<f32>
 };
 
-// Calculate the full set of vertex data shared betwen each shape type
+// Calculate the full set of vertex data shared between each shape type
 fn get_vertex_data(matrix: mat4x4<f32>, vertex: vec2<f32>, thickness: f32, flags: u32) -> VertexData {
     var out: VertexData;
 

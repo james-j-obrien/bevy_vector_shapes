@@ -36,7 +36,7 @@ pub struct ShapeConfig {
 
     #[reflect(ignore)]
     pub render_layers: Option<RenderLayers>,
-    pub alpha_mode: AlphaMode,
+    pub alpha_mode: ShapeAlphaMode,
     /// Forcibly disables local anti-aliasing.
     pub disable_laa: bool,
     /// [`Canvas`] to draw the shape to.
@@ -119,6 +119,11 @@ impl ShapeConfig {
         config.transform = Transform::IDENTITY;
         config
     }
+
+    // Helper method to set color from any or bevy's color variants
+    pub fn set_color(&mut self, color: impl Into<Color>) {
+        self.color = color.into();
+    }
 }
 
 impl ShapeConfig {
@@ -128,7 +133,7 @@ impl ShapeConfig {
             transform: default(),
             origin: None,
 
-            color: Color::GRAY,
+            color: Color::WHITE,
             thickness: 0.1,
             thickness_type: default(),
             alignment: default(),
@@ -138,7 +143,7 @@ impl ShapeConfig {
             corner_radii: default(),
 
             render_layers: None,
-            alpha_mode: AlphaMode::Blend,
+            alpha_mode: ShapeAlphaMode::Blend,
             disable_laa: false,
             canvas: None,
             texture: None,
