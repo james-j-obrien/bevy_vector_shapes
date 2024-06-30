@@ -29,7 +29,7 @@ pub struct ShapeConfig {
 
     #[reflect(ignore)]
     pub render_layers: Option<RenderLayers>,
-    pub alpha_mode: AlphaMode,
+    pub alpha_mode: ShapeAlphaMode,
     /// Forcibly disables local anti-aliasing.
     pub disable_laa: bool,
     /// [`Canvas`] to draw the shape to.
@@ -135,7 +135,7 @@ impl ShapeConfig {
             corner_radii: default(),
 
             render_layers: None,
-            alpha_mode: AlphaMode::Blend,
+            alpha_mode: ShapeAlphaMode::Blend,
             disable_laa: false,
             canvas: None,
             texture: None,

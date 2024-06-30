@@ -179,7 +179,7 @@ bitfield! {
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, Component)]
 pub struct ShapePipelineMaterial {
     render_layers: RenderLayersHash,
-    alpha_mode: AlphaModeOrd,
+    alpha_mode: ShapeAlphaMode,
     disable_laa: bool,
     texture: Option<Handle<Image>>,
     canvas: Option<Entity>,
@@ -191,8 +191,9 @@ impl ShapePipelineMaterial {
         let material = material.cloned().unwrap_or_default();
         Self {
             render_layers: RenderLayersHash(render_layers.cloned().unwrap_or_default()),
-            alpha_mode: AlphaModeOrd(material.alpha_mode),
-            disable_laa: material.disable_laa || material.alpha_mode == AlphaMode::Opaque,
+            alpha_mode: material.alpha_mode,
+            disable_laa: material.disable_laa,
+            //|| material.alpha_mode == AlphaMode::Opaque
             canvas: material.canvas,
             pipeline: material.pipeline,
             texture: material.texture,
@@ -204,8 +205,9 @@ impl From<&ShapeConfig> for ShapePipelineMaterial {
     fn from(config: &ShapeConfig) -> Self {
         Self {
             render_layers: RenderLayersHash(config.render_layers.clone().unwrap_or_default()),
-            alpha_mode: AlphaModeOrd(config.alpha_mode),
-            disable_laa: config.disable_laa || config.alpha_mode == AlphaMode::Opaque,
+            alpha_mode: config.alpha_mode,
+            disable_laa: config.disable_laa,
+            // || material.alpha_mode == AlphaMode::Opaque
             texture: config.texture.clone(),
             pipeline: config.pipeline,
             canvas: config.canvas,
@@ -219,41 +221,6 @@ struct RenderLayersHash(RenderLayers);
 impl Hash for RenderLayersHash {
     fn hash<H: Hasher>(&self, state: &mut H) {
         unsafe { std::mem::transmute::<_, &u32>(self).hash(state) }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-struct AlphaModeOrd(AlphaMode);
-
-impl AlphaModeOrd {
-    fn ord(&self) -> f32 {
-        match self.0 {
-            AlphaMode::Opaque => 0.0,
-            AlphaMode::Blend => 1.0,
-            AlphaMode::Premultiplied => 3.0,
-            AlphaMode::Add => 4.0,
-            AlphaMode::Multiply => 5.0,
-            AlphaMode::AlphaToCoverage => 6.0,
-            AlphaMode::Mask(m) => 7.0 + m,
-        }
-    }
-}
-
-impl Hash for AlphaModeOrd {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        FloatOrd(self.ord()).hash(state);
-    }
-}
-
-impl PartialOrd for AlphaModeOrd {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for AlphaModeOrd {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        FloatOrd(self.ord()).cmp(&FloatOrd(other.ord()))
     }
 }
 
@@ -311,10 +278,6 @@ fn setup_pipeline(app: &mut App) {
         .add_systems(
             Render,
             prepare_shape_view_bind_groups.in_set(RenderSet::PrepareBindGroups),
-        )
-        .add_systems(
-            Render,
-            prepare_shape_texture_bind_groups.in_set(RenderSet::PrepareBindGroups),
         );
 }
 
@@ -338,11 +301,8 @@ fn setup_type_pipeline_3d<T: ShapeData + 'static>(app: &mut App) {
             Render,
             (
                 prepare_shape_3d_bind_group::<T>.in_set(RenderSet::PrepareBindGroups),
+                prepare_shape_3d_texture_bind_groups::<T>.in_set(RenderSet::PrepareBindGroups),
                 queue_shapes_3d::<T>.in_set(RenderSet::Queue),
-                // batch_and_prepare_render_phase::<Opaque3d, ShapePipeline<T>>
-                //     .in_set(RenderSet::PrepareResources),
-                // batch_and_prepare_render_phase::<AlphaMask3d, ShapePipeline<T>>
-                //     .in_set(RenderSet::PrepareResources),
                 batch_and_prepare_render_phase::<Transparent3d, Shape3dPipeline<T>>
                     .in_set(RenderSet::PrepareResources),
             ),
@@ -364,6 +324,7 @@ fn setup_type_pipeline_2d<T: ShapeData + 'static>(app: &mut App) {
                 Render,
                 (
                     prepare_shape_2d_bind_group::<T>.in_set(RenderSet::PrepareBindGroups),
+                    prepare_shape_2d_texture_bind_groups::<T>.in_set(RenderSet::PrepareBindGroups),
                     queue_shapes_2d::<T>.in_set(RenderSet::Queue),
                     batch_and_prepare_render_phase::<Transparent2d, Shape2dPipeline<T>>
                         .in_set(RenderSet::PrepareResources),

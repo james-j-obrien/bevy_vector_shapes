@@ -22,7 +22,7 @@ fn setup(mut commands: Commands, mut shapes: ShapeCommands) {
         ..default()
     });
 
-    // The ShapeCommands API is identical to the ShapePainter API so can be used almost interchangably
+    // The ShapeCommands API is identical to the ShapePainter API so can be used almost interchangeably
     shapes.circle(1.0).with_children(|parent| {
         for _ in 0..4 {
             parent.rotate_z(PI / 2.0);

@@ -1,9 +1,9 @@
 use bevy::{
-    core_pipeline::{core_3d::*, prepass::OpaqueNoLightmap3dBinKey},
+    core_pipeline::core_3d::*,
     ecs::entity::EntityHashMap,
     prelude::*,
     render::{
-        render_phase::{DrawFunctions, ViewBinnedRenderPhases},
+        render_phase::DrawFunctions,
         render_resource::*,
         view::{ExtractedView, RenderLayers},
         Extract,
@@ -86,8 +86,8 @@ pub fn extract_shapes_3d<T: ShapeData>(
 
 #[allow(clippy::too_many_arguments)]
 pub fn queue_shapes_3d<T: ShapeData>(
-    opaque_draw_functions: Res<DrawFunctions<Opaque3d>>,
-    alpha_mask_draw_functions: Res<DrawFunctions<AlphaMask3d>>,
+    // opaque_draw_functions: Res<DrawFunctions<Opaque3d>>,
+    // alpha_mask_draw_functions: Res<DrawFunctions<AlphaMask3d>>,
     transparent_draw_functions: Res<DrawFunctions<Transparent3d>>,
     pipeline: Res<Shape3dPipeline<T>>,
     pipeline_cache: Res<PipelineCache>,
@@ -95,15 +95,15 @@ pub fn queue_shapes_3d<T: ShapeData>(
     materials: Res<Shape3dMaterials<T>>,
     instance_data: Res<Shape3dInstances<T>>,
     mut shape_pipelines: ResMut<ShapePipelines>,
-    mut opaque_phases: ResMut<ViewBinnedRenderPhases<Opaque3d>>,
-    mut alpha_phases: ResMut<ViewBinnedRenderPhases<AlphaMask3d>>,
+    // mut opaque_phases: ResMut<ViewBinnedRenderPhases<Opaque3d>>,
+    // mut alpha_phases: ResMut<ViewBinnedRenderPhases<AlphaMask3d>>,
     mut trans_phases: ResMut<ViewSortedRenderPhases<Transparent3d>>,
     mut views: Query<(Entity, &ExtractedView, Option<&RenderLayers>)>,
 ) {
-    let draw_opaque = opaque_draw_functions.read().id::<DrawShape3dCommand<T>>();
-    let draw_alpha_mask = alpha_mask_draw_functions
-        .read()
-        .id::<DrawShape3dCommand<T>>();
+    // let draw_opaque = opaque_draw_functions.read().id::<DrawShape3dCommand<T>>();
+    // let draw_alpha_mask = alpha_mask_draw_functions
+    //     .read()
+    //     .id::<DrawShape3dCommand<T>>();
     let draw_transparent = transparent_draw_functions
         .read()
         .id::<DrawShape3dCommand<T>>();
@@ -131,11 +131,14 @@ pub fn queue_shapes_3d<T: ShapeData>(
         };
 
         for (view_entity, view, _) in visible_views.into_iter() {
-            let (Some(opaque_phase), Some(alpha_mask_phase), Some(transparent_phase)) = (
-                opaque_phases.get_mut(&view_entity),
-                alpha_phases.get_mut(&view_entity),
-                trans_phases.get_mut(&view_entity),
-            ) else {
+            // let (Some(opaque_phase), Some(alpha_mask_phase), Some(transparent_phase)) = (
+            //     opaque_phases.get_mut(&view_entity),
+            //     alpha_phases.get_mut(&view_entity),
+            //     trans_phases.get_mut(&view_entity),
+            // ) else {
+            //     continue;
+            // };
+            let Some(transparent_phase) = trans_phases.get_mut(&view_entity) else {
                 continue;
             };
             let mut view_key = key;
@@ -143,49 +146,22 @@ pub fn queue_shapes_3d<T: ShapeData>(
             view_key |= ShapePipelineKey::from_hdr(view.hdr);
             let pipeline = shape_pipelines.specialize(&pipeline_cache, pipeline.as_ref(), view_key);
 
-            let default_id = AssetId::Uuid {
-                uuid: AssetId::<Mesh>::DEFAULT_UUID,
-            };
+            // let default_id = AssetId::Uuid {
+            //     uuid: AssetId::<Mesh>::DEFAULT_UUID,
+            // };
             let rangefinder = view.rangefinder3d();
             for &entity in entities {
                 // SAFETY: we insert this alongside inserting into the vector we are currently iterating
                 let (_, data) = unsafe { instance_data.get(&entity).unwrap_unchecked() };
                 let distance = rangefinder.distance(&data.transform());
-                match material.alpha_mode.0 {
-                    AlphaMode::Opaque => {
-                        let key = Opaque3dBinKey {
-                            pipeline,
-                            draw_function: draw_opaque,
-                            asset_id: default_id,
-                            material_bind_group_id: None,
-                            lightmap_image: None,
-                        };
-                        opaque_phase.add(key, entity, true);
-                    }
-                    AlphaMode::Mask(_) => {
-                        let key = OpaqueNoLightmap3dBinKey {
-                            pipeline,
-                            draw_function: draw_alpha_mask,
-                            asset_id: default_id,
-                            material_bind_group_id: None,
-                        };
-                        alpha_mask_phase.add(key, entity, true);
-                    }
-                    AlphaMode::Blend
-                    | AlphaMode::Premultiplied
-                    | AlphaMode::Add
-                    | AlphaMode::Multiply
-                    | AlphaMode::AlphaToCoverage => {
-                        transparent_phase.add(Transparent3d {
-                            entity,
-                            draw_function: draw_transparent,
-                            pipeline,
-                            distance,
-                            batch_range: 0..1,
-                            extra_index: PhaseItemExtraIndex::NONE,
-                        });
-                    }
-                }
+                transparent_phase.add(Transparent3d {
+                    entity,
+                    draw_function: draw_transparent,
+                    pipeline,
+                    distance,
+                    batch_range: 0..1,
+                    extra_index: PhaseItemExtraIndex::NONE,
+                });
             }
         }
     }

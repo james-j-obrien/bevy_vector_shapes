@@ -53,15 +53,15 @@ fn draw_gallery(mut painter: ShapePainter) {
 
     painter.reset();
     painter.translate(Vec3::X * radius * -4.0);
-    painter.alpha_mode = AlphaMode::Add;
+    painter.alpha_mode = ShapeAlphaMode::Add;
     draw_circles(&mut painter, radius);
 
     painter.reset();
-    painter.alpha_mode = AlphaMode::Multiply;
+    painter.alpha_mode = ShapeAlphaMode::Multiply;
     draw_circles(&mut painter, radius);
 
     painter.reset();
     painter.translate(Vec3::X * radius * 4.0);
-    painter.alpha_mode = AlphaMode::Blend;
+    painter.alpha_mode = ShapeAlphaMode::Blend;
     draw_circles(&mut painter, radius);
 }
