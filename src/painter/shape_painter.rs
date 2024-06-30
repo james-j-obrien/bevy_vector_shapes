@@ -24,15 +24,20 @@ pub struct ShapeStorage {
 impl ShapeStorage {
     fn send<T: ShapeData>(&mut self, config: &ShapeConfig, data: T) {
         let key = (TypeId::of::<T>(), config.pipeline);
-        let entry = (ShapePipelineMaterial::from(config), data);
         let vec = self
             .shapes
             .entry(key)
             .or_insert_with(AnyVec::new::<ShapeInstance<T>>);
 
+        let instance = ShapeInstance {
+            material: ShapePipelineMaterial::from(config),
+            origin: config.origin.unwrap_or(config.transform.translation),
+            data,
+        };
+
         // SAFETY: we only insert entries in this function and only those that match the appropriate TypeId
         unsafe {
-            vec.downcast_mut_unchecked().push(entry);
+            vec.downcast_mut_unchecked().push(instance);
         }
     }
 

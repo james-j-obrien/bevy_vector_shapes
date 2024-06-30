@@ -73,7 +73,8 @@ fn vertex(v: Vertex) -> VertexOutput {
     var origin = select(world_end, world_start, vertex.y < 0.0);
 
     // Calculate the remainder of our basis vectors
-    var basis_vectors = core::get_basis_vectors_from_up(matrix, origin, y_basis, core,:: f_alignment(shape.flags) << 1u);
+    var alignment = core::f_alignment(shape.flags) << 1u;
+    var basis_vectors = core::get_basis_vectors_from_up(matrix, origin, y_basis, alignment);
 
     // Calculate thickness data
     var thickness_type = core::f_thickness_type(shape.flags);
@@ -170,10 +171,10 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
         var dist = length(pos);
 
         // Mask out corners
-        in_shape = min(in_shape, core,:: step_aa(dist, 1.));
+        in_shape = min(in_shape, core::step_aa(dist, 1.));
     } else {
         // Simple rectangle sdf for no caps or square caps
-        in_shape = min(in_shape, core,:: step_aa(abs(f.uv.x), 1.) * core,:: step_aa(abs(f.uv.y), 1.0));
+        in_shape = min(in_shape, core::step_aa(abs(f.uv.x), 1.) * core::step_aa(abs(f.uv.y), 1.0));
     }
 
     var color = core::color_output(vec4<f32>(f.color.rgb, in_shape));

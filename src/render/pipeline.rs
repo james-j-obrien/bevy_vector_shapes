@@ -333,7 +333,7 @@ impl<T: ShapeData> GetBatchData for Shape2dPipeline<T> {
         entity: Entity,
     ) -> Option<(Self::BufferData, Option<Self::CompareData>)> {
         let instance = instances.get(&entity)?;
-        Some((instance.1.clone(), Some(instance.0.clone())))
+        Some((instance.data.clone(), Some(instance.material.clone())))
     }
 }
 
@@ -356,6 +356,6 @@ impl<T: ShapeData> GetBatchData for Shape3dPipeline<T> {
         entity: Entity,
     ) -> Option<(Self::BufferData, Option<Self::CompareData>)> {
         let instance = instances.get(&entity)?;
-        Some((instance.1.clone(), Some(instance.0.clone())))
+        Some((instance.data.clone(), Some(instance.material.clone())))
     }
 }

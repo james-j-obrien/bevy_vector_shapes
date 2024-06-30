@@ -46,6 +46,7 @@ pub fn extract_shapes_3d<T: ShapeData>(
                 &InheritedVisibility,
                 Option<&ShapeMaterial>,
                 Option<&RenderLayers>,
+                Option<&ShapeOrigin>,
             ),
             With<Shape3d>,
         >,
@@ -59,27 +60,40 @@ pub fn extract_shapes_3d<T: ShapeData>(
 
     entities
         .iter()
-        .filter_map(|(e, cp, fill, tf, vis, flags, rl)| {
+        .filter_map(|(e, cp, fill, tf, vis, flags, rl, or)| {
             if vis.get() {
+                // find global origin of shape
+                let local_origin = or.map(|or| or.0).unwrap_or(Vec3::ZERO);
+                let origin = tf.transform_point(local_origin);
+
                 Some((
                     e,
-                    ShapePipelineMaterial::new(flags, rl),
-                    cp.get_data(tf, fill),
+                    ShapeInstance {
+                        material: ShapePipelineMaterial::new(flags, rl),
+                        origin,
+                        data: cp.get_data(tf, fill),
+                    },
                 ))
             } else {
                 None
             }
         })
-        .for_each(|(entity, material, data)| {
-            materials.entry(material.clone()).or_default().push(entity);
-            instance_data.insert(entity, (material, data));
+        .for_each(|(entity, instance)| {
+            materials
+                .entry(instance.material.clone())
+                .or_default()
+                .push(entity);
+            instance_data.insert(entity, instance);
         });
 
     if let Some(iter) = storage.get::<T>(ShapePipelineType::Shape3d) {
-        iter.cloned().for_each(|(material, data)| {
+        iter.cloned().for_each(|instance| {
             let entity = commands.spawn_empty().id();
-            materials.entry(material.clone()).or_default().push(entity);
-            instance_data.insert(entity, (material, data));
+            materials
+                .entry(instance.material.clone())
+                .or_default()
+                .push(entity);
+            instance_data.insert(entity, instance);
         });
     }
 }
@@ -152,8 +166,10 @@ pub fn queue_shapes_3d<T: ShapeData>(
             let rangefinder = view.rangefinder3d();
             for &entity in entities {
                 // SAFETY: we insert this alongside inserting into the vector we are currently iterating
-                let (_, data) = unsafe { instance_data.get(&entity).unwrap_unchecked() };
-                let distance = rangefinder.distance(&data.transform());
+                let instance = unsafe { instance_data.get(&entity).unwrap_unchecked() };
+                let data = &instance.data;
+                let dist_point = data.transform().transform_vector3(instance.origin);
+                let distance = rangefinder.distance_translation(&dist_point);
                 transparent_phase.add(Transparent3d {
                     entity,
                     draw_function: draw_transparent,

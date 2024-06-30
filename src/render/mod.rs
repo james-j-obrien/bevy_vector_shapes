@@ -114,8 +114,19 @@ pub fn load_shaders(app: &mut App) {
     );
 }
 
-/// A pair of [`ShapePipelineMaterial`] and [`ShapeData`] to be used for rendering.
-pub type ShapeInstance<T> = (ShapePipelineMaterial, T);
+/// Contains data necessary to render a single shape.
+#[derive(Clone)]
+pub struct ShapeInstance<T> {
+    /// This shape's material.
+    pub material: ShapePipelineMaterial,
+
+    /// The point in space used for ordering this point.
+    /// Ignored by the 3D pipeline.
+    pub origin: Vec3,
+
+    /// The [`ShapeData`] of this shape.
+    pub data: T,
+}
 
 /// Trait implemented by each shapes shader data, defines common methods used in the rendering pipeline.
 pub trait ShapeData: Send + Sync + GpuArrayBufferable + 'static {
