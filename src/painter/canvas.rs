@@ -9,7 +9,7 @@ use bevy::{
 };
 use wgpu::{Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages};
 
-/// Prepares the camera assosciated with each canvas.
+/// Prepares the camera associated with each canvas.
 ///
 /// Replaces the image handle when the canvas is resized and applies [`CanvasMode`] behaviours.
 pub fn update_canvases(
@@ -27,12 +27,12 @@ pub fn update_canvases(
 
             match canvas.mode {
                 CanvasMode::Continuous => {
-                    camera.clear_color = canvas.clear_color.clone();
+                    camera.clear_color = canvas.clear_color;
                     camera.is_active = true;
                 }
                 CanvasMode::Persistent => {
                     if canvas.redraw {
-                        camera.clear_color = canvas.clear_color.clone();
+                        camera.clear_color = canvas.clear_color;
                     } else {
                         camera.clear_color = ClearColorConfig::None;
                     }
@@ -146,7 +146,7 @@ impl Canvas {
 /// Configuration to be used when creating a [`CanvasBundle`]
 #[derive(Default)]
 pub struct CanvasConfig {
-    /// Clear mode analagous to [`Camera2d`].
+    /// Clear mode analogous to [`Camera2d`].
     pub clear_color: ClearColorConfig,
     /// Determines when the canvas is cleared and drawn to, see [`CanvasMode`].
     pub mode: CanvasMode,
@@ -154,11 +154,11 @@ pub struct CanvasConfig {
     pub width: u32,
     /// Height of the canvas' target texture in pixels.
     pub height: u32,
-    /// Camera order analagous to [`Camera`].
+    /// Camera order analogous to [`Camera`].
     pub order: isize,
     /// [`ImageSampler`] to be used when creating the target texture.
     pub sampler: ImageSampler,
-    /// Whether to enable hdr for the assosciated camera and texture.
+    /// Whether to enable hdr for the associated camera and texture.
     pub hdr: bool,
 }
 
@@ -196,7 +196,7 @@ impl CanvasBundle {
                     order: config.order,
                     hdr: config.hdr,
                     target: RenderTarget::Image(image.clone()),
-                    clear_color: config.clear_color.clone(),
+                    clear_color: config.clear_color,
                     ..default()
                 },
                 ..default()

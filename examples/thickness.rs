@@ -1,13 +1,13 @@
 // Demonstrates the various thickness types by drawing lines of each type and zoooming in and out
 
-use bevy::prelude::*;
+use bevy::{color::palettes::css::*, prelude::*};
 use bevy_vector_shapes::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(ShapePlugin::default())
-        .insert_resource(ClearColor(Color::DARK_GRAY))
+        .insert_resource(ClearColor(DIM_GRAY.into()))
         .insert_resource(Msaa::Off)
         .add_systems(Startup, setup)
         .add_systems(Update, draw_gallery)
@@ -33,7 +33,7 @@ fn draw_gallery(
     let between_sets = 3.0;
     let line_vec = Vec3::new(0.4, 2.0, 0.0);
 
-    painter.color = Color::MIDNIGHT_BLUE;
+    painter.set_color(MIDNIGHT_BLUE);
     painter.translate(Vec3::NEG_X * (between_lines * 3.0 + between_sets));
     painter.thickness_type = ThicknessType::Pixels;
 
@@ -48,7 +48,7 @@ fn draw_gallery(
     painter.translate(Vec3::X * between_lines);
     painter.line(-line_vec, line_vec);
 
-    painter.color = Color::CRIMSON;
+    painter.set_color(CRIMSON);
     painter.translate(Vec3::X * between_sets);
     painter.thickness_type = ThicknessType::World;
 
@@ -63,7 +63,7 @@ fn draw_gallery(
     painter.translate(Vec3::X * between_lines);
     painter.line(-line_vec, line_vec);
 
-    painter.color = Color::SEA_GREEN;
+    painter.set_color(SEA_GREEN);
     painter.translate(Vec3::X * between_sets);
     painter.thickness_type = ThicknessType::Screen;
 

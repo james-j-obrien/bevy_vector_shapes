@@ -4,6 +4,7 @@
 use std::f32::consts::PI;
 
 use bevy::{
+    color::palettes::css::*,
     prelude::*,
     render::{camera::RenderTarget, texture::ImageSampler, view::RenderLayers},
 };
@@ -13,7 +14,7 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(ShapePlugin::default())
-        .insert_resource(ClearColor(Color::DARK_GRAY))
+        .insert_resource(ClearColor(DIM_GRAY.into()))
         .add_systems(Startup, setup)
         .add_systems(Update, (rotate_cube, draw_shapes))
         .run();
@@ -102,12 +103,12 @@ fn draw_shapes(time: Res<Time>, mut painter: ShapePainter) {
 
     painter.cap = Cap::Round;
     painter.thickness = 0.4;
-    painter.color = Color::CRIMSON * (1.0 / (0.5 + meter_fill));
+    painter.set_color(CRIMSON * (1.0 / (0.5 + meter_fill)));
     painter.arc(1.3, start_angle, end_angle);
 
     painter.cap = Cap::None;
     painter.thickness = 0.2;
-    painter.color = Color::DARK_GRAY;
+    painter.set_color(DARK_GRAY);
     painter.arc(1.6, start_angle, -start_angle);
     painter.arc(0.8, start_angle, -start_angle);
 

@@ -1,13 +1,13 @@
 // Demonstrates use of the shape bundles directly rather than go through the ShapeCommands or ShapePainter abstractions
 
-use bevy::prelude::*;
+use bevy::{color::palettes::css::*, prelude::*};
 use bevy_vector_shapes::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(ShapePlugin::default())
-        .insert_resource(ClearColor(Color::DARK_GRAY))
+        .insert_resource(ClearColor(DIM_GRAY.into()))
         .insert_resource(Msaa::Off)
         .add_systems(Startup, setup)
         .add_systems(Update, update_shapes)
@@ -26,7 +26,7 @@ fn setup(mut commands: Commands) {
     commands.spawn(
         ShapeBundle::rect(
             &ShapeConfig {
-                color: Color::MIDNIGHT_BLUE,
+                color: MIDNIGHT_BLUE.into(),
                 corner_radii: Vec4::splat(0.3),
                 ..ShapeConfig::default_3d()
             },

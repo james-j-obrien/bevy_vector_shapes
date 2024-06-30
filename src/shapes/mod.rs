@@ -20,8 +20,8 @@ pub use triangle::*;
 /// Component that holds data related to a shape to be used during rendering,
 #[derive(Component, Clone)]
 pub struct ShapeMaterial {
-    /// Alpha mode to use when rendering, Opaque, Blend, Add and Multiply are explicitly supported.
-    pub alpha_mode: AlphaMode,
+    /// Alpha mode to use when rendering, Blend, Add and Multiply are explicitly supported.
+    pub alpha_mode: ShapeAlphaMode,
     /// Forcibly disable local anti-aliasing.
     pub disable_laa: bool,
     /// Target pipeline draw the shape.
@@ -35,11 +35,30 @@ pub struct ShapeMaterial {
 impl Default for ShapeMaterial {
     fn default() -> Self {
         Self {
-            alpha_mode: AlphaMode::Blend,
+            alpha_mode: ShapeAlphaMode::Blend,
             disable_laa: false,
             pipeline: ShapePipelineType::Shape2d,
             texture: None,
             canvas: None,
+        }
+    }
+}
+
+/// Alpha mode to use when rendering, a subset of [`AlphaMode`].
+#[derive(Default, Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash, Reflect)]
+pub enum ShapeAlphaMode {
+    #[default]
+    Blend,
+    Add,
+    Multiply,
+}
+
+impl From<AlphaMode> for ShapeAlphaMode {
+    fn from(value: AlphaMode) -> Self {
+        match value {
+            AlphaMode::Add => ShapeAlphaMode::Add,
+            AlphaMode::Multiply => ShapeAlphaMode::Multiply,
+            _ => ShapeAlphaMode::Blend,
         }
     }
 }

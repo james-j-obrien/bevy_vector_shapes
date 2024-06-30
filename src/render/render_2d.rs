@@ -2,12 +2,12 @@ use crate::{painter::ShapeStorage, render::*, shapes::Shape3d};
 use bevy::{
     ecs::entity::EntityHashMap,
     render::{
-        render_phase::{DrawFunctions, RenderPhase},
+        render_phase::{DrawFunctions, PhaseItemExtraIndex},
         render_resource::*,
         view::{ExtractedView, RenderLayers},
         Extract,
     },
-    utils::{FloatOrd, HashMap},
+    utils::HashMap,
 };
 
 #[derive(Resource, Deref, DerefMut)]
@@ -84,21 +84,18 @@ pub fn extract_shapes_2d<T: ShapeData>(
 #[allow(clippy::too_many_arguments)]
 pub fn queue_shapes_2d<T: ShapeData>(
     transparent_2d_draw_functions: Res<DrawFunctions<Transparent2d>>,
-    pipeline: Res<ShapePipeline<T>>,
+    pipeline: Res<Shape2dPipeline<T>>,
     pipeline_cache: Res<PipelineCache>,
     msaa: Res<Msaa>,
     materials: Res<Shape2dMaterials<T>>,
     instance_data: Res<Shape2dInstances<T>>,
     mut shape_pipelines: ResMut<ShapePipelines>,
-    mut views: Query<(
-        &ExtractedView,
-        Option<&RenderLayers>,
-        &mut RenderPhase<Transparent2d>,
-    )>,
+    mut phases: ResMut<ViewSortedRenderPhases<Transparent2d>>,
+    mut views: Query<(Entity, &ExtractedView, Option<&RenderLayers>)>,
 ) {
     let draw_function = transparent_2d_draw_functions
         .read()
-        .id::<DrawShapeCommand<T>>();
+        .id::<DrawShape2dCommand<T>>();
     let view_count = views.iter().count();
 
     for (material, entities) in materials.iter() {
@@ -115,14 +112,18 @@ pub fn queue_shapes_2d<T: ShapeData>(
         } else {
             views
                 .iter_mut()
-                .filter(|(_, layers, _)| {
+                .filter(|(_, _, layers)| {
                     let render_layers = layers.cloned().unwrap_or_default();
                     render_layers.intersects(&material.render_layers.0)
                 })
                 .for_each(|view| visible_views.push(view))
         };
 
-        for (view, _, mut transparent_phase) in visible_views.into_iter() {
+        for (view_entity, view, _) in visible_views.into_iter() {
+            let Some(transparent_phase) = phases.get_mut(&view_entity) else {
+                continue;
+            };
+
             let mut view_key = key;
             view_key |= ShapePipelineKey::from_msaa_samples(msaa.samples());
             view_key |= ShapePipelineKey::from_hdr(view.hdr);
@@ -138,9 +139,33 @@ pub fn queue_shapes_2d<T: ShapeData>(
                     draw_function,
                     sort_key: FloatOrd(data.distance()),
                     batch_range: 0..1,
-                    dynamic_offset: None,
+                    extra_index: PhaseItemExtraIndex::NONE,
                 });
             }
         }
+    }
+}
+
+#[derive(Resource)]
+pub struct Shape2dBindGroup<T: ShapeData> {
+    pub value: BindGroup,
+    _marker: PhantomData<T>,
+}
+
+pub fn prepare_shape_2d_bind_group<T: ShapeData + 'static>(
+    mut commands: Commands,
+    pipeline: Res<Shape2dPipeline<T>>,
+    render_device: Res<RenderDevice>,
+    shape_buffer: Res<BatchedInstanceBuffer<T>>,
+) {
+    if let Some(binding) = shape_buffer.binding() {
+        commands.insert_resource(Shape2dBindGroup {
+            value: render_device.create_bind_group(
+                "shape_bind_group",
+                &pipeline.layout,
+                &BindGroupEntries::single(binding),
+            ),
+            _marker: PhantomData::<T>,
+        });
     }
 }

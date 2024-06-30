@@ -62,6 +62,7 @@ fn draw(mut painter: ShapePainter) {
 
 | bevy | bevy_vector_shapes |
 | ---- | ------------------ |
+| rc3  | main               |
 | 0.13 | 0.7.0              |
 | 0.12 | 0.6.0              |
 | 0.11 | 0.5.2              |
@@ -69,5 +70,5 @@ fn draw(mut painter: ShapePainter) {
 
 ## Alternatives
 - [bevy_smud](https://github.com/johanhelsing/bevy_smud): for generating custom sdf expressions at run time.
-- [bevy_protoype_lyon](https://github.com/Nilirad/bevy_prototype_lyon): for generating meshes from 2D shapes and paths.
+- [bevy_prototype_lyon](https://github.com/Nilirad/bevy_prototype_lyon): for generating meshes from 2D shapes and paths.
 - [vello](https://github.com/linebender/vello): for very efficient 2D shape rendering to images.

@@ -73,7 +73,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     var origin = select(world_end, world_start, vertex.y < 0.0);
 
     // Calculate the remainder of our basis vectors
-    var basis_vectors = core::get_basis_vectors_from_up(matrix, origin, y_basis, core::f_alignment(shape.flags) << 1u);
+    var basis_vectors = core::get_basis_vectors_from_up(matrix, origin, y_basis, core,:: f_alignment(shape.flags) << 1u);
 
     // Calculate thickness data
     var thickness_type = core::f_thickness_type(shape.flags);
@@ -116,7 +116,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     var padded_pos = local_pos + aa_padding;
     var uv_ratio = padded_pos / local_pos;
 
-    // Caluclate the offset from our origin point
+    // Calculate the offset from our origin point
     var local_offset = vertex.xy * (vec2<f32>(radius, cap_length) * scale.xy + aa_padding_u);
 
     // Determine final world position by offsetting by the origin we chose and rotating by our basis vectors
@@ -170,10 +170,10 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
         var dist = length(pos);
 
         // Mask out corners
-        in_shape = min(in_shape, core::step_aa(dist, 1.));
+        in_shape = min(in_shape, core,:: step_aa(dist, 1.));
     } else {
         // Simple rectangle sdf for no caps or square caps
-        in_shape = min(in_shape, core::step_aa(abs(f.uv.x), 1.) * core::step_aa(abs(f.uv.y), 1.0));
+        in_shape = min(in_shape, core,:: step_aa(abs(f.uv.x), 1.) * core,:: step_aa(abs(f.uv.y), 1.0));
     }
 
     var color = core::color_output(vec4<f32>(f.color.rgb, in_shape));

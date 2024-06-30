@@ -1,10 +1,16 @@
 use std::any::TypeId;
 
 use bevy::{
+    core_pipeline::tonemapping::get_lut_bind_group_layout_entries,
+    ecs::system::{lifetimeless::SRes, SystemParamItem},
     prelude::*,
-    render::{render_resource::*, renderer::RenderDevice, texture::BevyDefault, view::ViewUniform},
+    render::{
+        globals::GlobalsUniform, render_resource::*, renderer::RenderDevice, texture::BevyDefault,
+        view::ViewUniform,
+    },
     utils::HashMap,
 };
+use binding_types::uniform_buffer;
 use wgpu::vertex_attr_array;
 
 use super::*;
@@ -52,13 +58,10 @@ impl ShapePipelineKey {
     }
 
     pub fn from_material(material: &ShapePipelineMaterial) -> Self {
-        let mut key = match material.alpha_mode.0 {
-            AlphaMode::Opaque => Self::BLEND_OPAQUE,
-            AlphaMode::Mask(_) => Self::BLEND_OPAQUE,
-            AlphaMode::Blend => Self::BLEND_ALPHA,
-            AlphaMode::Premultiplied => Self::BLEND_ALPHA,
-            AlphaMode::Add => Self::BLEND_ADD,
-            AlphaMode::Multiply => Self::BLEND_MULTIPLY,
+        let mut key = match material.alpha_mode {
+            ShapeAlphaMode::Add => Self::BLEND_ADD,
+            ShapeAlphaMode::Multiply => Self::BLEND_MULTIPLY,
+            _ => Self::BLEND_ALPHA,
         };
         if material.texture.is_some() {
             key |= Self::TEXTURED;
@@ -78,21 +81,24 @@ pub struct ShapePipelines {
 impl FromWorld for ShapePipelines {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
+        let tonemapping_lut_entries = get_lut_bind_group_layout_entries();
         let view_layout = render_device.create_bind_group_layout(
-            Some("shape_view_layout"),
-            &[
-                // View
-                BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
-                    ty: BindingType::Buffer {
-                        ty: BufferBindingType::Uniform,
-                        has_dynamic_offset: true,
-                        min_binding_size: Some(ViewUniform::min_size()),
-                    },
-                    count: None,
-                },
-            ],
+            "shape_view_layout",
+            &BindGroupLayoutEntries::with_indices(
+                ShaderStages::VERTEX_FRAGMENT,
+                (
+                    (0, uniform_buffer::<ViewUniform>(true)),
+                    (1, uniform_buffer::<GlobalsUniform>(false)),
+                    (
+                        2,
+                        tonemapping_lut_entries[0].visibility(ShaderStages::FRAGMENT),
+                    ),
+                    (
+                        3,
+                        tonemapping_lut_entries[1].visibility(ShaderStages::FRAGMENT),
+                    ),
+                ),
+            ),
         );
         let texture_layout = render_device.create_bind_group_layout(
             Some("shape_texture_layout"),
@@ -128,7 +134,7 @@ impl ShapePipelines {
     pub fn specialize<T: ShapeData + 'static>(
         &mut self,
         cache: &PipelineCache,
-        pipeline: &ShapePipeline<T>,
+        pipeline: &Shape2dPipeline<T>,
         key: ShapePipelineKey,
     ) -> CachedRenderPipelineId {
         let Self {
@@ -148,18 +154,21 @@ impl ShapePipelines {
 }
 
 #[derive(Resource)]
-pub struct ShapePipeline<T: ShapeData> {
+pub struct Shape2dPipeline<T: ShapeData> {
     pub shader: Handle<Shader>,
     pub layout: BindGroupLayout,
     _marker: PhantomData<T>,
 }
 
-impl<T: ShapeData> FromWorld for ShapePipeline<T> {
+impl<T: ShapeData> FromWorld for Shape2dPipeline<T> {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
         let layout = render_device.create_bind_group_layout(
             Some("shape_layout"),
-            &[GpuArrayBuffer::<T>::binding_layout(render_device).build(0, ShaderStages::VERTEX)],
+            &BindGroupLayoutEntries::with_indices(
+                ShaderStages::VERTEX,
+                ((0, GpuArrayBuffer::<T>::binding_layout(render_device)),),
+            ),
         );
 
         let asset_server = world.resource_mut::<AssetServer>();
@@ -175,7 +184,7 @@ impl<T: ShapeData> FromWorld for ShapePipeline<T> {
     }
 }
 
-impl<T: ShapeData> ShapePipeline<T> {
+impl<T: ShapeData> Shape2dPipeline<T> {
     fn specialize(
         &self,
         view_layout: &BindGroupLayout,
@@ -311,5 +320,42 @@ impl<T: ShapeData> ShapePipeline<T> {
             label: Some(label),
             push_constant_ranges: vec![],
         }
+    }
+}
+
+impl<T: ShapeData> GetBatchData for Shape2dPipeline<T> {
+    type Param = SRes<Shape2dInstances<T>>;
+    type CompareData = ShapePipelineMaterial;
+    type BufferData = T;
+
+    fn get_batch_data(
+        instances: &SystemParamItem<Self::Param>,
+        entity: Entity,
+    ) -> Option<(Self::BufferData, Option<Self::CompareData>)> {
+        let instance = instances.get(&entity)?;
+        Some((instance.1.clone(), Some(instance.0.clone())))
+    }
+}
+
+#[derive(Resource, Deref, DerefMut)]
+pub struct Shape3dPipeline<T: ShapeData>(Shape2dPipeline<T>);
+
+impl<T: ShapeData> FromWorld for Shape3dPipeline<T> {
+    fn from_world(world: &mut World) -> Self {
+        Self(Shape2dPipeline::<T>::from_world(world))
+    }
+}
+
+impl<T: ShapeData> GetBatchData for Shape3dPipeline<T> {
+    type Param = SRes<Shape3dInstances<T>>;
+    type CompareData = ShapePipelineMaterial;
+    type BufferData = T;
+
+    fn get_batch_data(
+        instances: &SystemParamItem<Self::Param>,
+        entity: Entity,
+    ) -> Option<(Self::BufferData, Option<Self::CompareData>)> {
+        let instance = instances.get(&entity)?;
+        Some((instance.1.clone(), Some(instance.0.clone())))
     }
 }

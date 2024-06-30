@@ -3,7 +3,7 @@ use bevy::{
     ecs::entity::EntityHashMap,
     prelude::*,
     render::{
-        render_phase::{DrawFunctions, RenderPhase},
+        render_phase::DrawFunctions,
         render_resource::*,
         view::{ExtractedView, RenderLayers},
         Extract,
@@ -86,28 +86,27 @@ pub fn extract_shapes_3d<T: ShapeData>(
 
 #[allow(clippy::too_many_arguments)]
 pub fn queue_shapes_3d<T: ShapeData>(
-    opaque_draw_functions: Res<DrawFunctions<Opaque3d>>,
-    alpha_mask_draw_functions: Res<DrawFunctions<AlphaMask3d>>,
+    // opaque_draw_functions: Res<DrawFunctions<Opaque3d>>,
+    // alpha_mask_draw_functions: Res<DrawFunctions<AlphaMask3d>>,
     transparent_draw_functions: Res<DrawFunctions<Transparent3d>>,
-    pipeline: Res<ShapePipeline<T>>,
+    pipeline: Res<Shape3dPipeline<T>>,
     pipeline_cache: Res<PipelineCache>,
     msaa: Res<Msaa>,
     materials: Res<Shape3dMaterials<T>>,
     instance_data: Res<Shape3dInstances<T>>,
     mut shape_pipelines: ResMut<ShapePipelines>,
-    mut views: Query<(
-        &ExtractedView,
-        Option<&RenderLayers>,
-        &mut RenderPhase<Opaque3d>,
-        &mut RenderPhase<AlphaMask3d>,
-        &mut RenderPhase<Transparent3d>,
-    )>,
+    // mut opaque_phases: ResMut<ViewBinnedRenderPhases<Opaque3d>>,
+    // mut alpha_phases: ResMut<ViewBinnedRenderPhases<AlphaMask3d>>,
+    mut trans_phases: ResMut<ViewSortedRenderPhases<Transparent3d>>,
+    mut views: Query<(Entity, &ExtractedView, Option<&RenderLayers>)>,
 ) {
-    let draw_opaque = opaque_draw_functions.read().id::<DrawShapeCommand<T>>();
-    let draw_alpha_mask = alpha_mask_draw_functions.read().id::<DrawShapeCommand<T>>();
+    // let draw_opaque = opaque_draw_functions.read().id::<DrawShape3dCommand<T>>();
+    // let draw_alpha_mask = alpha_mask_draw_functions
+    //     .read()
+    //     .id::<DrawShape3dCommand<T>>();
     let draw_transparent = transparent_draw_functions
         .read()
-        .id::<DrawShapeCommand<T>>();
+        .id::<DrawShape3dCommand<T>>();
     let view_count = views.iter().count();
 
     for (material, entities) in materials.iter() {
@@ -124,64 +123,70 @@ pub fn queue_shapes_3d<T: ShapeData>(
         } else {
             views
                 .iter_mut()
-                .filter(|(_, layers, ..)| {
+                .filter(|(_, _, layers)| {
                     let render_layers = layers.cloned().unwrap_or_default();
                     render_layers.intersects(&material.render_layers.0)
                 })
                 .for_each(|view| visible_views.push(view))
         };
 
-        for (view, _, mut opaque_phase, mut alpha_mask_phase, mut transparent_phase) in
-            visible_views.into_iter()
-        {
+        for (view_entity, view, _) in visible_views.into_iter() {
+            // let (Some(opaque_phase), Some(alpha_mask_phase), Some(transparent_phase)) = (
+            //     opaque_phases.get_mut(&view_entity),
+            //     alpha_phases.get_mut(&view_entity),
+            //     trans_phases.get_mut(&view_entity),
+            // ) else {
+            //     continue;
+            // };
+            let Some(transparent_phase) = trans_phases.get_mut(&view_entity) else {
+                continue;
+            };
             let mut view_key = key;
             view_key |= ShapePipelineKey::from_msaa_samples(msaa.samples());
             view_key |= ShapePipelineKey::from_hdr(view.hdr);
             let pipeline = shape_pipelines.specialize(&pipeline_cache, pipeline.as_ref(), view_key);
 
+            // let default_id = AssetId::Uuid {
+            //     uuid: AssetId::<Mesh>::DEFAULT_UUID,
+            // };
             let rangefinder = view.rangefinder3d();
             for &entity in entities {
                 // SAFETY: we insert this alongside inserting into the vector we are currently iterating
                 let (_, data) = unsafe { instance_data.get(&entity).unwrap_unchecked() };
                 let distance = rangefinder.distance(&data.transform());
-                match material.alpha_mode.0 {
-                    AlphaMode::Opaque => {
-                        opaque_phase.add(Opaque3d {
-                            asset_id: AssetId::Uuid {
-                                uuid: AssetId::<Mesh>::DEFAULT_UUID,
-                            },
-                            entity,
-                            draw_function: draw_opaque,
-                            pipeline,
-                            batch_range: 0..1,
-                            dynamic_offset: None,
-                        });
-                    }
-                    AlphaMode::Mask(_) => {
-                        alpha_mask_phase.add(AlphaMask3d {
-                            entity,
-                            draw_function: draw_alpha_mask,
-                            pipeline,
-                            distance,
-                            batch_range: 0..1,
-                            dynamic_offset: None,
-                        });
-                    }
-                    AlphaMode::Blend
-                    | AlphaMode::Premultiplied
-                    | AlphaMode::Add
-                    | AlphaMode::Multiply => {
-                        transparent_phase.add(Transparent3d {
-                            entity,
-                            draw_function: draw_transparent,
-                            pipeline,
-                            distance,
-                            batch_range: 0..1,
-                            dynamic_offset: None,
-                        });
-                    }
-                }
+                transparent_phase.add(Transparent3d {
+                    entity,
+                    draw_function: draw_transparent,
+                    pipeline,
+                    distance,
+                    batch_range: 0..1,
+                    extra_index: PhaseItemExtraIndex::NONE,
+                });
             }
         }
+    }
+}
+
+#[derive(Resource)]
+pub struct Shape3dBindGroup<T: ShapeData> {
+    pub value: BindGroup,
+    _marker: PhantomData<T>,
+}
+
+pub fn prepare_shape_3d_bind_group<T: ShapeData + 'static>(
+    mut commands: Commands,
+    pipeline: Res<Shape3dPipeline<T>>,
+    render_device: Res<RenderDevice>,
+    shape_buffer: Res<BatchedInstanceBuffer<T>>,
+) {
+    if let Some(binding) = shape_buffer.binding() {
+        commands.insert_resource(Shape3dBindGroup {
+            value: render_device.create_bind_group(
+                "shape_bind_group",
+                &pipeline.layout,
+                &BindGroupEntries::single(binding),
+            ),
+            _marker: PhantomData::<T>,
+        });
     }
 }

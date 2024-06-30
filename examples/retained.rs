@@ -2,14 +2,14 @@
 
 use std::f32::consts::PI;
 
-use bevy::prelude::*;
+use bevy::{color::palettes::css::*, prelude::*};
 use bevy_vector_shapes::prelude::*;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugins(ShapePlugin::default())
-        .insert_resource(ClearColor(Color::DARK_GRAY))
+        .insert_resource(ClearColor(DIM_GRAY.into()))
         .insert_resource(Msaa::Off)
         .add_systems(Startup, setup)
         .add_systems(Update, rotate_circle)
@@ -22,7 +22,7 @@ fn setup(mut commands: Commands, mut shapes: ShapeCommands) {
         ..default()
     });
 
-    // The ShapeCommands API is identical to the ShapePainter API so can be used almost interchangably
+    // The ShapeCommands API is identical to the ShapePainter API so can be used almost interchangeably
     shapes.circle(1.0).with_children(|parent| {
         for _ in 0..4 {
             parent.rotate_z(PI / 2.0);

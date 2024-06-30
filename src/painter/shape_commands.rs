@@ -30,8 +30,8 @@ impl<'w, 's> ShapeSpawner<'w> for ShapeCommands<'w, 's> {
             commands, config, ..
         } = self;
         let mut entity = commands.spawn(bundle);
-        if let Some(layers) = config.render_layers {
-            entity.insert(layers);
+        if let Some(layers) = &config.render_layers {
+            entity.insert(layers.clone());
         }
         if let ShapePipelineType::Shape3d = config.pipeline {
             entity.insert(Shape3d);
