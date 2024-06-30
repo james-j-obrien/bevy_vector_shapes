@@ -182,7 +182,7 @@ impl<const I: usize, T: ShapeData, P: PhaseItem> RenderCommand<P>
         (bind_groups, instances): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
-        let Some(material) = instances.get(&item.entity()).map(|i| &i.0) else {
+        let Some(material) = instances.get(&item.entity()).map(|i| &i.material) else {
             return RenderCommandResult::Success;
         };
         if let Some(handle) = &material.texture {
@@ -214,7 +214,7 @@ impl<const I: usize, T: ShapeData, P: PhaseItem> RenderCommand<P>
         (bind_groups, instances): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
-        let Some(material) = instances.get(&item.entity()).map(|i| &i.0) else {
+        let Some(material) = instances.get(&item.entity()).map(|i| &i.material) else {
             return RenderCommandResult::Success;
         };
         if let Some(handle) = &material.texture {

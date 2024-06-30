@@ -24,7 +24,7 @@ fn setup(mut commands: Commands) {
 
 fn draw(mut painter: ShapePainter) {
     // Render the background
-    painter.color = Color::BLACK.with_a(0.9);
+    painter.color = Color::BLACK.with_alpha(0.9);
     painter.corner_radii = Vec4::splat(0.1);
     painter.rect(Vec2::new(2.0, 1.0));
 
