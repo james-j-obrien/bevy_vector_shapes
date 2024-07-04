@@ -231,7 +231,7 @@ struct RenderLayersHash(RenderLayers);
 
 impl Hash for RenderLayersHash {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        unsafe { std::mem::transmute::<_, &u32>(self).hash(state) }
+        self.0.bits().hash(state)
     }
 }
 
