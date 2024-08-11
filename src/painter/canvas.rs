@@ -47,7 +47,7 @@ pub fn update_canvases(
 }
 
 /// Enum that determines when canvases are cleared and redrawn.
-#[derive(Default)]
+#[derive(Default, Reflect)]
 pub enum CanvasMode {
     /// Always clear and draw each frame
     #[default]
@@ -61,7 +61,7 @@ pub enum CanvasMode {
 /// Component containing data and methods for a given canvas.
 ///
 /// Can be spawned as part of a [`CanvasBundle`] with [`CanvasCommands::spawn_canvas`].
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct Canvas {
     /// Handle to the canvas' target texture.
     pub image: Handle<Image>,
