@@ -96,7 +96,7 @@ impl ShapeFill {
 }
 
 /// Marker component for entities that should be drawn by the 3D pipeline.
-#[derive(Component, Reflect)]
+#[derive(Component, Default, Reflect)]
 pub struct Shape3d;
 
 /// Overrides the origin of a 3D shape so that transparent drawing order can be overridden.
