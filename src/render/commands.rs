@@ -309,12 +309,6 @@ impl<P: PhaseItem, T: ShapeData> RenderCommand<P> for DrawShape<T> {
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
         let batch_range = item.batch_range();
-        #[cfg(all(feature = "webgl", target_arch = "wasm32"))]
-        pass.set_push_constants(
-            ShaderStages::VERTEX,
-            0,
-            &(batch_range.start as i32).to_le_bytes(),
-        );
         pass.set_vertex_buffer(0, quad.into_inner().buffer.slice(..));
         pass.draw(0..T::VERTICES, batch_range.clone());
 

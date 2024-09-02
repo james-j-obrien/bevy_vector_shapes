@@ -82,7 +82,7 @@ pub fn load_shaders(app: &mut App) {
         Shader::from_wgsl_with_defs,
         defs
     );
-    let defs = NgonData::shader_defs(app);
+    let defs = LineData::shader_defs(app);
     load_internal_asset!(
         app,
         LINE_HANDLE,
@@ -106,11 +106,13 @@ pub fn load_shaders(app: &mut App) {
         Shader::from_wgsl_with_defs,
         defs
     );
+    let defs = TriangleData::shader_defs(app);
     load_internal_asset!(
         app,
         TRIANGLE_HANDLE,
         "shaders/shapes/tri.wgsl",
-        Shader::from_wgsl
+        Shader::from_wgsl_with_defs,
+        defs
     );
 }
 
