@@ -18,7 +18,7 @@ mod triangle;
 pub use triangle::*;
 
 /// Component that holds data related to a shape to be used during rendering,
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Reflect)]
 pub struct ShapeMaterial {
     /// Alpha mode to use when rendering, Blend, Add and Multiply are explicitly supported.
     pub alpha_mode: ShapeAlphaMode,
@@ -64,7 +64,7 @@ impl From<AlphaMode> for ShapeAlphaMode {
 }
 
 /// Used in [`ShapeFill`] to determine how a shape is rendered.
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, Reflect)]
 pub enum FillType {
     /// Fully colored shape
     #[default]
@@ -76,7 +76,7 @@ pub enum FillType {
 }
 
 /// Component attached to each shape to determine how it is rendered.
-#[derive(Default, Component, Clone, Copy)]
+#[derive(Default, Component, Clone, Copy, Reflect)]
 pub struct ShapeFill {
     pub color: Color,
     pub ty: FillType,
@@ -96,13 +96,13 @@ impl ShapeFill {
 }
 
 /// Marker component for entities that should be drawn by the 3D pipeline.
-#[derive(Component)]
+#[derive(Component, Default, Reflect)]
 pub struct Shape3d;
 
 /// Overrides the origin of a 3D shape so that transparent drawing order can be overridden.
 ///
 /// This is in local space.
-#[derive(Component)]
+#[derive(Component, Reflect)]
 pub struct ShapeOrigin(pub Vec3);
 
 /// Bundle that is required to render a shape.
