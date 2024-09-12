@@ -167,9 +167,7 @@ pub fn queue_shapes_3d<T: ShapeData>(
             for &entity in entities {
                 // SAFETY: we insert this alongside inserting into the vector we are currently iterating
                 let instance = unsafe { instance_data.get(&entity).unwrap_unchecked() };
-                let data = &instance.data;
-                let dist_point = data.transform().transform_vector3(instance.origin);
-                let distance = rangefinder.distance_translation(&dist_point);
+                let distance = rangefinder.distance_translation(&instance.origin);
                 transparent_phase.add(Transparent3d {
                     entity,
                     draw_function: draw_transparent,
