@@ -8,6 +8,7 @@ use bevy::render::batching::no_gpu_preprocessing::BatchedInstanceBuffer;
 use bevy::render::batching::GetBatchData;
 use bevy::render::render_phase::{PhaseItemExtraIndex, SortedPhaseItem, ViewSortedRenderPhases};
 use bevy::render::sync_world::MainEntity;
+use bevy::render::sync_world::RenderEntity;
 use bevy::{
     asset::load_internal_asset,
     core_pipeline::{
@@ -276,10 +277,10 @@ impl FromWorld for QuadVertices {
 /// This may be removed once a better implementation is possible.
 pub fn extract_render_layers(
     mut commands: Commands,
-    cameras: Extract<Query<(Entity, &RenderLayers), With<Camera>>>,
+    cameras: Extract<Query<(&RenderEntity, &RenderLayers), With<Camera>>>,
 ) {
     for (entity, render_layers) in &cameras {
-        commands.get_or_spawn(entity).insert(render_layers.clone());
+        commands.entity(entity.id()).insert(render_layers.clone());
     }
 }
 
