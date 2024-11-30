@@ -20,6 +20,7 @@ bevy = { version = "0.15" , default-features = false, features = [
   "bevy_render",
   "bevy_sprite",
   "bevy_winit",
+  "bevy_window",
   "hdr",
   "ktx2",
   "tonemapping_luts",
