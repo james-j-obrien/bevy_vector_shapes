@@ -8,14 +8,16 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(ShapePlugin::default())
         .insert_resource(ClearColor(DIM_GRAY.into()))
-        .insert_resource(Msaa::Off)
         .add_systems(Startup, setup)
         .add_systems(Update, draw_gallery)
         .run();
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera3dBundle::default());
+    commands.spawn(Camera3dBundle {
+        msaa: Msaa::Off,
+        ..default()
+    });
 }
 
 fn draw_gallery(
@@ -25,7 +27,7 @@ fn draw_gallery(
 ) {
     painter.reset();
     cameras.iter_mut().for_each(|mut tf| {
-        *tf = Transform::from_xyz(0., 0., 20. + 10.0 * time.elapsed_seconds().sin())
+        *tf = Transform::from_xyz(0., 0., 20. + 10.0 * time.elapsed_secs().sin())
             .looking_at(Vec3::ZERO, Vec3::Y);
     });
 

@@ -1,12 +1,14 @@
 use std::any::TypeId;
 
 use bevy::{
-    core_pipeline::tonemapping::get_lut_bind_group_layout_entries,
+    core_pipeline::{
+        core_2d::CORE_2D_DEPTH_FORMAT, tonemapping::get_lut_bind_group_layout_entries,
+    },
     ecs::system::{lifetimeless::SRes, SystemParamItem},
     prelude::*,
     render::{
-        globals::GlobalsUniform, render_resource::*, renderer::RenderDevice, texture::BevyDefault,
-        view::ViewUniform,
+        globals::GlobalsUniform, render_resource::*, renderer::RenderDevice,
+        sync_world::MainEntity, view::ViewUniform,
     },
     utils::HashMap,
 };
@@ -238,7 +240,22 @@ impl<T: ShapeData> Shape2dPipeline<T> {
         }
 
         if key.contains(ShapePipelineKey::PIPELINE_2D) {
-            depth_stencil = None;
+            depth_stencil = Some(DepthStencilState {
+                format: CORE_2D_DEPTH_FORMAT,
+                depth_write_enabled,
+                depth_compare: CompareFunction::GreaterEqual,
+                stencil: StencilState {
+                    front: StencilFaceState::IGNORE,
+                    back: StencilFaceState::IGNORE,
+                    read_mask: 0,
+                    write_mask: 0,
+                },
+                bias: DepthBiasState {
+                    constant: 0,
+                    slope_scale: 0.0,
+                    clamp: 0.0,
+                },
+            });
             shader_defs.push("PIPELINE_2D".into());
         } else {
             depth_stencil = Some(DepthStencilState {
@@ -319,6 +336,7 @@ impl<T: ShapeData> Shape2dPipeline<T> {
             },
             label: Some(label),
             push_constant_ranges: vec![],
+            zero_initialize_workgroup_memory: false,
         }
     }
 }
@@ -330,7 +348,7 @@ impl<T: ShapeData> GetBatchData for Shape2dPipeline<T> {
 
     fn get_batch_data(
         instances: &SystemParamItem<Self::Param>,
-        entity: Entity,
+        (entity, _main_entity): (Entity, MainEntity),
     ) -> Option<(Self::BufferData, Option<Self::CompareData>)> {
         let instance = instances.get(&entity)?;
         Some((instance.data.clone(), Some(instance.material.clone())))
@@ -353,7 +371,7 @@ impl<T: ShapeData> GetBatchData for Shape3dPipeline<T> {
 
     fn get_batch_data(
         instances: &SystemParamItem<Self::Param>,
-        entity: Entity,
+        (entity, _main_entity): (Entity, MainEntity),
     ) -> Option<(Self::BufferData, Option<Self::CompareData>)> {
         let instance = instances.get(&entity)?;
         Some((instance.data.clone(), Some(instance.material.clone())))

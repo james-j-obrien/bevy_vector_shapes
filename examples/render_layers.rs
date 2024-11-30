@@ -5,8 +5,9 @@ use std::f32::consts::PI;
 
 use bevy::{
     color::palettes::css::*,
+    image::ImageSampler,
     prelude::*,
-    render::{camera::RenderTarget, texture::ImageSampler, view::RenderLayers},
+    render::{camera::RenderTarget, view::RenderLayers},
 };
 use bevy_vector_shapes::prelude::*;
 
@@ -54,6 +55,7 @@ fn setup(
             },
             transform: Transform::from_translation(Vec3::new(0.0, 0.0, 15.0))
                 .looking_at(Vec3::ZERO, Vec3::Y),
+            msaa: Msaa::Off,
             ..default()
         },
         first_pass_layer,
@@ -73,8 +75,8 @@ fn setup(
     // Main pass cube, with material containing the rendered first pass texture.
     commands.spawn((
         PbrBundle {
-            mesh: cube_handle,
-            material: material_handle,
+            mesh: cube_handle.into(),
+            material: material_handle.into(),
             transform: Transform::from_xyz(0.0, 0.0, 1.5)
                 .with_rotation(Quat::from_rotation_x(-PI / 5.0)),
             ..default()
@@ -85,6 +87,7 @@ fn setup(
     // The main pass camera.
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(0.0, 0.0, 15.0).looking_at(Vec3::ZERO, Vec3::Y),
+        msaa: Msaa::Off,
         ..default()
     });
 }
@@ -95,7 +98,7 @@ fn draw_shapes(time: Res<Time>, mut painter: ShapePainter) {
     painter.hollow = true;
     painter.transform.scale = Vec3::ONE * 3.0;
 
-    let meter_fill = (time.elapsed_seconds().sin() + 1.0) / 2.0;
+    let meter_fill = (time.elapsed_secs().sin() + 1.0) / 2.0;
     let meter_size = PI * 1.5;
 
     let start_angle = -meter_size / 2.0;
@@ -123,7 +126,7 @@ fn draw_shapes(time: Res<Time>, mut painter: ShapePainter) {
 
 fn rotate_cube(time: Res<Time>, mut query: Query<&mut Transform, With<MainPassCube>>) {
     for mut transform in &mut query {
-        transform.rotation = Quat::from_rotation_x(time.elapsed_seconds())
-            * Quat::from_rotation_y(time.elapsed_seconds() / 2.0);
+        transform.rotation = Quat::from_rotation_x(time.elapsed_secs())
+            * Quat::from_rotation_y(time.elapsed_secs() / 2.0);
     }
 }

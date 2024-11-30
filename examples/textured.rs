@@ -12,7 +12,6 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(ShapePlugin::default())
         .insert_resource(ClearColor(DIM_GRAY.into()))
-        .insert_resource(Msaa::Off)
         .add_systems(Startup, setup)
         .add_systems(Update, (draw_shapes, draw_canvas))
         .run();
@@ -25,13 +24,14 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
 
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(0., 0., 16.).looking_at(Vec3::ZERO, Vec3::Y),
+        msaa: Msaa::Off,
         ..default()
     });
 }
 
 fn draw_canvas(time: Res<Time>, mut painter: ShapePainter, canvas: Query<(Entity, &Canvas)>) {
     let (canvas, _) = canvas.single();
-    painter.rotate_z(time.elapsed_seconds().sin());
+    painter.rotate_z(time.elapsed_secs().sin());
     painter.set_canvas(canvas);
     painter.set_color(WHITE * 2.0);
     painter.translate(Vec3::NEG_Y * 12.0 * 16.0);
@@ -49,5 +49,5 @@ fn draw_shapes(time: Res<Time>, mut painter: ShapePainter, canvas: Query<(Entity
     painter.texture = Some(canvas.image.clone());
     painter.translate(Vec3::NEG_Y * 2.0);
 
-    gallery(painter, time.elapsed_seconds(), 0..10);
+    gallery(painter, time.elapsed_secs(), 0..10);
 }

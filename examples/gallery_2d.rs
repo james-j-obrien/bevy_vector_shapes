@@ -11,17 +11,19 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(Shape2dPlugin::default())
         .insert_resource(ClearColor(DIM_GRAY.into()))
-        .insert_resource(Msaa::Off)
         .add_systems(Startup, setup)
         .add_systems(Update, draw_gallery)
         .run();
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle::default());
+    commands.spawn(Camera2dBundle {
+        msaa: Msaa::Off,
+        ..default()
+    });
 }
 
 fn draw_gallery(time: Res<Time>, mut painter: ShapePainter) {
     painter.scale(Vec3::ONE * 34.0);
-    gallery(painter, time.elapsed_seconds(), 0..15);
+    gallery(painter, time.elapsed_secs(), 0..15);
 }

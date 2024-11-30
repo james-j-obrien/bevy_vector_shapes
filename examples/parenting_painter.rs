@@ -8,7 +8,6 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(ShapePlugin::default())
         .insert_resource(ClearColor(DIM_GRAY.into()))
-        .insert_resource(Msaa::Off)
         .add_systems(Startup, setup)
         .add_systems(Update, draw_gallery)
         .run();
@@ -20,6 +19,7 @@ struct Tree;
 fn setup(mut commands: Commands) {
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(0., 0., 16.).looking_at(Vec3::ZERO, Vec3::Y),
+        msaa: Msaa::Off,
         ..default()
     });
 
@@ -62,7 +62,7 @@ fn draw_gallery(
     mut tree: Query<&mut Transform, With<Tree>>,
 ) {
     let mut tree = tree.single_mut();
-    tree.rotation = Quat::from_rotation_z(time.elapsed_seconds().sin() / 4.0);
+    tree.rotation = Quat::from_rotation_z(time.elapsed_secs().sin() / 4.0);
 
     // Position our painter relative to our tree entity
     painter.transform = *tree;
@@ -71,6 +71,6 @@ fn draw_gallery(
         .line(Vec3::ZERO, Vec3::Y)
         .with_children(|child_painter| {
             child_painter.translate(Vec3::Y);
-            draw_tree(time.elapsed_seconds(), child_painter, 10);
+            draw_tree(time.elapsed_secs(), child_painter, 10);
         });
 }

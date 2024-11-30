@@ -22,6 +22,7 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
 
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(0., 0., 16.).looking_at(Vec3::ZERO, Vec3::Y),
+        msaa: Msaa::Off,
         ..default()
     });
 }
@@ -33,5 +34,5 @@ fn draw_shapes(time: Res<Time>, mut painter: ShapePainter, canvas: Query<(Entity
     painter.set_canvas(canvas_e);
     painter.set_scale(Vec3::ONE * 48.0);
 
-    gallery(painter, time.elapsed_seconds(), 0..15);
+    gallery(painter, time.elapsed_secs(), 0..15);
 }
