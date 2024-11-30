@@ -60,6 +60,7 @@ pub fn extract_shapes_3d<T: ShapeData>(
 ) {
     instance_data.clear();
     materials.clear();
+    canvases.clear();
 
     entities
         .iter()
