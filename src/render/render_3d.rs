@@ -5,7 +5,7 @@ use bevy::{
     render::{
         render_phase::DrawFunctions,
         render_resource::*,
-        sync_world::MainEntity,
+        sync_world::{MainEntity, RenderEntity},
         view::{ExtractedView, RenderLayers},
         Extract,
     },
@@ -55,6 +55,8 @@ pub fn extract_shapes_3d<T: ShapeData>(
     storage: Extract<Res<ShapeStorage>>,
     mut instance_data: ResMut<Shape3dInstances<T>>,
     mut materials: ResMut<Shape3dMaterials<T>>,
+    render_entities: Extract<Query<&RenderEntity>>,
+    mut canvases: Local<EntityHashMap<Entity>>,
 ) {
     instance_data.clear();
     materials.clear();
@@ -88,8 +90,16 @@ pub fn extract_shapes_3d<T: ShapeData>(
         });
 
     if let Some(iter) = storage.get::<T>(ShapePipelineType::Shape3d) {
-        iter.cloned().for_each(|instance| {
+        iter.cloned().for_each(|mut instance| {
             let entity = commands.spawn_empty().id();
+            if let Some(canvas) = &mut instance.material.canvas {
+                *canvas = *canvases.entry(*canvas).or_insert_with(|| {
+                    render_entities
+                        .get(*canvas)
+                        .map(|e| e.id())
+                        .unwrap_or(Entity::PLACEHOLDER)
+                });
+            }
             materials
                 .entry(instance.material.clone())
                 .or_default()

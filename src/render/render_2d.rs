@@ -4,7 +4,7 @@ use bevy::{
     render::{
         render_phase::{DrawFunctions, PhaseItemExtraIndex},
         render_resource::*,
-        sync_world::MainEntity,
+        sync_world::{MainEntity, RenderEntity},
         view::{ExtractedView, RenderLayers},
         Extract,
     },
@@ -34,7 +34,7 @@ impl<T: ShapeData> Default for Shape2dMaterials<T> {
 
 pub fn extract_shapes_2d<T: ShapeData>(
     mut commands: Commands,
-    entities: Extract<
+    shapes: Extract<
         Query<
             (
                 Entity,
@@ -51,11 +51,14 @@ pub fn extract_shapes_2d<T: ShapeData>(
     storage: Extract<Res<ShapeStorage>>,
     mut instance_data: ResMut<Shape2dInstances<T>>,
     mut materials: ResMut<Shape2dMaterials<T>>,
+    render_entities: Extract<Query<&RenderEntity>>,
+    mut canvases: Local<EntityHashMap<Entity>>,
 ) {
     instance_data.clear();
     materials.clear();
+    canvases.clear();
 
-    entities
+    shapes
         .iter()
         .filter_map(|(e, cp, fill, tf, vis, flags, rl)| {
             if vis.get() {
@@ -81,8 +84,16 @@ pub fn extract_shapes_2d<T: ShapeData>(
         });
 
     if let Some(iter) = storage.get::<T>(ShapePipelineType::Shape2d) {
-        iter.cloned().for_each(|instance| {
+        iter.cloned().for_each(|mut instance| {
             let entity = commands.spawn_empty().id();
+            if let Some(canvas) = &mut instance.material.canvas {
+                *canvas = *canvases.entry(*canvas).or_insert_with(|| {
+                    render_entities
+                        .get(*canvas)
+                        .map(|e| e.id())
+                        .unwrap_or(Entity::PLACEHOLDER)
+                });
+            }
             materials
                 .entry(instance.material.clone())
                 .or_default()
