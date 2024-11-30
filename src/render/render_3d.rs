@@ -5,6 +5,7 @@ use bevy::{
     render::{
         render_phase::DrawFunctions,
         render_resource::*,
+        sync_world::MainEntity,
         view::{ExtractedView, RenderLayers},
         Extract,
     },
@@ -105,14 +106,13 @@ pub fn queue_shapes_3d<T: ShapeData>(
     transparent_draw_functions: Res<DrawFunctions<Transparent3d>>,
     pipeline: Res<Shape3dPipeline<T>>,
     pipeline_cache: Res<PipelineCache>,
-    msaa: Res<Msaa>,
     materials: Res<Shape3dMaterials<T>>,
     instance_data: Res<Shape3dInstances<T>>,
     mut shape_pipelines: ResMut<ShapePipelines>,
     // mut opaque_phases: ResMut<ViewBinnedRenderPhases<Opaque3d>>,
     // mut alpha_phases: ResMut<ViewBinnedRenderPhases<AlphaMask3d>>,
     mut trans_phases: ResMut<ViewSortedRenderPhases<Transparent3d>>,
-    mut views: Query<(Entity, &ExtractedView, Option<&RenderLayers>)>,
+    mut views: Query<(Entity, &ExtractedView, &Msaa, Option<&RenderLayers>)>,
 ) {
     // let draw_opaque = opaque_draw_functions.read().id::<DrawShape3dCommand<T>>();
     // let draw_alpha_mask = alpha_mask_draw_functions
@@ -137,14 +137,14 @@ pub fn queue_shapes_3d<T: ShapeData>(
         } else {
             views
                 .iter_mut()
-                .filter(|(_, _, layers)| {
+                .filter(|(_, _, _, layers)| {
                     let render_layers = layers.cloned().unwrap_or_default();
                     render_layers.intersects(&material.render_layers.0)
                 })
                 .for_each(|view| visible_views.push(view))
         };
 
-        for (view_entity, view, _) in visible_views.into_iter() {
+        for (view_entity, view, msaa, _) in visible_views.into_iter() {
             // let (Some(opaque_phase), Some(alpha_mask_phase), Some(transparent_phase)) = (
             //     opaque_phases.get_mut(&view_entity),
             //     alpha_phases.get_mut(&view_entity),
@@ -169,7 +169,7 @@ pub fn queue_shapes_3d<T: ShapeData>(
                 let instance = unsafe { instance_data.get(&entity).unwrap_unchecked() };
                 let distance = rangefinder.distance_translation(&instance.origin);
                 transparent_phase.add(Transparent3d {
-                    entity,
+                    entity: (entity, MainEntity::from(Entity::PLACEHOLDER)),
                     draw_function: draw_transparent,
                     pipeline,
                     distance,

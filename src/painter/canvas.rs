@@ -1,9 +1,9 @@
 use bevy::{
     ecs::system::EntityCommands,
+    image::ImageSampler,
     prelude::*,
     render::{
         camera::RenderTarget,
-        texture::{BevyDefault, ImageSampler},
         view::{RenderLayers, ViewTarget},
     },
 };

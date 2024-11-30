@@ -7,6 +7,7 @@ use bevy::math::FloatOrd;
 use bevy::render::batching::no_gpu_preprocessing::BatchedInstanceBuffer;
 use bevy::render::batching::GetBatchData;
 use bevy::render::render_phase::{PhaseItemExtraIndex, SortedPhaseItem, ViewSortedRenderPhases};
+use bevy::render::sync_world::MainEntity;
 use bevy::{
     asset::load_internal_asset,
     core_pipeline::{
@@ -433,7 +434,10 @@ pub fn batch_and_prepare_render_phase<
     let system_param_item = param.into_inner();
 
     let mut process_item = |item: &mut I| {
-        let (data, compare) = GBD::get_batch_data(&system_param_item, item.entity())?;
+        let (data, compare) = GBD::get_batch_data(
+            &system_param_item,
+            (item.entity(), MainEntity::from(Entity::PLACEHOLDER)),
+        )?;
         let buffer_index = gpu_array_buffer.push(data.clone());
 
         let index = buffer_index.index;

@@ -2,7 +2,7 @@
 // Note you will still get some bloom effects even without an HDR canvas,
 // but in order to allow for color values below 1.0 the canvas needs HDR enabled
 
-use bevy::{core_pipeline::bloom::BloomSettings, prelude::*, render::texture::ImageSampler};
+use bevy::{core_pipeline::bloom::BloomSettings, image::ImageSampler, prelude::*};
 use bevy_vector_shapes::prelude::*;
 
 mod gallery_3d;
@@ -16,7 +16,6 @@ fn main() {
             ..ShapeConfig::default_3d()
         }))
         .insert_resource(ClearColor(Color::BLACK))
-        .insert_resource(Msaa::Off)
         .add_systems(Startup, setup)
         .add_systems(Update, draw_shapes)
         .run();
@@ -35,6 +34,7 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
                 ..default()
             },
             transform: Transform::from_xyz(0., 0., 16.).looking_at(Vec3::ZERO, Vec3::Y),
+            msaa: Msaa::Off,
             ..default()
         },
         BloomSettings::default(),
@@ -48,5 +48,5 @@ fn draw_shapes(time: Res<Time>, mut painter: ShapePainter, canvas: Query<(Entity
     painter.set_canvas(canvas_e);
     painter.set_scale(Vec3::ONE * 12.0);
 
-    gallery(painter, time.elapsed_seconds(), 0..15);
+    gallery(painter, time.elapsed_secs(), 0..15);
 }

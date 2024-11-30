@@ -4,6 +4,7 @@ use bevy::{
     render::{
         render_phase::{DrawFunctions, PhaseItemExtraIndex},
         render_resource::*,
+        sync_world::MainEntity,
         view::{ExtractedView, RenderLayers},
         Extract,
     },
@@ -96,12 +97,11 @@ pub fn queue_shapes_2d<T: ShapeData>(
     transparent_2d_draw_functions: Res<DrawFunctions<Transparent2d>>,
     pipeline: Res<Shape2dPipeline<T>>,
     pipeline_cache: Res<PipelineCache>,
-    msaa: Res<Msaa>,
     materials: Res<Shape2dMaterials<T>>,
     instance_data: Res<Shape2dInstances<T>>,
     mut shape_pipelines: ResMut<ShapePipelines>,
     mut phases: ResMut<ViewSortedRenderPhases<Transparent2d>>,
-    mut views: Query<(Entity, &ExtractedView, Option<&RenderLayers>)>,
+    mut views: Query<(Entity, &ExtractedView, &Msaa, Option<&RenderLayers>)>,
 ) {
     let draw_function = transparent_2d_draw_functions
         .read()
@@ -122,14 +122,14 @@ pub fn queue_shapes_2d<T: ShapeData>(
         } else {
             views
                 .iter_mut()
-                .filter(|(_, _, layers)| {
+                .filter(|(_, _, _, layers)| {
                     let render_layers = layers.cloned().unwrap_or_default();
                     render_layers.intersects(&material.render_layers.0)
                 })
                 .for_each(|view| visible_views.push(view))
         };
 
-        for (view_entity, view, _) in visible_views.into_iter() {
+        for (view_entity, view, msaa, _) in visible_views.into_iter() {
             let Some(transparent_phase) = phases.get_mut(&view_entity) else {
                 continue;
             };
@@ -140,11 +140,11 @@ pub fn queue_shapes_2d<T: ShapeData>(
             view_key |= ShapePipelineKey::PIPELINE_2D;
             let pipeline = shape_pipelines.specialize(&pipeline_cache, pipeline.as_ref(), view_key);
 
-            for entity in entities {
+            for &entity in entities {
                 // SAFETY: we insert this alongside inserting into the vector we are currently iterating
-                let instance = unsafe { instance_data.get(entity).unwrap_unchecked() };
+                let instance = unsafe { instance_data.get(&entity).unwrap_unchecked() };
                 transparent_phase.add(Transparent2d {
-                    entity: *entity,
+                    entity: (entity, MainEntity::from(Entity::PLACEHOLDER)),
                     pipeline,
                     draw_function,
                     sort_key: FloatOrd(instance.data.distance()),

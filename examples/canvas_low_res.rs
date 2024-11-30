@@ -1,6 +1,6 @@
 // Demonstrated use of a canvas to render low resolutions shapes on a small canvas
 
-use bevy::{color::palettes::css::*, prelude::*, render::texture::ImageSampler};
+use bevy::{color::palettes::css::*, image::ImageSampler, prelude::*};
 use bevy_vector_shapes::prelude::*;
 
 mod gallery_3d;
@@ -14,7 +14,6 @@ fn main() {
             ..ShapeConfig::default_3d()
         }))
         .insert_resource(ClearColor(DIM_GRAY.into()))
-        .insert_resource(Msaa::Off)
         .add_systems(Startup, setup)
         .add_systems(Update, draw_shapes)
         .run();
@@ -27,6 +26,7 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
 
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(0., 0., 16.).looking_at(Vec3::ZERO, Vec3::Y),
+        msaa: Msaa::Off,
         ..default()
     });
 }
@@ -38,5 +38,5 @@ fn draw_shapes(time: Res<Time>, mut painter: ShapePainter, canvas: Query<(Entity
     painter.set_canvas(canvas_e);
     painter.set_scale(Vec3::ONE * 12.0);
 
-    gallery(painter, time.elapsed_seconds(), 0..15);
+    gallery(painter, time.elapsed_secs(), 0..15);
 }

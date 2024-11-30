@@ -13,7 +13,6 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(ShapePlugin::default())
         .insert_resource(ClearColor(DIM_GRAY.into()))
-        .insert_resource(Msaa::Off)
         .add_systems(Startup, setup)
         .add_systems(Update, rotate_targets)
         .run();
@@ -25,6 +24,7 @@ struct Target;
 fn setup(mut commands: Commands, mut shapes: ShapeCommands, mut meshes: ResMut<Assets<Mesh>>) {
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(0., 0.0, 16.).looking_at(Vec3::ZERO, Vec3::Y),
+        msaa: Msaa::Off,
         ..default()
     });
 
@@ -53,7 +53,7 @@ fn setup(mut commands: Commands, mut shapes: ShapeCommands, mut meshes: ResMut<A
                         * Vec3::new(0.0, 1.0, 0.0),
                 );
                 child_builder.spawn(PbrBundle {
-                    mesh: cube_handle.clone(),
+                    mesh: cube_handle.clone().into(),
                     transform,
                     ..default()
                 });
@@ -64,5 +64,5 @@ fn setup(mut commands: Commands, mut shapes: ShapeCommands, mut meshes: ResMut<A
 fn rotate_targets(time: Res<Time>, mut target: Query<&mut Transform, With<Target>>) {
     target
         .iter_mut()
-        .for_each(|mut tf| tf.rotation *= Quat::from_rotation_z(time.delta_seconds()))
+        .for_each(|mut tf| tf.rotation *= Quat::from_rotation_z(time.delta_secs()))
 }

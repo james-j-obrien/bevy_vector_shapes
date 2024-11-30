@@ -20,6 +20,7 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
 
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(0., 0., 16.).looking_at(Vec3::ZERO, Vec3::Y),
+        msaa: Msaa::Off,
         ..default()
     });
 }
@@ -48,7 +49,7 @@ fn draw_shapes(time: Res<Time>, mut painter: ShapePainter, canvas: Query<(Entity
     painter.hollow = true;
     painter.thickness = 6.0;
     painter.set_color(CRIMSON);
-    painter.translate(Vec3::Y * time.elapsed_seconds().sin() * 256.0);
+    painter.translate(Vec3::Y * time.elapsed_secs().sin() * 256.0);
     painter.circle(48.0);
 
     painter.reset();

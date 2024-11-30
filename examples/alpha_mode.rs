@@ -12,7 +12,6 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(Shape2dPlugin::default())
         .insert_resource(ClearColor(DIM_GRAY.into()))
-        .insert_resource(Msaa::Off)
         .add_systems(Startup, setup)
         .add_systems(Update, draw_gallery)
         .run();
@@ -26,8 +25,9 @@ fn setup(mut commands: Commands) {
                 min_width: 5.2 * 4.5,
                 min_height: 3.2 * 4.5,
             },
-            ..default()
+            ..OrthographicProjection::default_2d()
         },
+        msaa: Msaa::Off,
         ..default()
     });
 }

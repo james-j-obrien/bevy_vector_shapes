@@ -10,7 +10,6 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(ShapePlugin::default())
         .insert_resource(ClearColor(DIM_GRAY.into()))
-        .insert_resource(Msaa::Off)
         .add_systems(Startup, setup)
         .add_systems(Update, rotate_circle)
         .run();
@@ -19,6 +18,7 @@ fn main() {
 fn setup(mut commands: Commands, mut shapes: ShapeCommands) {
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(0., 0.0, 16.).looking_at(Vec3::ZERO, Vec3::Y),
+        msaa: Msaa::Off,
         ..default()
     });
 
@@ -34,5 +34,5 @@ fn setup(mut commands: Commands, mut shapes: ShapeCommands) {
 fn rotate_circle(time: Res<Time>, mut circle: Query<&mut Transform, With<DiscComponent>>) {
     circle
         .iter_mut()
-        .for_each(|mut tf| tf.rotation *= Quat::from_rotation_z(time.delta_seconds()))
+        .for_each(|mut tf| tf.rotation *= Quat::from_rotation_z(time.delta_secs()))
 }

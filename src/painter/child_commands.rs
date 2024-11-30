@@ -19,7 +19,7 @@ pub struct PushChildren {
 
 impl Command for PushChildren {
     fn apply(self, world: &mut World) {
-        world.entity_mut(self.parent).push_children(&self.children);
+        world.entity_mut(self.parent).add_children(&self.children);
     }
 }
 
@@ -48,7 +48,7 @@ impl<'w, 's> ShapeEntityCommands<'w, 's> {
 
         spawn_children(&mut painter);
         let children = painter.push_children;
-        self.commands().add(children);
+        self.commands().queue(children);
         self
     }
 }
@@ -98,7 +98,7 @@ impl<'w> ShapeChildBuilder<'w> {
 
     /// Adds a command to be executed, like [`Commands::add`].
     pub fn add_command<C: Command + 'static>(&mut self, command: C) -> &mut Self {
-        self.commands.add(command);
+        self.commands.queue(command);
         self
     }
 }
@@ -177,7 +177,7 @@ impl<'w> BuildShapeChildren for EntityCommands<'w> {
 
         spawn_children(&mut painter);
         let children = painter.push_children;
-        self.commands().add(children);
+        self.commands().queue(children);
         self
     }
 }

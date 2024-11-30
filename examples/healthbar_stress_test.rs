@@ -26,6 +26,7 @@ fn setup(mut commands: Commands) {
     let center = Vec3::new(shapes, 0.0, shapes);
     commands.spawn(Camera3dBundle {
         transform: Transform::from_xyz(-20.0, 20.0, -20.0).looking_at(center, Vec3::Y),
+        msaa: Msaa::Off,
         ..default()
     });
 }
@@ -47,7 +48,7 @@ fn draw_spheres(time: Res<Time>, mut painter: ShapePainter) {
     for x in 0..SHAPES_PER_AXIS {
         for y in 0..SHAPES_PER_AXIS {
             let (x, y) = (x as f32, y as f32);
-            let offset = time.elapsed_seconds() + x + 100. * y;
+            let offset = time.elapsed_secs() + x + 100. * y;
             let position = Vec3::new(x * 2.0, offset.sin(), y * 2.0);
 
             painter.hollow = false;

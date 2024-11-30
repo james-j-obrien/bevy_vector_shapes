@@ -339,7 +339,6 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(ShapePlugin::default())
         .insert_resource(ClearColor(DIM_GRAY.into()))
-        .insert_resource(Msaa::Off)
         .add_systems(Startup, setup)
         .add_systems(Update, draw_gallery)
         .run();
@@ -349,11 +348,12 @@ fn setup(mut commands: Commands) {
     commands
         .spawn(Camera3dBundle {
             transform: Transform::from_xyz(0., 0., 16.).looking_at(Vec3::ZERO, Vec3::Y),
+            msaa: Msaa::Off,
             ..default()
         })
         .insert(RenderLayers::default());
 }
 
 fn draw_gallery(time: Res<Time>, painter: ShapePainter) {
-    gallery(painter, time.elapsed_seconds(), 0..15);
+    gallery(painter, time.elapsed_secs(), 0..15);
 }

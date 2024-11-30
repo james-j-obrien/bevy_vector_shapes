@@ -8,7 +8,6 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(ShapePlugin::default())
         .insert_resource(ClearColor(DIM_GRAY.into()))
-        .insert_resource(Msaa::Off)
         .add_systems(Startup, setup)
         .add_systems(Update, update_shapes)
         .run();
@@ -17,6 +16,7 @@ fn main() {
 fn setup(mut commands: Commands) {
     commands.spawn((Camera3dBundle {
         transform: Transform::from_xyz(0., 0.0, 16.).looking_at(Vec3::ZERO, Vec3::Y),
+        msaa: Msaa::Off,
         ..default()
     },));
 
@@ -38,6 +38,6 @@ fn setup(mut commands: Commands) {
 
 fn update_shapes(time: Res<Time>, mut shapes: Query<&mut Transform, With<ShapeMaterial>>) {
     shapes.iter_mut().for_each(|mut tf| {
-        tf.rotate_local_z(time.delta_seconds());
+        tf.rotate_local_z(time.delta_secs());
     })
 }

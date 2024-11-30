@@ -5,8 +5,8 @@ use bevy::{
     ecs::system::{lifetimeless::SRes, SystemParamItem},
     prelude::*,
     render::{
-        globals::GlobalsUniform, render_resource::*, renderer::RenderDevice, texture::BevyDefault,
-        view::ViewUniform,
+        globals::GlobalsUniform, render_resource::*, renderer::RenderDevice,
+        sync_world::MainEntity, view::ViewUniform,
     },
     utils::HashMap,
 };
@@ -319,6 +319,7 @@ impl<T: ShapeData> Shape2dPipeline<T> {
             },
             label: Some(label),
             push_constant_ranges: vec![],
+            zero_initialize_workgroup_memory: false,
         }
     }
 }
@@ -330,7 +331,7 @@ impl<T: ShapeData> GetBatchData for Shape2dPipeline<T> {
 
     fn get_batch_data(
         instances: &SystemParamItem<Self::Param>,
-        entity: Entity,
+        (entity, _main_entity): (Entity, MainEntity),
     ) -> Option<(Self::BufferData, Option<Self::CompareData>)> {
         let instance = instances.get(&entity)?;
         Some((instance.data.clone(), Some(instance.material.clone())))
@@ -353,7 +354,7 @@ impl<T: ShapeData> GetBatchData for Shape3dPipeline<T> {
 
     fn get_batch_data(
         instances: &SystemParamItem<Self::Param>,
-        entity: Entity,
+        (entity, _main_entity): (Entity, MainEntity),
     ) -> Option<(Self::BufferData, Option<Self::CompareData>)> {
         let instance = instances.get(&entity)?;
         Some((instance.data.clone(), Some(instance.material.clone())))
