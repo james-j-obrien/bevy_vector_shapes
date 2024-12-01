@@ -34,7 +34,7 @@ fn setup(mut commands: Commands, mut shapes: ShapeCommands, mut meshes: ResMut<A
     commands
         .spawn((Target, Transform::default(), Visibility::default()))
         .with_shape_children(shapes.config(), |child_builder| {
-            for _ in 0..1 {
+            for _ in 0..4 {
                 child_builder.rotate_z(PI / 2.0);
                 child_builder.line(Vec3::Y, Vec3::Y * 2.0);
             }
