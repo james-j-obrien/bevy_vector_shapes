@@ -24,11 +24,11 @@ fn main() {
 fn setup(mut commands: Commands) {
     let shapes = SHAPES_PER_AXIS as f32;
     let center = Vec3::new(shapes, 0.0, shapes);
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(-20.0, 20.0, -20.0).looking_at(center, Vec3::Y),
-        msaa: Msaa::Off,
-        ..default()
-    });
+    commands.spawn((
+        Camera3d::default(),
+        Transform::from_xyz(-20.0, 20.0, -20.0).looking_at(center, Vec3::Y),
+        Msaa::Off,
+    ));
 }
 
 fn draw_health_bar(painter: &mut ShapePainter, hp: f32) {

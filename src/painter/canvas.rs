@@ -181,7 +181,8 @@ impl CanvasConfig {
 /// Can be spawned with [`CanvasCommands::spawn_canvas`].
 #[derive(Bundle)]
 pub struct CanvasBundle {
-    camera: Camera2dBundle,
+    camera_2d: Camera2d,
+    camera: Camera,
     canvas: Canvas,
     render_layers: RenderLayers,
 }
@@ -190,15 +191,12 @@ impl CanvasBundle {
     /// Create a [`CanvasBundle`] from a given image with the given configuration.
     pub fn new(image: Handle<Image>, config: CanvasConfig) -> Self {
         Self {
-            camera: Camera2dBundle {
-                camera_2d: Camera2d,
-                camera: Camera {
-                    order: config.order,
-                    hdr: config.hdr,
-                    target: RenderTarget::Image(image.clone()),
-                    clear_color: config.clear_color,
-                    ..default()
-                },
+            camera_2d: Camera2d,
+            camera: Camera {
+                order: config.order,
+                hdr: config.hdr,
+                target: RenderTarget::Image(image.clone()),
+                clear_color: config.clear_color,
                 ..default()
             },
             canvas: Canvas {

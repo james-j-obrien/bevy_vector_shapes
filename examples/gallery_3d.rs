@@ -345,13 +345,12 @@ fn main() {
 }
 
 fn setup(mut commands: Commands) {
-    commands
-        .spawn(Camera3dBundle {
-            transform: Transform::from_xyz(0., 0., 16.).looking_at(Vec3::ZERO, Vec3::Y),
-            msaa: Msaa::Off,
-            ..default()
-        })
-        .insert(RenderLayers::default());
+    commands.spawn((
+        Camera3d::default(),
+        Transform::from_xyz(0., 0., 16.).looking_at(Vec3::ZERO, Vec3::Y),
+        Msaa::Off,
+        RenderLayers::default(),
+    ));
 }
 
 fn draw_gallery(time: Res<Time>, painter: ShapePainter) {

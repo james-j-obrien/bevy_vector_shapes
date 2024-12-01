@@ -110,7 +110,8 @@ pub struct ShapeOrigin(pub Vec3);
 /// Shape specific methods will additionally add the component representing the corresponding shape.
 #[derive(Bundle)]
 pub struct ShapeBundle<T: Component> {
-    pub spatial_bundle: SpatialBundle,
+    pub visibility: Visibility,
+    pub transform: Transform,
     pub shape: ShapeMaterial,
     pub fill: ShapeFill,
     pub shape_type: T,
@@ -119,7 +120,8 @@ pub struct ShapeBundle<T: Component> {
 impl<T: Component> ShapeBundle<T> {
     pub fn new(config: &ShapeConfig, component: T) -> Self {
         Self {
-            spatial_bundle: SpatialBundle::from_transform(config.transform),
+            visibility: default(),
+            transform: config.transform,
             shape: ShapeMaterial {
                 alpha_mode: config.alpha_mode,
                 disable_laa: config.disable_laa,

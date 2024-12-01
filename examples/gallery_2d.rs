@@ -17,10 +17,7 @@ fn main() {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle {
-        msaa: Msaa::Off,
-        ..default()
-    });
+    commands.spawn((Camera2d, Msaa::Off));
 }
 
 fn draw_gallery(time: Res<Time>, mut painter: ShapePainter) {

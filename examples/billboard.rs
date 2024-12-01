@@ -24,10 +24,7 @@ fn main() {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera3dBundle {
-        msaa: Msaa::Off,
-        ..default()
-    });
+    commands.spawn((Camera3d::default(), Msaa::Off));
 }
 
 fn draw_gallery(

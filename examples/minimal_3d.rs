@@ -15,7 +15,7 @@ fn main() {
 
 fn setup(mut commands: Commands) {
     // Spawn the camera
-    commands.spawn(Camera3dBundle::default());
+    commands.spawn(Camera3d::default());
 }
 
 fn draw(mut painter: ShapePainter) {

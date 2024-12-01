@@ -39,25 +39,22 @@ fn setup(
 
     // Light
     // NOTE: Currently lights are shared between passes - see https://github.com/bevyengine/bevy/issues/3462
-    commands.spawn(PointLightBundle {
-        transform: Transform::from_translation(Vec3::new(0.0, 0.0, 10.0)),
-        ..default()
-    });
+    commands.spawn((
+        PointLight::default(),
+        Transform::from_translation(Vec3::new(0.0, 0.0, 10.0)),
+    ));
 
     commands.spawn((
-        Camera3dBundle {
-            camera: Camera {
-                clear_color: ClearColorConfig::Custom(Color::WHITE),
-                // render before the "main pass" camera
-                order: -1,
-                target: RenderTarget::Image(image_handle.clone()),
-                ..default()
-            },
-            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 15.0))
-                .looking_at(Vec3::ZERO, Vec3::Y),
-            msaa: Msaa::Off,
+        Camera3d::default(),
+        Camera {
+            clear_color: ClearColorConfig::Custom(Color::WHITE),
+            // render before the "main pass" camera
+            order: -1,
+            target: RenderTarget::Image(image_handle.clone()),
             ..default()
         },
+        Transform::from_translation(Vec3::new(0.0, 0.0, 15.0)).looking_at(Vec3::ZERO, Vec3::Y),
+        Msaa::Off,
         first_pass_layer,
     ));
 
@@ -74,22 +71,18 @@ fn setup(
 
     // Main pass cube, with material containing the rendered first pass texture.
     commands.spawn((
-        PbrBundle {
-            mesh: cube_handle.into(),
-            material: material_handle.into(),
-            transform: Transform::from_xyz(0.0, 0.0, 1.5)
-                .with_rotation(Quat::from_rotation_x(-PI / 5.0)),
-            ..default()
-        },
+        Mesh3d(cube_handle),
+        MeshMaterial3d(material_handle),
+        Transform::from_xyz(0.0, 0.0, 1.5).with_rotation(Quat::from_rotation_x(-PI / 5.0)),
         MainPassCube,
     ));
 
     // The main pass camera.
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0.0, 0.0, 15.0).looking_at(Vec3::ZERO, Vec3::Y),
-        msaa: Msaa::Off,
-        ..default()
-    });
+    commands.spawn((
+        Camera3d::default(),
+        Transform::from_xyz(0.0, 0.0, 15.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Msaa::Off,
+    ));
 }
 
 fn draw_shapes(time: Res<Time>, mut painter: ShapePainter) {

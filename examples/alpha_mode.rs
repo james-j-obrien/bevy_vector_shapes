@@ -18,18 +18,18 @@ fn main() {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera2dBundle {
-        transform: Transform::from_translation(Vec3::Z),
-        projection: OrthographicProjection {
+    commands.spawn((
+        Camera2d,
+        Transform::from_translation(Vec3::Z),
+        OrthographicProjection {
             scaling_mode: ScalingMode::AutoMin {
                 min_width: 5.2 * 4.5,
                 min_height: 3.2 * 4.5,
             },
             ..OrthographicProjection::default_2d()
         },
-        msaa: Msaa::Off,
-        ..default()
-    });
+        Msaa::Off,
+    ));
 }
 
 fn draw_circles(painter: &mut ShapePainter, radius: f32) {
