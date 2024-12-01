@@ -17,16 +17,17 @@ fn main() {
 struct Tree;
 
 fn setup(mut commands: Commands) {
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0., 0., 16.).looking_at(Vec3::ZERO, Vec3::Y),
-        msaa: Msaa::Off,
-        ..default()
-    });
+    commands.spawn((
+        Camera3d::default(),
+        Transform::from_xyz(0., 0., 16.).looking_at(Vec3::ZERO, Vec3::Y),
+        Msaa::Off,
+    ));
 
     // Immediate mode shapes don't need to be parented to an entity but we do so here to demonstrate how
     commands.spawn((
         Tree,
-        SpatialBundle::from_transform(Transform::from_xyz(0.0, -5.0, 0.0)),
+        Transform::from_xyz(0.0, -5.0, 0.0),
+        Visibility::default(),
     ));
 }
 

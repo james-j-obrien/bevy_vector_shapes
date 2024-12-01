@@ -22,11 +22,11 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     config.clear_color = ClearColorConfig::Custom((WHITE * 0.5).into());
     let (_, _entity) = commands.spawn_canvas(images.as_mut(), config);
 
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0., 0., 16.).looking_at(Vec3::ZERO, Vec3::Y),
-        msaa: Msaa::Off,
-        ..default()
-    });
+    commands.spawn((
+        Camera3d::default(),
+        Transform::from_xyz(0., 0., 16.).looking_at(Vec3::ZERO, Vec3::Y),
+        Msaa::Off,
+    ));
 }
 
 fn draw_canvas(time: Res<Time>, mut painter: ShapePainter, canvas: Query<(Entity, &Canvas)>) {

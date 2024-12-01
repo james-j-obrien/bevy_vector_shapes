@@ -14,11 +14,11 @@ fn main() {
 }
 
 fn setup(mut commands: Commands) {
-    commands.spawn((Camera3dBundle {
-        transform: Transform::from_xyz(0., 0.0, 16.).looking_at(Vec3::ZERO, Vec3::Y),
-        msaa: Msaa::Off,
-        ..default()
-    },));
+    commands.spawn((
+        Camera3d::default(),
+        Transform::from_xyz(0., 0.0, 16.).looking_at(Vec3::ZERO, Vec3::Y),
+        Msaa::Off,
+    ));
 
     // Note: [`ShapeBundle`] does not include `RenderLayers` by default so the associated field
     // on [`ShapeConfig`] will be ignored, add the component manually or use [`ShapeCommands::rect`]

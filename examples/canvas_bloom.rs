@@ -2,7 +2,7 @@
 // Note you will still get some bloom effects even without an HDR canvas,
 // but in order to allow for color values below 1.0 the canvas needs HDR enabled
 
-use bevy::{core_pipeline::bloom::BloomSettings, image::ImageSampler, prelude::*};
+use bevy::{core_pipeline::bloom::Bloom, image::ImageSampler, prelude::*};
 use bevy_vector_shapes::prelude::*;
 
 mod gallery_3d;
@@ -28,16 +28,14 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     commands.spawn_canvas(images.as_mut(), config);
 
     commands.spawn((
-        Camera3dBundle {
-            camera: Camera {
-                hdr: true,
-                ..default()
-            },
-            transform: Transform::from_xyz(0., 0., 16.).looking_at(Vec3::ZERO, Vec3::Y),
-            msaa: Msaa::Off,
+        Camera3d::default(),
+        Camera {
+            hdr: true,
             ..default()
         },
-        BloomSettings::default(),
+        Transform::from_xyz(0., 0., 16.).looking_at(Vec3::ZERO, Vec3::Y),
+        Msaa::Off,
+        Bloom::default(),
     ));
 }
 

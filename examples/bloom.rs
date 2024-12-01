@@ -1,6 +1,6 @@
 // Demonstrates shapes respecting global bloom settings
 
-use bevy::core_pipeline::bloom::BloomSettings;
+use bevy::core_pipeline::bloom::Bloom;
 use bevy::prelude::*;
 use bevy_vector_shapes::prelude::*;
 
@@ -19,16 +19,14 @@ fn main() {
 
 fn setup(mut commands: Commands) {
     commands.spawn((
-        Camera3dBundle {
-            camera: Camera {
-                hdr: true,
-                ..default()
-            },
-            transform: Transform::from_xyz(0., 0., 16.).looking_at(Vec3::ZERO, Vec3::Y),
-            msaa: Msaa::Off,
+        Camera3d::default(),
+        Camera {
+            hdr: true,
             ..default()
         },
-        BloomSettings::default(),
+        Transform::from_xyz(0., 0., 16.).looking_at(Vec3::ZERO, Vec3::Y),
+        Msaa::Off,
+        Bloom::default(),
     ));
 }
 

@@ -11,19 +11,21 @@
 
 //! fn main() {
 //!     App::new()
-//!         .add_plugins(DefaultPlugins)
-//!         // Add the shape plugin:
-//!         // - Shape2dPlugin for 2D cameras
-//!         // - ShapePlugin for both 3D and 2D cameras
-//!         .add_plugins(Shape2dPlugin::default())
-//!         .add_startup_system(setup)
-//!         .add_system(draw)
+//!         .add_plugins((
+//!             DefaultPlugins,
+//!             // Add the shape plugin:
+//!             // - Shape2dPlugin for 2D cameras
+//!             // - ShapePlugin for both 3D and 2D cameras
+//!             Shape2dPlugin::default(),
+//!         ))
+//!         .add_systems(Startup, setup)
+//!         .add_systems(Update, draw)
 //!         .run();
 //! }
 
 //! fn setup(mut commands: Commands) {
 //!     // Spawn the camera
-//!     commands.spawn(Camera2dBundle::default());
+//!     commands.spawn(Camera2d);
 //! }
 
 //! fn draw(mut painter: ShapePainter) {

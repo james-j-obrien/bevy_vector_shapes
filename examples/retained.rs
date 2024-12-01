@@ -16,11 +16,11 @@ fn main() {
 }
 
 fn setup(mut commands: Commands, mut shapes: ShapeCommands) {
-    commands.spawn(Camera3dBundle {
-        transform: Transform::from_xyz(0., 0.0, 16.).looking_at(Vec3::ZERO, Vec3::Y),
-        msaa: Msaa::Off,
-        ..default()
-    });
+    commands.spawn((
+        Camera3d::default(),
+        Transform::from_xyz(0., 0.0, 16.).looking_at(Vec3::ZERO, Vec3::Y),
+        Msaa::Off,
+    ));
 
     // The ShapeCommands API is identical to the ShapePainter API so can be used almost interchangeably
     shapes.circle(1.0).with_children(|parent| {
