@@ -10,7 +10,7 @@ keywords = ["bevy", "gamedev", "graphics"]
 license = "MIT OR Apache-2.0"
 name = "bevy_vector_shapes"
 repository = "https://github.com/james-j-obrien/bevy_vector_shapes"
-version = "0.9.2"
+version = "0.9.3"
 
 [dependencies]
 any_vec = "0.14.0"

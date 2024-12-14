@@ -5,7 +5,7 @@ use bevy::{
     render::{
         render_phase::DrawFunctions,
         render_resource::*,
-        sync_world::{MainEntity, RenderEntity},
+        sync_world::{MainEntity, RenderEntity, TemporaryRenderEntity},
         view::{ExtractedView, RenderLayers},
         Extract,
     },
@@ -92,7 +92,7 @@ pub fn extract_shapes_3d<T: ShapeData>(
 
     if let Some(iter) = storage.get::<T>(ShapePipelineType::Shape3d) {
         iter.cloned().for_each(|mut instance| {
-            let entity = commands.spawn_empty().id();
+            let entity = commands.spawn(TemporaryRenderEntity).id();
             if let Some(canvas) = &mut instance.material.canvas {
                 *canvas = *canvases.entry(*canvas).or_insert_with(|| {
                     render_entities
