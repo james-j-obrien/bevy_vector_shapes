@@ -251,6 +251,7 @@ impl<T: PartialOrd> Conditional<T> {
 #[derive(Deserialize, Debug)]
 pub enum ShapeParam<T> {
     Raw(T),
+    Ctx(String),
     MulCtx(T, String),
     AddCtx(T, String),
     SubCtx(T, String),
@@ -261,6 +262,14 @@ impl ShapeParam<Color> {
     fn apply_color(&self, context: &HashMap<String, Color>) -> Color {
         match &self {
             ShapeParam::Raw(raw) => *raw,
+            ShapeParam::Ctx(key) => {
+                let Some(ctx_val) = context.get(key) else {
+                    warn!("Could not find context for: {key}");
+                    return Color::default();
+                };
+
+                *ctx_val
+            }
             ShapeParam::MulCtx(val, key) => {
                 let Some(ctx_val) = context.get(key) else {
                     warn!("Could not find context for: {key}");
@@ -305,12 +314,20 @@ impl ShapeParam<Color> {
     }
 }
 
-impl<T: Mul<Output = T> + Add<Output = T> + Sub<Output = T> + Div<Output = T> + Copy>
+impl<T: Mul<Output = T> + Add<Output = T> + Sub<Output = T> + Div<Output = T> + Copy + Default>
     ShapeParam<T>
 {
     fn apply(&self, context: &HashMap<String, T>) -> T {
         match &self {
             ShapeParam::Raw(raw) => *raw,
+            ShapeParam::Ctx(key) => {
+                let Some(ctx_val) = context.get(key) else {
+                    warn!("Could not find context for: {key}");
+                    return T::default();
+                };
+
+                *ctx_val
+            }
             ShapeParam::MulCtx(val, key) => {
                 let Some(ctx_val) = context.get(key) else {
                     warn!("Could not find context for: {key}");
@@ -433,9 +450,9 @@ pub enum ShapePainterOperation {
     Eq(bool, String, Box<ShapePainterOperation>),
     Neq(bool, String, Box<ShapePainterOperation>),
     Label(String),
-    SetF32(f32, String),
-    SetVec2(Vec2, String),
-    SetVec3(Vec3, String),
+    SetF32(ShapeParam<f32>, String),
+    SetVec2(ShapeParam<Vec2>, String),
+    SetVec3(ShapeParam<Vec3>, String),
     SetBool(bool, String),
 }
 
@@ -591,30 +608,33 @@ impl ShapePainterOperation {
                 if Conditional::vec3(comp, dim, vec, ctx_key, &context.vec3s) {
                     return op.execute(context, painter, asset_server);
                 }
-            },
+            }
             ShapePainterOperation::Eq(val, key, op) => {
                 if Conditional::bool_eq_ctx(*val, key, &context.bools) {
                     return op.execute(context, painter, asset_server);
                 }
-            },
+            }
             ShapePainterOperation::Neq(val, key, op) => {
                 if Conditional::bool_neq_ctx(*val, key, &context.bools) {
                     return op.execute(context, painter, asset_server);
                 }
-            },
-            ShapePainterOperation::Label(_) => {},
+            }
+            ShapePainterOperation::Label(_) => {}
             ShapePainterOperation::SetF32(val, key) => {
-                context.floats.insert(key.clone(), *val);
-            },
+                let computed = val.apply(&context.floats);
+                context.floats.insert(key.clone(), computed);
+            }
             ShapePainterOperation::SetVec2(vec2, key) => {
-                context.vec2s.insert(key.clone(), *vec2);
-            },
+                let computed = vec2.apply(&context.vec2s);
+                context.vec2s.insert(key.clone(), computed);
+            }
             ShapePainterOperation::SetVec3(vec3, key) => {
-                context.vec3s.insert(key.clone(), *vec3);
-            },
+                let computed = vec3.apply(&context.vec3s);
+                context.vec3s.insert(key.clone(), computed);
+            }
             ShapePainterOperation::SetBool(val, key) => {
                 context.bools.insert(key.clone(), *val);
-            },
+            }
         };
 
         isr

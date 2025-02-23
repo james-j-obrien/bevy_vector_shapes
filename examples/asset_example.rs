@@ -35,9 +35,11 @@ fn actuate_context(mut shapes: Query<&mut VectorShape>, time: Res<Time>) {
             Vec3::splat(time.elapsed_secs().sin().abs()),
         );
 
+        let should_render = time.elapsed_secs().floor() as u8 % 2 == 0;
+
         shape
             .base_context
-            .floats
-            .insert("elapsed_time".to_owned(), time.elapsed_secs());
+            .bools
+            .insert("should_render".to_owned(), should_render);
     }
 }
