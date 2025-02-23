@@ -160,7 +160,7 @@ pub trait TrianglePainter {
     fn triangle(&mut self, v_a: Vec2, v_b: Vec2, v_c: Vec2) -> &mut Self;
 }
 
-impl<'w, 's> TrianglePainter for ShapePainter<'w, 's> {
+impl TrianglePainter for ShapePainter<'_, '_> {
     fn triangle(&mut self, v_a: Vec2, v_b: Vec2, v_c: Vec2) -> &mut Self {
         self.send(TriangleData::new(self.config(), v_a, v_b, v_c))
     }

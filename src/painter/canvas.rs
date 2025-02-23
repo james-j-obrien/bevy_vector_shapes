@@ -225,7 +225,7 @@ pub trait CanvasCommands<'w> {
     ) -> (Handle<Image>, EntityCommands);
 }
 
-impl<'w, 's> CanvasCommands<'w> for Commands<'w, 's> {
+impl<'w> CanvasCommands<'w> for Commands<'w, '_> {
     fn spawn_canvas(
         &mut self,
         assets: &mut Assets<Image>,

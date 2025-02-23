@@ -164,7 +164,7 @@ pub trait RegularPolygonPainter {
     fn ngon(&mut self, sides: f32, radius: f32) -> &mut Self;
 }
 
-impl<'w, 's> RegularPolygonPainter for ShapePainter<'w, 's> {
+impl RegularPolygonPainter for ShapePainter<'_, '_> {
     fn ngon(&mut self, sides: f32, radius: f32) -> &mut Self {
         self.send(NgonData::new(self.config(), sides, radius))
     }

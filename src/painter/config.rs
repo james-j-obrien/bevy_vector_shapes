@@ -169,7 +169,7 @@ impl FromWorld for ShapeConfig {
     }
 }
 
-unsafe impl<'r> SystemParam for &'r mut ShapeConfig {
+unsafe impl SystemParam for &mut ShapeConfig {
     type State = SyncCell<ShapeConfig>;
     type Item<'w, 's> = &'s mut ShapeConfig;
 

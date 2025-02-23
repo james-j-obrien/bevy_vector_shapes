@@ -142,7 +142,7 @@ pub trait LinePainter {
     fn line(&mut self, start: Vec3, end: Vec3) -> &mut Self;
 }
 
-impl<'w, 's> LinePainter for ShapePainter<'w, 's> {
+impl LinePainter for ShapePainter<'_, '_> {
     fn line(&mut self, start: Vec3, end: Vec3) -> &mut Self {
         self.send(LineData::new(self.config(), start, end))
     }

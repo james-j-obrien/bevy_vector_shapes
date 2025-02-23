@@ -74,7 +74,7 @@ pub struct ShapePainter<'w, 's> {
     default_config: Res<'w, BaseShapeConfig>,
 }
 
-impl<'w, 's> ShapePainter<'w, 's> {
+impl ShapePainter<'_, '_> {
     pub fn config(&self) -> &ShapeConfig {
         self.config
     }
@@ -115,7 +115,7 @@ impl<'w, 's> ShapePainter<'w, 's> {
     }
 }
 
-impl<'w, 's> Deref for ShapePainter<'w, 's> {
+impl Deref for ShapePainter<'_, '_> {
     type Target = ShapeConfig;
 
     fn deref(&self) -> &Self::Target {
@@ -123,7 +123,7 @@ impl<'w, 's> Deref for ShapePainter<'w, 's> {
     }
 }
 
-impl<'w, 's> DerefMut for ShapePainter<'w, 's> {
+impl DerefMut for ShapePainter<'_, '_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.config
     }

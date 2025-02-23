@@ -206,7 +206,7 @@ pub trait DiscPainter {
     fn arc(&mut self, radius: f32, start_angle: f32, end_angle: f32) -> &mut Self;
 }
 
-impl<'w, 's> DiscPainter for ShapePainter<'w, 's> {
+impl DiscPainter for ShapePainter<'_, '_> {
     fn circle(&mut self, radius: f32) -> &mut Self {
         self.send(DiscData::circle(self.config(), radius))
     }

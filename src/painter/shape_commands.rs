@@ -17,14 +17,14 @@ pub struct ShapeCommands<'w, 's> {
     default_config: Res<'w, BaseShapeConfig>,
 }
 
-impl<'w, 's> ShapeCommands<'w, 's> {
+impl ShapeCommands<'_, '_> {
     /// Set the painter's [`ShapeConfig`] to the current value of the [`BaseShapeConfig`] resource.
     pub fn reset(&mut self) {
         *self.config = self.default_config.0.clone();
     }
 }
 
-impl<'w, 's> ShapeSpawner<'w> for ShapeCommands<'w, 's> {
+impl<'w> ShapeSpawner<'w> for ShapeCommands<'w, '_> {
     fn spawn_shape(&mut self, bundle: impl Bundle) -> ShapeEntityCommands {
         let Self {
             commands, config, ..
@@ -52,7 +52,7 @@ impl<'w, 's> ShapeSpawner<'w> for ShapeCommands<'w, 's> {
     }
 }
 
-impl<'w, 's> Deref for ShapeCommands<'w, 's> {
+impl Deref for ShapeCommands<'_, '_> {
     type Target = ShapeConfig;
 
     fn deref(&self) -> &Self::Target {
@@ -60,7 +60,7 @@ impl<'w, 's> Deref for ShapeCommands<'w, 's> {
     }
 }
 
-impl<'w, 's> DerefMut for ShapeCommands<'w, 's> {
+impl DerefMut for ShapeCommands<'_, '_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.config
     }
