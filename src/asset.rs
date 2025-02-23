@@ -1,10 +1,13 @@
 use std::ops::{Add, Div, Mul, Sub};
 
-use bevy::{asset::AssetLoader, prelude::*, utils::HashMap};
 use crate::{
     prelude::ShapePainter,
-    shapes::{Alignment, DiscPainter, LinePainter, RectPainter, RegularPolygonPainter, TrianglePainter},
+    shapes::{
+        Alignment, Cap, DiscPainter, LinePainter, RectPainter, RegularPolygonPainter,
+        ShapeAlphaMode, ThicknessType, TrianglePainter,
+    },
 };
+use bevy::{asset::AssetLoader, prelude::*, utils::HashMap};
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -32,7 +35,6 @@ pub fn paint_vector_shapes(
         painter.set_rotation(tsf.rotation());
         painter.set_scale(tsf.scale());
         painter.alignment = Alignment::Billboard;
-
 
         painter = vector_shape.paint(&shape.context, painter, asset_server.as_ref());
     }
@@ -181,6 +183,17 @@ pub struct ShapeContext {
 
 #[derive(Deserialize, Debug)]
 pub enum ShapePainterOperation {
+    CfgAlignment(Alignment),
+    CfgCornerRadii(Vec4),
+    CfgAlphaMode(ShapeAlphaMode),
+    CfgHollow(bool),
+    CfgRoundness(ShapeParam<f32>),
+    CfgDisableLaa(bool),
+    CfgCap(Cap),
+    CfgOrigin(ShapeParam<Vec3>),
+    CfgNoOrigin,
+    CfgThickness(ShapeParam<f32>),
+    CfgThicknessType(ThicknessType),
     SetTranslation(ShapeParam<Vec3>),
     Translate(ShapeParam<Vec3>),
 
@@ -300,6 +313,27 @@ impl ShapePainterOperation {
                     v_c.apply(&context.vec2s),
                 );
             }
+            ShapePainterOperation::CfgAlignment(alignment) => painter.alignment = *alignment,
+            ShapePainterOperation::CfgCornerRadii(vec4) => painter.corner_radii = *vec4,
+            ShapePainterOperation::CfgAlphaMode(shape_alpha_mode) => {
+                painter.alpha_mode = *shape_alpha_mode
+            }
+            ShapePainterOperation::CfgHollow(hollow) => painter.hollow = *hollow,
+            ShapePainterOperation::CfgRoundness(shape_param) => {
+                painter.roundness = shape_param.apply(&context.floats)
+            }
+            ShapePainterOperation::CfgDisableLaa(disable_laa) => painter.disable_laa = *disable_laa,
+            ShapePainterOperation::CfgCap(cap) => painter.cap = *cap,
+            ShapePainterOperation::CfgOrigin(shape_param) => {
+                painter.origin = Some(shape_param.apply(&context.vec3s))
+            }
+            ShapePainterOperation::CfgThickness(shape_param) => {
+                painter.thickness = shape_param.apply(&context.floats)
+            }
+            ShapePainterOperation::CfgThicknessType(thickness_type) => {
+                painter.thickness_type = *thickness_type
+            }
+            ShapePainterOperation::CfgNoOrigin => painter.origin = None,
         };
 
         painter

@@ -1,5 +1,8 @@
 use bevy::prelude::*;
-use bevy_vector_shapes::{ShapePlugin, asset::{VectorShapeAsset, VectorShape, vector_asset_plugin}};
+use bevy_vector_shapes::{
+    asset::{vector_asset_plugin, VectorShape, VectorShapeAsset},
+    ShapePlugin,
+};
 
 /// Note: This example requires the 'assets' feature to be enabled
 pub fn main() {
@@ -14,11 +17,7 @@ pub fn main() {
 
 fn setup(mut cmds: Commands, asset_server: Res<AssetServer>) {
     let camera_tsf = Transform::from_xyz(0.0, 5.0, 0.0).looking_at(Vec3::ZERO, Dir3::X);
-    cmds.spawn((
-        Name::new("Camera"),
-        Camera3d::default(),
-        camera_tsf,
-    ));
+    cmds.spawn((Name::new("Camera"), Camera3d::default(), camera_tsf));
     cmds.spawn(DirectionalLight::default());
 
     let asset = asset_server.load::<VectorShapeAsset>("test.vectorshape.ron");

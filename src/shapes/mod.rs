@@ -1,5 +1,8 @@
 use bevy::prelude::*;
 
+#[cfg(feature = "assets")]
+use serde::Deserialize;
+
 use crate::{prelude::*, render::ShapePipelineType};
 
 mod disc;
@@ -45,6 +48,7 @@ impl Default for ShapeMaterial {
 }
 
 /// Alpha mode to use when rendering, a subset of [`AlphaMode`].
+#[cfg_attr(feature = "assets", derive(Deserialize))]
 #[derive(Default, Debug, Clone, Copy, PartialEq, PartialOrd, Ord, Eq, Hash, Reflect)]
 pub enum ShapeAlphaMode {
     #[default]
@@ -141,6 +145,7 @@ impl<T: Component> ShapeBundle<T> {
 }
 
 /// Defines the way in which the thickness value of shape is interpreted.
+#[cfg_attr(feature = "assets", derive(Deserialize))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Reflect)]
 pub enum ThicknessType {
     /// 1.0 thickness corresponds to 1.0 world unit.
@@ -159,6 +164,7 @@ impl From<ThicknessType> for u32 {
 }
 
 /// Defines the way in which caps will be rendered on a supported shape.
+#[cfg_attr(feature = "assets", derive(Deserialize))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Reflect)]
 pub enum Cap {
     /// No caps
@@ -177,6 +183,7 @@ impl From<Cap> for u32 {
 }
 
 /// Defines how a shape will orient itself in relation to it's transform and the camera
+#[cfg_attr(feature = "assets", derive(Deserialize))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Reflect)]
 pub enum Alignment {
     /// Shapes will respect the rotation in their transform.
