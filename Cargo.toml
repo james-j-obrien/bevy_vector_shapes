@@ -41,4 +41,5 @@ serde = {version = "1", optional = true } # Already included in Bevy anyway
 ron = {version = "0.8.1", optional = true}
 
 [features]
+default = ["assets"]
 assets = ["dep:thiserror", "dep:serde", "dep:ron"]

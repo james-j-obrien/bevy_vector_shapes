@@ -18,17 +18,18 @@ pub fn vector_asset_plugin(app: &mut App) {
 }
 
 pub fn paint_vector_shapes(
-    shapes: Query<(&GlobalTransform, &VectorShape)>,
+    mut shapes: Query<(&GlobalTransform, &mut VectorShape)>,
     mut painter: ShapePainter<'_, '_>,
     shape_assets: Res<Assets<VectorShapeAsset>>,
     asset_server: Res<AssetServer>,
 ) {
-    for (tsf, shape) in shapes.iter() {
+    for (tsf, mut shape) in shapes.iter_mut() {
         let Some(vector_shape) = shape_assets.get(shape.asset.id()) else {
             debug!("Could not get vector shape asset!");
             continue;
         };
 
+        shape.working_context = shape.base_context.clone();
         painter.reset();
         //Need to do this because the ShapePainter has no concept of the parent/child tsf hierarchy
         painter.set_translation(tsf.translation());
@@ -36,21 +37,27 @@ pub fn paint_vector_shapes(
         painter.set_scale(tsf.scale());
         painter.alignment = Alignment::Billboard;
 
-        painter = vector_shape.paint(&shape.context, painter, asset_server.as_ref());
+        painter = vector_shape.paint(&mut shape.working_context, painter, asset_server.as_ref());
     }
 }
 
 #[derive(Component)]
 pub struct VectorShape {
     pub asset: Handle<VectorShapeAsset>,
-    pub context: ShapeContext,
+
+    /// The base_context that the asset gets passed each frame
+    pub base_context: ShapeContext,
+
+    /// The working context that the asset can modify, gets reset to base_context each frame
+    pub working_context: ShapeContext,
 }
 
 impl VectorShape {
     pub fn new(asset: Handle<VectorShapeAsset>) -> Self {
         VectorShape {
             asset,
-            context: ShapeContext::default(),
+            base_context: ShapeContext::default(),
+            working_context: ShapeContext::default(),
         }
     }
 }
@@ -61,15 +68,164 @@ pub struct VectorShapeAsset(Vec<ShapePainterOperation>);
 impl VectorShapeAsset {
     pub fn paint<'w, 's>(
         &self,
-        context: &ShapeContext,
+        context: &mut ShapeContext,
         mut painter: ShapePainter<'w, 's>,
         asset_server: &AssetServer,
     ) -> ShapePainter<'w, 's> {
-        for operation in &self.0 {
-            painter = operation.execute(context, painter, asset_server);
+        let operations = &self.0;
+        let mut instr_idx = 0;
+
+        loop {
+            if instr_idx >= operations.len() {
+                break;
+            }
+
+            let operation = &operations[instr_idx];
+
+            let isr = operation.execute( context, &mut painter, asset_server);
+            info!("idx: {}", instr_idx);
+            match isr.eval(instr_idx, operations) {
+                Ok(new_line) => {
+                    info!("New Line: {}", new_line);
+                    instr_idx = new_line
+                }
+                Err(e) => {
+                    debug!("{e}");
+                    break;
+                }
+            };
         }
 
         painter
+    }
+}
+
+#[derive(Deserialize, Debug)]
+pub enum Conditional<T> {
+    Eq(T, String),
+    NEq(T, String),
+    Gt(T, String),
+    Lt(T, String),
+    And(Box<(Conditional<T>, Conditional<T>)>),
+    Or(Box<(Conditional<T>, Conditional<T>)>),
+}
+
+#[derive(Deserialize, Debug)]
+pub enum CompareFn {
+    Eq,
+    NEq,
+    GtEq,
+    Gt,
+    Lt,
+    LtEq,
+}
+
+#[derive(Deserialize, Debug)]
+pub enum Dimension {
+    X,
+    Y,
+    Z,
+}
+
+impl Conditional<Vec2> {
+    fn vec2(
+        cond: &CompareFn,
+        dim: &Dimension,
+        value: &Vec2,
+        ctx_key: &String,
+        ctx: &HashMap<String, Vec2>,
+    ) -> bool {
+        let Some(ctx_value) = ctx.get(ctx_key) else {
+            warn!("Could not find context value for key: {}", ctx_key);
+            return false;
+        };
+
+        let (val, ctx_val) = match dim {
+            Dimension::X => (value.x, ctx_value.x),
+            Dimension::Y => (value.y, ctx_value.y),
+            _ => {
+                warn!("No Z dimension on vec2!");
+                return false;
+            }
+        };
+
+        match cond {
+            CompareFn::Eq => val == ctx_val,
+            CompareFn::NEq => val != ctx_val,
+            CompareFn::GtEq => val >= ctx_val,
+            CompareFn::Gt => val <= ctx_val,
+            CompareFn::Lt => val < ctx_val,
+            CompareFn::LtEq => val <= ctx_val,
+        }
+    }
+
+    fn vec3(
+        cond: &CompareFn,
+        dim: &Dimension,
+        value: &Vec3,
+        ctx_key: &String,
+        ctx: &HashMap<String, Vec3>,
+    ) -> bool {
+        let Some(ctx_value) = ctx.get(ctx_key) else {
+            warn!("Could not find context value for key: {}", ctx_key);
+            return false;
+        };
+
+        let (val, ctx_val) = match dim {
+            Dimension::X => (value.x, ctx_value.x),
+            Dimension::Y => (value.y, ctx_value.y),
+            Dimension::Z => (value.z, ctx_value.z),
+        };
+
+        match cond {
+            CompareFn::Eq => val == ctx_val,
+            CompareFn::NEq => val != ctx_val,
+            CompareFn::GtEq => val >= ctx_val,
+            CompareFn::Gt => val <= ctx_val,
+            CompareFn::Lt => val < ctx_val,
+            CompareFn::LtEq => val <= ctx_val,
+        }
+    }
+}
+
+impl<T: PartialOrd> Conditional<T> {
+    fn eval(&self, ctx: &HashMap<String, T>) -> bool {
+        match self {
+            Conditional::Eq(val, key) => {
+                let Some(ctx_val) = ctx.get(key) else {
+                    warn!("Could not find context for: {key}");
+                    return false;
+                };
+
+                val == ctx_val
+            }
+            Conditional::NEq(val, key) => {
+                let Some(ctx_val) = ctx.get(key) else {
+                    warn!("Could not find context for: {key}");
+                    return false;
+                };
+
+                val != ctx_val
+            }
+            Conditional::Gt(val, key) => {
+                let Some(ctx_val) = ctx.get(key) else {
+                    warn!("Could not find context for: {key}");
+                    return false;
+                };
+
+                val > ctx_val
+            }
+            Conditional::Lt(val, key) => {
+                let Some(ctx_val) = ctx.get(key) else {
+                    warn!("Could not find context for: {key}");
+                    return false;
+                };
+
+                val < ctx_val
+            }
+            Conditional::And(operands) => operands.0.eval(ctx) && operands.1.eval(ctx),
+            Conditional::Or(operands) => operands.0.eval(ctx) || operands.1.eval(ctx),
+        }
     }
 }
 
@@ -173,7 +329,7 @@ impl<T: Mul<Output = T> + Add<Output = T> + Sub<Output = T> + Div<Output = T> + 
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct ShapeContext {
     pub floats: HashMap<String, f32>,
     pub vec2s: HashMap<String, Vec2>,
@@ -183,17 +339,17 @@ pub struct ShapeContext {
 
 #[derive(Deserialize, Debug)]
 pub enum ShapePainterOperation {
-    CfgAlignment(Alignment),
-    CfgCornerRadii(Vec4),
-    CfgAlphaMode(ShapeAlphaMode),
-    CfgHollow(bool),
-    CfgRoundness(ShapeParam<f32>),
-    CfgDisableLaa(bool),
-    CfgCap(Cap),
-    CfgOrigin(ShapeParam<Vec3>),
-    CfgNoOrigin,
-    CfgThickness(ShapeParam<f32>),
-    CfgThicknessType(ThicknessType),
+    Alignment(Alignment),
+    CornerRadii(Vec4),
+    AlphaMode(ShapeAlphaMode),
+    Hollow(bool),
+    Roundness(ShapeParam<f32>),
+    LaaDisabled(bool),
+    Cap(Cap),
+    Origin(ShapeParam<Vec3>),
+    NoOrigin,
+    Thickness(ShapeParam<f32>),
+    ThicknessType(ThicknessType),
     SetTranslation(ShapeParam<Vec3>),
     Translate(ShapeParam<Vec3>),
 
@@ -237,15 +393,78 @@ pub enum ShapePainterOperation {
     Ngon(ShapeParam<f32>, ShapeParam<f32>),
     /// Triangle with specified corner vertices
     Triangle(ShapeParam<Vec2>, ShapeParam<Vec2>, ShapeParam<Vec2>),
+
+    // Now we're getting a little carried away
+    /// move the instruction pointer relative to this one
+    Goto(IsrTgt),
+    CondF32(Conditional<f32>, Box<ShapePainterOperation>),
+    CondVec2(
+        Dimension,
+        CompareFn,
+        Vec2,
+        String,
+        Box<ShapePainterOperation>,
+    ),
+    CondVec3(
+        Dimension,
+        CompareFn,
+        Vec3,
+        String,
+        Box<ShapePainterOperation>,
+    ),
+    Label(String),
+    SetF32(f32, String),
+    SetVec2(Vec2, String),
+    SetVec3(Vec3, String),
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub enum IsrTgt {
+    Relative(isize),
+    Abs(usize),
+    Label(String),
+}
+
+impl IsrTgt {
+    fn eval(
+        &self,
+        current_line: usize,
+        operations: &[ShapePainterOperation],
+    ) -> Result<usize, String> {
+        let new_size = match self {
+            IsrTgt::Relative(rel) => current_line as isize + rel,
+            IsrTgt::Abs(line) => *line as isize,
+            IsrTgt::Label(label) => {
+                let Some(label_line) = operations.iter().position(|operation| match operation {
+                    ShapePainterOperation::Label(op_label) => op_label == label,
+                    _ => false,
+                }) else {
+                    return Err(format!("Could not find label: {}", label));
+                };
+
+                label_line as isize
+            }
+        };
+
+        if new_size < 0 {
+            return Err("New ISR lower than zero".to_owned());
+        } else if new_size >= operations.len() as isize {
+            return Err("New ISR Exceeds bounds of operations length".to_owned());
+        }
+
+        Ok(new_size as usize)
+    }
 }
 
 impl ShapePainterOperation {
-    pub fn execute<'w, 's>(
+    /// Returns a tuple of the modified shape painter and an isr modification (will almost always be 1 except in the event of a GOTO)
+    pub fn execute(
         &self,
-        context: &ShapeContext,
-        mut painter: ShapePainter<'w, 's>,
+        context: &mut ShapeContext,
+        painter: &mut ShapePainter,
         asset_server: &AssetServer,
-    ) -> ShapePainter<'w, 's> {
+    ) -> IsrTgt {
+        let mut isr = IsrTgt::Relative(1);
         match self {
             ShapePainterOperation::SetTranslation(location) => {
                 painter.set_translation(location.apply(&context.vec3s))
@@ -313,30 +532,58 @@ impl ShapePainterOperation {
                     v_c.apply(&context.vec2s),
                 );
             }
-            ShapePainterOperation::CfgAlignment(alignment) => painter.alignment = *alignment,
-            ShapePainterOperation::CfgCornerRadii(vec4) => painter.corner_radii = *vec4,
-            ShapePainterOperation::CfgAlphaMode(shape_alpha_mode) => {
+            ShapePainterOperation::Alignment(alignment) => painter.alignment = *alignment,
+            ShapePainterOperation::CornerRadii(vec4) => painter.corner_radii = *vec4,
+            ShapePainterOperation::AlphaMode(shape_alpha_mode) => {
                 painter.alpha_mode = *shape_alpha_mode
             }
-            ShapePainterOperation::CfgHollow(hollow) => painter.hollow = *hollow,
-            ShapePainterOperation::CfgRoundness(shape_param) => {
+            ShapePainterOperation::Hollow(hollow) => painter.hollow = *hollow,
+            ShapePainterOperation::Roundness(shape_param) => {
                 painter.roundness = shape_param.apply(&context.floats)
             }
-            ShapePainterOperation::CfgDisableLaa(disable_laa) => painter.disable_laa = *disable_laa,
-            ShapePainterOperation::CfgCap(cap) => painter.cap = *cap,
-            ShapePainterOperation::CfgOrigin(shape_param) => {
+            ShapePainterOperation::LaaDisabled(disable_laa) => painter.disable_laa = *disable_laa,
+            ShapePainterOperation::Cap(cap) => painter.cap = *cap,
+            ShapePainterOperation::Origin(shape_param) => {
                 painter.origin = Some(shape_param.apply(&context.vec3s))
             }
-            ShapePainterOperation::CfgThickness(shape_param) => {
+            ShapePainterOperation::Thickness(shape_param) => {
                 painter.thickness = shape_param.apply(&context.floats)
             }
-            ShapePainterOperation::CfgThicknessType(thickness_type) => {
+            ShapePainterOperation::ThicknessType(thickness_type) => {
                 painter.thickness_type = *thickness_type
             }
-            ShapePainterOperation::CfgNoOrigin => painter.origin = None,
+            ShapePainterOperation::NoOrigin => painter.origin = None,
+            ShapePainterOperation::Goto(isr_tgt) => {
+                isr = isr_tgt.clone();
+            }
+            ShapePainterOperation::CondF32(conditional, shape_painter_operation) => {
+                if conditional.eval(&context.floats) {
+                    return shape_painter_operation.execute(context, painter, asset_server);
+                };
+            }
+            ShapePainterOperation::CondVec2(dim, comp, vec, ctx_key, op) => {
+                if Conditional::vec2(comp, dim, vec, ctx_key, &context.vec2s) {
+                    return op.execute(context, painter, asset_server);
+                }
+            }
+            ShapePainterOperation::CondVec3(dim, comp, vec, ctx_key, op) => {
+                if Conditional::vec3(comp, dim, vec, ctx_key, &context.vec3s) {
+                    return op.execute(context, painter, asset_server);
+                }
+            }
+            ShapePainterOperation::Label(_) => {}
+            ShapePainterOperation::SetF32(val, key) => {
+                context.floats.insert(key.clone(), *val);
+            },
+            ShapePainterOperation::SetVec2(vec2, key) => {
+                context.vec2s.insert(key.clone(), *vec2);
+            },
+            ShapePainterOperation::SetVec3(vec3, key) => {
+                context.vec3s.insert(key.clone(), *vec3);
+            },
         };
 
-        painter
+        isr
     }
 }
 

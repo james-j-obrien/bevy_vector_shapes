@@ -30,7 +30,7 @@ fn setup(mut cmds: Commands, asset_server: Res<AssetServer>) {
 
 fn actuate_context(mut shapes: Query<&mut VectorShape>, time: Res<Time>) {
     for mut shape in shapes.iter_mut() {
-        shape.context.vec3s.insert(
+        shape.base_context.vec3s.insert(
             "lineScale".to_owned(),
             Vec3::splat(time.elapsed_secs().sin().abs()),
         );
