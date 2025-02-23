@@ -7,5 +7,8 @@ VectorShapeAsset(
         Line(Raw(Vec3(1.0, 0.0, 0.0)), Raw(Vec3(1.0, 0.0, 1.0))),
         Line(Raw(Vec3(1.0, 0.0, 1.0)), Raw(Vec3(0.0, 0.0, 1.0))),
         Line(Raw(Vec3(0.0, 0.0, 1.0)), Raw(Vec3(0.0, 0.0, 0.0))),
+        SetScale(Raw(Vec3(1.0, 1.0, 1.0))),
+        Translate(Raw(Vec3(1.0, 0.0, 1.0))),
+        Line(Raw(Vec3(0.0, 0.0, 0.0)), Raw(Vec3(1.0, 0.0, 1.0))),
     ]
 )

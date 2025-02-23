@@ -34,5 +34,10 @@ fn actuate_context(mut shapes: Query<&mut VectorShape>, time: Res<Time>) {
             "lineScale".to_owned(),
             Vec3::splat(time.elapsed_secs().sin().abs()),
         );
+
+        shape
+            .base_context
+            .floats
+            .insert("elapsed_time".to_owned(), time.elapsed_secs());
     }
 }

@@ -82,7 +82,7 @@ impl VectorShapeAsset {
 
             let operation = &operations[instr_idx];
 
-            let isr = operation.execute( context, &mut painter, asset_server);
+            let isr = operation.execute(context, &mut painter, asset_server);
             debug!("idx: {}", instr_idx);
             match isr.eval(instr_idx, operations) {
                 Ok(new_line) => {
@@ -127,7 +127,7 @@ pub enum Dimension {
     Z,
 }
 
-impl Conditional<Vec2> {
+impl Conditional<()> {
     fn vec2(
         cond: &CompareFn,
         dim: &Dimension,
@@ -185,6 +185,24 @@ impl Conditional<Vec2> {
             CompareFn::Lt => val < ctx_val,
             CompareFn::LtEq => val <= ctx_val,
         }
+    }
+
+    fn bool_eq_ctx(val: bool, key: &String, ctx: &HashMap<String, bool>) -> bool {
+        let Some(res) = ctx.get(key) else {
+            warn!("Could not get bool from context: {key}");
+            return false;
+        };
+
+        *res == val
+    }
+
+    fn bool_neq_ctx(val: bool, key: &String, ctx: &HashMap<String, bool>) -> bool {
+        let Some(res) = ctx.get(key) else {
+            warn!("Could not get bool from context: {key}");
+            return false;
+        };
+
+        *res != val
     }
 }
 
@@ -322,7 +340,6 @@ impl<T: Mul<Output = T> + Add<Output = T> + Sub<Output = T> + Div<Output = T> + 
                     warn!("Could not find context for: {key}");
                     return *val;
                 };
-
                 *val / *ctx_val
             }
         }
@@ -335,6 +352,7 @@ pub struct ShapeContext {
     pub vec2s: HashMap<String, Vec2>,
     pub vec3s: HashMap<String, Vec3>,
     pub colors: HashMap<String, Color>,
+    pub bools: HashMap<String, bool>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -412,10 +430,13 @@ pub enum ShapePainterOperation {
         String,
         Box<ShapePainterOperation>,
     ),
+    Eq(bool, String, Box<ShapePainterOperation>),
+    Neq(bool, String, Box<ShapePainterOperation>),
     Label(String),
     SetF32(f32, String),
     SetVec2(Vec2, String),
     SetVec3(Vec3, String),
+    SetBool(bool, String),
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -570,8 +591,18 @@ impl ShapePainterOperation {
                 if Conditional::vec3(comp, dim, vec, ctx_key, &context.vec3s) {
                     return op.execute(context, painter, asset_server);
                 }
-            }
-            ShapePainterOperation::Label(_) => {}
+            },
+            ShapePainterOperation::Eq(val, key, op) => {
+                if Conditional::bool_eq_ctx(*val, key, &context.bools) {
+                    return op.execute(context, painter, asset_server);
+                }
+            },
+            ShapePainterOperation::Neq(val, key, op) => {
+                if Conditional::bool_neq_ctx(*val, key, &context.bools) {
+                    return op.execute(context, painter, asset_server);
+                }
+            },
+            ShapePainterOperation::Label(_) => {},
             ShapePainterOperation::SetF32(val, key) => {
                 context.floats.insert(key.clone(), *val);
             },
@@ -580,6 +611,9 @@ impl ShapePainterOperation {
             },
             ShapePainterOperation::SetVec3(vec3, key) => {
                 context.vec3s.insert(key.clone(), *vec3);
+            },
+            ShapePainterOperation::SetBool(val, key) => {
+                context.bools.insert(key.clone(), *val);
             },
         };
 
