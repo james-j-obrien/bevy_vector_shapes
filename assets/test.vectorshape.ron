@@ -1,0 +1,11 @@
+VectorShapeAsset(
+    [
+        Set3D,
+        SetColor(Raw(Srgba((red: 0.0, green: 1.0, blue: 0.0, alpha: 1.0)))),
+        SetScale(MulCtx(Vec3(1.0, 1.0, 1.0), "lineScale")),
+        Line(Raw(Vec3(0.0, 0.0, 0.0)), Raw(Vec3(1.0, 0.0, 0.0))),
+        Line(Raw(Vec3(1.0, 0.0, 0.0)), Raw(Vec3(1.0, 0.0, 1.0))),
+        Line(Raw(Vec3(1.0, 0.0, 1.0)), Raw(Vec3(0.0, 0.0, 1.0))),
+        Line(Raw(Vec3(0.0, 0.0, 1.0)), Raw(Vec3(0.0, 0.0, 0.0))),
+    ]
+)

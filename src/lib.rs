@@ -49,6 +49,9 @@ use render::{ShapeRenderPlugin, ShapeType3dPlugin, ShapeTypePlugin};
 pub mod painter;
 use painter::*;
 
+#[cfg(feature="assets")]
+pub mod asset;
+
 /// `use bevy_vector_shapes::prelude::*` to import commonly used items.
 pub mod prelude {
     pub use crate::painter::{

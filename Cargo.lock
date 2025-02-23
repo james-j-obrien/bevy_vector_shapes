@@ -964,7 +964,10 @@ dependencies = [
  "bitfield",
  "bitflags 2.6.0",
  "nonmax",
+ "ron",
+ "serde",
  "smallvec",
+ "thiserror",
  "wgpu",
 ]
 

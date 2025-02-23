@@ -12,6 +12,10 @@ name = "bevy_vector_shapes"
 repository = "https://github.com/james-j-obrien/bevy_vector_shapes"
 version = "0.9.3"
 
+[[example]]
+name="asset_example"
+required-features = ["assets"]
+
 [dependencies]
 any_vec = "0.14.0"
 bevy = { version = "0.15" , default-features = false, features = [
@@ -32,3 +36,9 @@ bitflags = "2.6.0"
 nonmax = "0.5.5"
 smallvec = "1.13.2"
 wgpu = { version = "23.0.1", default-features = false }
+thiserror={version = "1.0", optional = true}
+serde = {version = "1", optional = true } # Already included in Bevy anyway
+ron = {version = "0.8.1", optional = true}
+
+[features]
+assets = ["dep:thiserror", "dep:serde", "dep:ron"]
