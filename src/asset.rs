@@ -83,10 +83,10 @@ impl VectorShapeAsset {
             let operation = &operations[instr_idx];
 
             let isr = operation.execute( context, &mut painter, asset_server);
-            info!("idx: {}", instr_idx);
+            debug!("idx: {}", instr_idx);
             match isr.eval(instr_idx, operations) {
                 Ok(new_line) => {
-                    info!("New Line: {}", new_line);
+                    debug!("New Line: {}", new_line);
                     instr_idx = new_line
                 }
                 Err(e) => {
