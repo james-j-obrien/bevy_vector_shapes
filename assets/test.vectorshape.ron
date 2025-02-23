@@ -19,15 +19,19 @@ VectorShapeAsset(
             true, "should_render",
             Line(Raw(Vec3(0.0, 0.0, 0.0)), Raw(Vec3(1.0, 0.0, 0.0)))
         ),
-        SetF32(Raw(5.0), "counter"),
+        SetF32(Raw(2.0), "counter"),
         Hollow(true),
         ThicknessType(Pixels),
-        SetTranslation(Raw(Vec3(0.0, 0.0, 0.0))),
+        SetTranslation(Ctx("lineScale")),
 
         Label("StartLoop"),
             Thickness(Ctx("counter")),
             Circle(DivCtx(1.0, "counter")),
             SetF32(AddCtx(-1.0, "counter"), "counter"),
             CondF32(Lt(0.0, "counter"), Goto(Label("StartLoop"))),
+
+        SetTranslation(Raw(Vec3(0.0, 0.0, 0.0))),
+        SetColor(Raw(Srgba((red: 1.0, green: 0.0, blue: 0.5, alpha: 1.0)))),
+        LineStrip([Raw(Vec3(0.0, 0.0, 0.0)), Raw(Vec3(1.0, 0.0, 1.0)), Raw(Vec3(0.0, 0.0, 2.0)), Raw(Vec3(0.0, 0.0, 0.0))])
     ]
 )

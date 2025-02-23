@@ -415,6 +415,8 @@ pub enum ShapePainterOperation {
     /// Line(start, end)
     Line(ShapeParam<Vec3>, ShapeParam<Vec3>),
 
+    LineStrip(Vec<ShapeParam<Vec3>>),
+
     /// Circle(radius)
     Circle(ShapeParam<f32>),
 
@@ -538,7 +540,12 @@ impl ShapePainterOperation {
             }
             ShapePainterOperation::Line(start, end) => {
                 painter.line(start.apply(&context.vec3s), end.apply(&context.vec3s));
-            }
+            },
+            ShapePainterOperation::LineStrip(points) => {
+                for point in points.windows(2) {
+                    painter.line(point[0].apply(&context.vec3s), point[1].apply(&context.vec3s));
+                }
+            },
             ShapePainterOperation::Circle(radius) => {
                 painter.circle(radius.apply(&context.floats));
             }
