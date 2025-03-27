@@ -25,9 +25,7 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     ));
 }
 
-fn update_canvas(keys: Res<ButtonInput<KeyCode>>, mut canvas: Query<&mut Canvas>) {
-    let mut canvas = canvas.single_mut();
-
+fn update_canvas(keys: Res<ButtonInput<KeyCode>>, mut canvas: Single<&mut Canvas>) {
     if keys.just_pressed(KeyCode::Space) {
         canvas.redraw();
     }
@@ -41,8 +39,8 @@ fn update_canvas(keys: Res<ButtonInput<KeyCode>>, mut canvas: Query<&mut Canvas>
     }
 }
 
-fn draw_shapes(time: Res<Time>, mut painter: ShapePainter, canvas: Query<(Entity, &Canvas)>) {
-    let (canvas_e, canvas) = canvas.single();
+fn draw_shapes(time: Res<Time>, mut painter: ShapePainter, canvas: Single<(Entity, &Canvas)>) {
+    let (canvas_e, canvas) = canvas.into_inner();
     painter.image(canvas.image.clone(), Vec2::splat(20.));
 
     painter.set_canvas(canvas_e);

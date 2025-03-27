@@ -14,7 +14,7 @@ version = "0.9.3"
 
 [dependencies]
 any_vec = "0.14.0"
-bevy = { version = "0.15" , default-features = false, features = [
+bevy = { version = "0.16.0-rc.2", default-features = false, features = [
   "bevy_core_pipeline",
   "bevy_pbr",
   "bevy_render",
@@ -26,9 +26,10 @@ bevy = { version = "0.15" , default-features = false, features = [
   "tonemapping_luts",
   "x11",
   "zstd",
+  "std",
 ]}
 bitfield = "0.17.0"
 bitflags = "2.6.0"
 nonmax = "0.5.5"
 smallvec = "1.13.2"
-wgpu = { version = "23.0.1", default-features = false }
+wgpu = { version = "24.0.3", default-features = false }

@@ -418,7 +418,12 @@ impl<T: PartialEq> BatchMeta<T> {
         BatchMeta {
             pipeline_id: item.cached_pipeline(),
             draw_function_id: item.draw_function(),
-            dynamic_offset: item.extra_index().as_dynamic_offset(),
+            dynamic_offset: match item.extra_index() {
+                PhaseItemExtraIndex::DynamicOffset(dynamic_offset) => {
+                    NonMaxU32::new(dynamic_offset)
+                }
+                _ => None,
+            },
             user_data,
         }
     }

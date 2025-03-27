@@ -1,6 +1,7 @@
 use bevy::{
     core_pipeline::core_3d::*,
-    ecs::entity::EntityHashMap,
+    ecs::entity::hash_map::EntityHashMap,
+    platform_support::collections::HashMap,
     prelude::*,
     render::{
         render_phase::DrawFunctions,
@@ -9,7 +10,6 @@ use bevy::{
         view::{ExtractedView, RenderLayers},
         Extract,
     },
-    utils::HashMap,
 };
 
 use crate::{painter::ShapeStorage, render::*, shapes::Shape3d};
@@ -163,7 +163,7 @@ pub fn queue_shapes_3d<T: ShapeData>(
             // ) else {
             //     continue;
             // };
-            let Some(transparent_phase) = trans_phases.get_mut(&view_entity) else {
+            let Some(transparent_phase) = trans_phases.get_mut(&view.retained_view_entity) else {
                 continue;
             };
             let mut view_key = key;
@@ -185,7 +185,8 @@ pub fn queue_shapes_3d<T: ShapeData>(
                     pipeline,
                     distance,
                     batch_range: 0..1,
-                    extra_index: PhaseItemExtraIndex::NONE,
+                    extra_index: PhaseItemExtraIndex::None,
+                    indexed: false,
                 });
             }
         }

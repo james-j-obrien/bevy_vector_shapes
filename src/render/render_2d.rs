@@ -1,6 +1,7 @@
 use crate::{painter::ShapeStorage, render::*, shapes::Shape3d};
 use bevy::{
-    ecs::entity::EntityHashMap,
+    ecs::entity::hash_map::EntityHashMap,
+    platform_support::collections::HashMap,
     render::{
         render_phase::{DrawFunctions, PhaseItemExtraIndex},
         render_resource::*,
@@ -8,7 +9,6 @@ use bevy::{
         view::{ExtractedView, RenderLayers},
         Extract,
     },
-    utils::HashMap,
 };
 
 #[derive(Resource, Deref, DerefMut)]
@@ -141,7 +141,7 @@ pub fn queue_shapes_2d<T: ShapeData>(
         };
 
         for (view_entity, view, msaa, _) in visible_views.into_iter() {
-            let Some(transparent_phase) = phases.get_mut(&view_entity) else {
+            let Some(transparent_phase) = phases.get_mut(&view.retained_view_entity) else {
                 continue;
             };
 
@@ -160,7 +160,9 @@ pub fn queue_shapes_2d<T: ShapeData>(
                     draw_function,
                     sort_key: FloatOrd(instance.data.distance()),
                     batch_range: 0..1,
-                    extra_index: PhaseItemExtraIndex::NONE,
+                    extra_index: PhaseItemExtraIndex::None,
+                    extracted_index: usize::MAX,
+                    indexed: false,
                 });
             }
         }
