@@ -123,7 +123,7 @@ pub fn queue_shapes_3d<T: ShapeData>(
     // mut opaque_phases: ResMut<ViewBinnedRenderPhases<Opaque3d>>,
     // mut alpha_phases: ResMut<ViewBinnedRenderPhases<AlphaMask3d>>,
     mut trans_phases: ResMut<ViewSortedRenderPhases<Transparent3d>>,
-    mut views: Query<(Entity, &ExtractedView, &Msaa, Option<&RenderLayers>)>,
+    mut views: Query<(&ExtractedView, &Msaa, Option<&RenderLayers>)>,
 ) {
     // let draw_opaque = opaque_draw_functions.read().id::<DrawShape3dCommand<T>>();
     // let draw_alpha_mask = alpha_mask_draw_functions
@@ -148,14 +148,14 @@ pub fn queue_shapes_3d<T: ShapeData>(
         } else {
             views
                 .iter_mut()
-                .filter(|(_, _, _, layers)| {
+                .filter(|(_, _, layers)| {
                     let render_layers = layers.cloned().unwrap_or_default();
                     render_layers.intersects(&material.render_layers.0)
                 })
                 .for_each(|view| visible_views.push(view))
         };
 
-        for (view_entity, view, msaa, _) in visible_views.into_iter() {
+        for (view, msaa, _) in visible_views.into_iter() {
             // let (Some(opaque_phase), Some(alpha_mask_phase), Some(transparent_phase)) = (
             //     opaque_phases.get_mut(&view_entity),
             //     alpha_phases.get_mut(&view_entity),

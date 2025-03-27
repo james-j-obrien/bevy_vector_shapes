@@ -112,7 +112,7 @@ pub fn queue_shapes_2d<T: ShapeData>(
     instance_data: Res<Shape2dInstances<T>>,
     mut shape_pipelines: ResMut<ShapePipelines>,
     mut phases: ResMut<ViewSortedRenderPhases<Transparent2d>>,
-    mut views: Query<(Entity, &ExtractedView, &Msaa, Option<&RenderLayers>)>,
+    mut views: Query<(&ExtractedView, &Msaa, Option<&RenderLayers>)>,
 ) {
     let draw_function = transparent_2d_draw_functions
         .read()
@@ -133,14 +133,14 @@ pub fn queue_shapes_2d<T: ShapeData>(
         } else {
             views
                 .iter_mut()
-                .filter(|(_, _, _, layers)| {
+                .filter(|(_, _, layers)| {
                     let render_layers = layers.cloned().unwrap_or_default();
                     render_layers.intersects(&material.render_layers.0)
                 })
                 .for_each(|view| visible_views.push(view))
         };
 
-        for (view_entity, view, msaa, _) in visible_views.into_iter() {
+        for (view, msaa, _) in visible_views.into_iter() {
             let Some(transparent_phase) = phases.get_mut(&view.retained_view_entity) else {
                 continue;
             };
