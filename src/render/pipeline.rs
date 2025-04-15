@@ -5,7 +5,7 @@ use bevy::{
         core_2d::CORE_2D_DEPTH_FORMAT, tonemapping::get_lut_bind_group_layout_entries,
     },
     ecs::system::{lifetimeless::SRes, SystemParamItem},
-    platform_support::collections::HashMap,
+    platform::collections::HashMap,
     prelude::*,
     render::{
         globals::GlobalsUniform, render_resource::*, renderer::RenderDevice,

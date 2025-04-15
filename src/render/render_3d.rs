@@ -1,7 +1,7 @@
 use bevy::{
     core_pipeline::core_3d::*,
     ecs::entity::hash_map::EntityHashMap,
-    platform_support::collections::HashMap,
+    platform::collections::HashMap,
     prelude::*,
     render::{
         render_phase::DrawFunctions,

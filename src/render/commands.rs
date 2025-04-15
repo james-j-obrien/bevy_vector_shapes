@@ -7,7 +7,7 @@ use bevy::{
             SystemParamItem,
         },
     },
-    platform_support::collections::HashMap,
+    platform::collections::HashMap,
     prelude::*,
     render::{
         globals::GlobalsBuffer,

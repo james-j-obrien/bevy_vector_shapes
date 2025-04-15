@@ -4,7 +4,7 @@ use std::{
     slice::Iter,
 };
 
-use bevy::{ecs::system::SystemParam, platform_support::collections::HashMap, prelude::*};
+use bevy::{ecs::system::SystemParam, platform::collections::HashMap, prelude::*};
 
 use any_vec::AnyVec;
 

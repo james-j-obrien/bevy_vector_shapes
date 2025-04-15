@@ -1,7 +1,7 @@
 use crate::{painter::ShapeStorage, render::*, shapes::Shape3d};
 use bevy::{
     ecs::entity::hash_map::EntityHashMap,
-    platform_support::collections::HashMap,
+    platform::collections::HashMap,
     render::{
         render_phase::{DrawFunctions, PhaseItemExtraIndex},
         render_resource::*,
