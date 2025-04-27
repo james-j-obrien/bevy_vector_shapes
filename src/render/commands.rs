@@ -7,6 +7,7 @@ use bevy::{
             SystemParamItem,
         },
     },
+    platform::collections::HashMap,
     prelude::*,
     render::{
         globals::GlobalsBuffer,
@@ -19,7 +20,6 @@ use bevy::{
         texture::{FallbackImage, GpuImage},
         view::{ExtractedView, ViewUniformOffset, ViewUniforms},
     },
-    utils::HashMap,
 };
 
 use crate::render::*;
@@ -248,8 +248,8 @@ impl<const I: usize, T: ShapeData + 'static, P: PhaseItem> RenderCommand<P>
     ) -> RenderCommandResult {
         let mut dynamic_offsets: [u32; 1] = Default::default();
         let mut offset_count = 0;
-        if let Some(dynamic_offset) = item.extra_index().as_dynamic_offset() {
-            dynamic_offsets[offset_count] = dynamic_offset.get();
+        if let PhaseItemExtraIndex::DynamicOffset(dynamic_offset) = item.extra_index() {
+            dynamic_offsets[offset_count] = dynamic_offset;
             offset_count += 1;
         }
         pass.set_bind_group(
@@ -280,8 +280,8 @@ impl<const I: usize, T: ShapeData + 'static, P: PhaseItem> RenderCommand<P>
     ) -> RenderCommandResult {
         let mut dynamic_offsets: [u32; 1] = Default::default();
         let mut offset_count = 0;
-        if let Some(dynamic_offset) = item.extra_index().as_dynamic_offset() {
-            dynamic_offsets[offset_count] = dynamic_offset.get();
+        if let PhaseItemExtraIndex::DynamicOffset(dynamic_offset) = item.extra_index() {
+            dynamic_offsets[offset_count] = dynamic_offset;
             offset_count += 1;
         }
         pass.set_bind_group(

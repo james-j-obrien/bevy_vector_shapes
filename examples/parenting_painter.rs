@@ -60,13 +60,12 @@ fn draw_tree(time: f32, painter: &mut ShapePainter, depth: u32) {
 fn draw_gallery(
     time: Res<Time>,
     mut painter: ShapePainter,
-    mut tree: Query<&mut Transform, With<Tree>>,
+    mut tree: Single<&mut Transform, With<Tree>>,
 ) {
-    let mut tree = tree.single_mut();
     tree.rotation = Quat::from_rotation_z(time.elapsed_secs().sin() / 4.0);
 
     // Position our painter relative to our tree entity
-    painter.transform = *tree;
+    painter.transform = **tree;
     painter.set_color(SEA_GREEN + WHITE * 0.25);
     painter
         .line(Vec3::ZERO, Vec3::Y)

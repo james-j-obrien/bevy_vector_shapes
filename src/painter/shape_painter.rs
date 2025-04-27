@@ -4,7 +4,7 @@ use std::{
     slice::Iter,
 };
 
-use bevy::{ecs::system::SystemParam, prelude::*, utils::HashMap};
+use bevy::{ecs::system::SystemParam, platform::collections::HashMap, prelude::*};
 
 use any_vec::AnyVec;
 
@@ -52,7 +52,7 @@ impl ShapeStorage {
     }
 
     fn clear(&mut self) {
-        self.shapes = HashMap::new();
+        self.shapes = HashMap::default();
     }
 }
 

@@ -21,13 +21,13 @@ fn setup(mut commands: Commands) {
     commands.spawn((
         Camera2d,
         Transform::from_translation(Vec3::Z),
-        OrthographicProjection {
+        Projection::from(OrthographicProjection {
             scaling_mode: ScalingMode::AutoMin {
                 min_width: 5.2 * 4.5,
                 min_height: 3.2 * 4.5,
             },
             ..OrthographicProjection::default_2d()
-        },
+        }),
         Msaa::Off,
     ));
 }

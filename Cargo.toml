@@ -10,11 +10,11 @@ keywords = ["bevy", "gamedev", "graphics"]
 license = "MIT OR Apache-2.0"
 name = "bevy_vector_shapes"
 repository = "https://github.com/james-j-obrien/bevy_vector_shapes"
-version = "0.9.3"
+version = "0.10.0"
 
 [dependencies]
 any_vec = "0.14.0"
-bevy = { version = "0.15" , default-features = false, features = [
+bevy = { version = "0.16.0", default-features = false, features = [
   "bevy_core_pipeline",
   "bevy_pbr",
   "bevy_render",
@@ -26,9 +26,10 @@ bevy = { version = "0.15" , default-features = false, features = [
   "tonemapping_luts",
   "x11",
   "zstd",
+  "std",
 ]}
-bitfield = "0.17.0"
-bitflags = "2.6.0"
+bitfield = "0.19.0"
+bitflags = "2.3"
 nonmax = "0.5.5"
-smallvec = "1.13.2"
-wgpu = { version = "23.0.1", default-features = false }
+smallvec = "1.15.0"
+wgpu = { version = "24.0.3", default-features = false }
