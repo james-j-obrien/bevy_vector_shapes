@@ -1,9 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use bevy::{
-    ecs::{system::EntityCommands, world::Command},
-    prelude::*,
-};
+use bevy::{ecs::system::EntityCommands, prelude::*};
 use smallvec::SmallVec;
 
 use crate::{prelude::*, render::ShapePipelineType};

@@ -14,7 +14,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugins(ShapePlugin::default())
         .insert_resource(ClearColor(DIM_GRAY.into()))
-        .add_plugins(FrameTimeDiagnosticsPlugin)
+        .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_plugins(LogDiagnosticsPlugin::default())
         .add_systems(Startup, setup)
         .add_systems(Update, draw_spheres)

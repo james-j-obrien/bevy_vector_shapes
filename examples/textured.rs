@@ -29,10 +29,9 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     ));
 }
 
-fn draw_canvas(time: Res<Time>, mut painter: ShapePainter, canvas: Query<(Entity, &Canvas)>) {
-    let (canvas, _) = canvas.single();
+fn draw_canvas(time: Res<Time>, mut painter: ShapePainter, canvas: Single<Entity, With<Canvas>>) {
     painter.rotate_z(time.elapsed_secs().sin());
-    painter.set_canvas(canvas);
+    painter.set_canvas(*canvas);
     painter.set_color(WHITE * 2.0);
     painter.translate(Vec3::NEG_Y * 12.0 * 16.0);
     painter.thickness = 16.0;
@@ -44,8 +43,7 @@ fn draw_canvas(time: Res<Time>, mut painter: ShapePainter, canvas: Query<(Entity
     painter.reset();
 }
 
-fn draw_shapes(time: Res<Time>, mut painter: ShapePainter, canvas: Query<(Entity, &Canvas)>) {
-    let (_, canvas) = canvas.single();
+fn draw_shapes(time: Res<Time>, mut painter: ShapePainter, canvas: Single<&Canvas>) {
     painter.texture = Some(canvas.image.clone());
     painter.translate(Vec3::NEG_Y * 2.0);
 

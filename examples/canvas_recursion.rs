@@ -24,8 +24,8 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     ));
 }
 
-fn draw_shapes(time: Res<Time>, mut painter: ShapePainter, canvas: Query<(Entity, &Canvas)>) {
-    let (canvas_e, canvas) = canvas.single();
+fn draw_shapes(time: Res<Time>, mut painter: ShapePainter, canvas: Single<(Entity, &Canvas)>) {
+    let (canvas_e, canvas) = canvas.into_inner();
     painter.image(canvas.image.clone(), Vec2::splat(12.));
 
     painter.set_canvas(canvas_e);

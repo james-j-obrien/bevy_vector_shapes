@@ -2,6 +2,7 @@ use std::hash::Hash;
 use std::hash::Hasher;
 use std::marker::PhantomData;
 
+use bevy::asset::weak_handle;
 use bevy::ecs::system::StaticSystemParam;
 use bevy::math::FloatOrd;
 use bevy::render::batching::no_gpu_preprocessing::BatchedInstanceBuffer;
@@ -47,25 +48,25 @@ pub(crate) mod render_3d;
 use render_3d::*;
 
 /// Handler to shader containing shared functionality.
-pub const CORE_HANDLE: Handle<Shader> = Handle::weak_from_u128(13215291696265391738);
+pub const CORE_HANDLE: Handle<Shader> = weak_handle!("00000000-0000-0000-b766-25c7b7116e7a");
 
 /// Handler to shader containing shared constants.
-pub const CONSTANTS_HANDLE: Handle<Shader> = Handle::weak_from_u128(14523762397345674763);
+pub const CONSTANTS_HANDLE: Handle<Shader> = weak_handle!("00000000-0000-0000-c98e-c4f33ff6f60b");
 
 /// Handler to shader for drawing discs.
-pub const DISC_HANDLE: Handle<Shader> = Handle::weak_from_u128(12563478638216678166);
+pub const DISC_HANDLE: Handle<Shader> = weak_handle!("00000000-0000-0000-ae5a-7141de1d0b16");
 
 /// Handler to shader for drawing lines.
-pub const LINE_HANDLE: Handle<Shader> = Handle::weak_from_u128(13656934768948239208);
+pub const LINE_HANDLE: Handle<Shader> = weak_handle!("00000000-0000-0000-bd87-2dd097d75b68");
 
 /// Handler to shader for drawing regular polygons.
-pub const NGON_HANDLE: Handle<Shader> = Handle::weak_from_u128(17394960287230910395);
+pub const NGON_HANDLE: Handle<Shader> = weak_handle!("00000000-0000-0000-f167-5038026cdfbb");
 
 /// Handler to shader for drawing rectangles.
-pub const RECT_HANDLE: Handle<Shader> = Handle::weak_from_u128(15069348348279052351);
+pub const RECT_HANDLE: Handle<Shader> = weak_handle!("00000000-0000-0000-d121-147b5fcad83f");
 
 /// Handler to shader for drawing triangles.
-pub const TRIANGLE_HANDLE: Handle<Shader> = Handle::weak_from_u128(12344032791831516511);
+pub const TRIANGLE_HANDLE: Handle<Shader> = weak_handle!("00000000-0000-0000-ab4e-d06c34e4155f");
 
 /// Load the libraries shaders as internal assets.
 pub fn load_shaders(app: &mut App) {
@@ -418,7 +419,12 @@ impl<T: PartialEq> BatchMeta<T> {
         BatchMeta {
             pipeline_id: item.cached_pipeline(),
             draw_function_id: item.draw_function(),
-            dynamic_offset: item.extra_index().as_dynamic_offset(),
+            dynamic_offset: match item.extra_index() {
+                PhaseItemExtraIndex::DynamicOffset(dynamic_offset) => {
+                    NonMaxU32::new(dynamic_offset)
+                }
+                _ => None,
+            },
             user_data,
         }
     }

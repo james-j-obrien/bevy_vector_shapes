@@ -5,12 +5,12 @@ use bevy::{
         core_2d::CORE_2D_DEPTH_FORMAT, tonemapping::get_lut_bind_group_layout_entries,
     },
     ecs::system::{lifetimeless::SRes, SystemParamItem},
+    platform::collections::HashMap,
     prelude::*,
     render::{
         globals::GlobalsUniform, render_resource::*, renderer::RenderDevice,
         sync_world::MainEntity, view::ViewUniform,
     },
-    utils::HashMap,
 };
 use binding_types::uniform_buffer;
 use wgpu::vertex_attr_array;
