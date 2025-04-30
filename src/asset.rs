@@ -7,7 +7,7 @@ use crate::{
         ShapeAlphaMode, ThicknessType, TrianglePainter,
     },
 };
-use bevy::{asset::AssetLoader, prelude::*, utils::HashMap};
+use bevy::{asset::AssetLoader, platform::collections::HashMap, prelude::*};
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -479,7 +479,7 @@ impl IsrTgt {
                     ShapePainterOperation::Label(op_label) => op_label == label,
                     _ => false,
                 }) else {
-                    return Err(format!("Could not find label: {}", label));
+                    return Err(format!("Could not find label: {label}"));
                 };
 
                 label_line as isize
