@@ -153,7 +153,7 @@ impl Conditional<()> {
             CompareFn::Eq => val == ctx_val,
             CompareFn::NEq => val != ctx_val,
             CompareFn::GtEq => val >= ctx_val,
-            CompareFn::Gt => val <= ctx_val,
+            CompareFn::Gt => val > ctx_val,
             CompareFn::Lt => val < ctx_val,
             CompareFn::LtEq => val <= ctx_val,
         }
