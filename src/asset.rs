@@ -30,6 +30,7 @@ pub fn paint_vector_shapes(
         };
 
         shape.working_context = shape.base_context.clone();
+        shape.base_context.vec3s.insert("origin".to_owned(), tsf.translation());
         painter.reset();
         //Need to do this because the ShapePainter has no concept of the parent/child tsf hierarchy
         painter.set_translation(tsf.translation());
