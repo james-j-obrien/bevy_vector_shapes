@@ -140,7 +140,7 @@ pub trait RectPainter {
     fn image(&mut self, image: Handle<Image>, size: Vec2) -> &mut Self;
 }
 
-impl<'w, 's> RectPainter for ShapePainter<'w, 's> {
+impl RectPainter for ShapePainter<'_, '_> {
     fn rect(&mut self, size: Vec2) -> &mut Self {
         self.send(RectData::new(self.config(), size))
     }

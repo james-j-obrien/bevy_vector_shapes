@@ -616,6 +616,7 @@ dependencies = [
  "bevy_image",
  "bevy_input",
  "bevy_input_focus",
+ "bevy_log",
  "bevy_math",
  "bevy_pbr",
  "bevy_platform",
@@ -1027,7 +1028,10 @@ dependencies = [
  "bitfield",
  "bitflags 2.9.0",
  "nonmax",
+ "ron",
+ "serde",
  "smallvec",
+ "thiserror 1.0.69",
  "wgpu",
 ]
 
