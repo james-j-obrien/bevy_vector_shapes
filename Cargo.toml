@@ -13,7 +13,6 @@ version = "0.10.0"
 [dependencies]
 any_vec = "0.14.0"
 bevy = { version = "0.16.0", default-features = false, features = [
-  "bevy_core_pipeline",
   "bevy_render",
   "std",
 ] }
