@@ -4,10 +4,10 @@
 use std::f32::consts::PI;
 
 use bevy::{
+    camera::{visibility::RenderLayers, RenderTarget},
     color::palettes::css::*,
     image::ImageSampler,
     prelude::*,
-    render::{camera::RenderTarget, view::RenderLayers},
 };
 use bevy_vector_shapes::prelude::*;
 

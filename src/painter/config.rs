@@ -1,9 +1,10 @@
+use bevy::camera::visibility::RenderLayers;
 use bevy::ecs::component::Tick;
+use bevy::ecs::query::FilteredAccessSet;
 use bevy::ecs::system::{SystemMeta, SystemParam};
 use bevy::ecs::world::unsafe_world_cell::UnsafeWorldCell;
+use bevy::platform::cell::SyncCell;
 use bevy::prelude::*;
-use bevy::render::view::RenderLayers;
-use bevy::utils::synccell::SyncCell;
 
 use crate::prelude::*;
 use crate::render::ShapePipelineType;
@@ -169,12 +170,34 @@ impl FromWorld for ShapeConfig {
     }
 }
 
+pub struct ShapeConfigState {
+    shape_config: SyncCell<ShapeConfig>,
+    resource_state: <Res<'static, BaseShapeConfig> as SystemParam>::State,
+}
+
 unsafe impl SystemParam for &mut ShapeConfig {
-    type State = SyncCell<ShapeConfig>;
+    type State = ShapeConfigState;
     type Item<'w, 's> = &'s mut ShapeConfig;
 
-    fn init_state(world: &mut World, _system_meta: &mut SystemMeta) -> Self::State {
-        SyncCell::new(ShapeConfig::from_world(world))
+    fn init_state(world: &mut World) -> Self::State {
+        ShapeConfigState {
+            shape_config: SyncCell::new(ShapeConfig::from_world(world)),
+            resource_state: Res::<BaseShapeConfig>::init_state(world),
+        }
+    }
+
+    fn init_access(
+        state: &Self::State,
+        system_meta: &mut SystemMeta,
+        component_access_set: &mut FilteredAccessSet,
+        world: &mut World,
+    ) {
+        Res::<BaseShapeConfig>::init_access(
+            &state.resource_state,
+            system_meta,
+            component_access_set,
+            world,
+        );
     }
 
     #[inline]
@@ -184,11 +207,11 @@ unsafe impl SystemParam for &mut ShapeConfig {
         _world: UnsafeWorldCell<'w>,
         _change_tick: Tick,
     ) -> Self::Item<'w, 's> {
-        state.get()
+        state.shape_config.get()
     }
 
     fn apply(state: &mut Self::State, _system_meta: &SystemMeta, world: &mut World) {
-        let state = state.get();
+        let state = state.shape_config.get();
         if state.reset {
             *state = world.resource::<BaseShapeConfig>().0.clone();
         }

@@ -1,11 +1,9 @@
 use bevy::{
+    camera::{visibility::RenderLayers, RenderTarget},
     ecs::system::EntityCommands,
     image::ImageSampler,
     prelude::*,
-    render::{
-        camera::RenderTarget,
-        view::{RenderLayers, ViewTarget},
-    },
+    render::view::{Hdr, ViewTarget},
 };
 use wgpu::{Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages};
 
@@ -192,7 +190,6 @@ impl CanvasBundle {
             camera_2d: Camera2d,
             camera: Camera {
                 order: config.order,
-                hdr: config.hdr,
                 target: RenderTarget::Image(image.clone().into()),
                 clear_color: config.clear_color,
                 ..default()
@@ -236,9 +233,11 @@ impl<'w, 's> CanvasCommands<'w> for Commands<'w, 's> {
             config.sampler.clone(),
             config.hdr,
         );
-        (
-            handle.clone(),
-            self.spawn(CanvasBundle::new(handle, config)),
-        )
+        let hdr = config.hdr;
+        let mut entity = self.spawn(CanvasBundle::new(handle.clone(), config));
+        if hdr {
+            entity.insert(Hdr);
+        }
+        (handle, entity)
     }
 }

@@ -101,7 +101,7 @@ pub fn prepare_shape_2d_texture_bind_groups<T: ShapeData>(
             if let Some(gpu_image) = gpu_images.get(handle.id()) {
                 image_bind_groups
                     .values
-                    .entry(handle.clone_weak())
+                    .entry(handle.clone())
                     .or_insert_with(|| {
                         render_device.create_bind_group(
                             "shape_texture_bind_group",
@@ -129,7 +129,7 @@ pub fn prepare_shape_3d_texture_bind_groups<T: ShapeData>(
             if let Some(gpu_image) = gpu_images.get(handle.id()) {
                 image_bind_groups
                     .values
-                    .entry(handle.clone_weak())
+                    .entry(handle.clone())
                     .or_insert_with(|| {
                         render_device.create_bind_group(
                             "shape_texture_bind_group",
@@ -155,7 +155,7 @@ impl<const I: usize, P: PhaseItem> RenderCommand<P> for SetShapeViewBindGroup<I>
     #[inline]
     fn render<'w>(
         _item: &P,
-        (view_uniform, shape_view_bind_group): ROQueryItem<'w, Self::ViewQuery>,
+        (view_uniform, shape_view_bind_group): ROQueryItem<'w, '_, Self::ViewQuery>,
         _entity: Option<()>,
         _param: SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
@@ -187,11 +187,7 @@ impl<const I: usize, T: ShapeData, P: PhaseItem> RenderCommand<P>
         };
         if let Some(handle) = &material.texture {
             let bind_groups = bind_groups.into_inner();
-            pass.set_bind_group(
-                I,
-                bind_groups.values.get(&handle.clone_weak()).unwrap(),
-                &[],
-            );
+            pass.set_bind_group(I, bind_groups.values.get(&handle.clone()).unwrap(), &[]);
         }
         RenderCommandResult::Success
     }
@@ -219,11 +215,7 @@ impl<const I: usize, T: ShapeData, P: PhaseItem> RenderCommand<P>
         };
         if let Some(handle) = &material.texture {
             let bind_groups = bind_groups.into_inner();
-            pass.set_bind_group(
-                I,
-                bind_groups.values.get(&handle.clone_weak()).unwrap(),
-                &[],
-            );
+            pass.set_bind_group(I, bind_groups.values.get(&handle.clone()).unwrap(), &[]);
         }
         RenderCommandResult::Success
     }

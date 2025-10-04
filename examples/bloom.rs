@@ -1,7 +1,6 @@
 // Demonstrates shapes respecting global bloom settings
 
-use bevy::core_pipeline::bloom::Bloom;
-use bevy::prelude::*;
+use bevy::{post_process::bloom::Bloom, prelude::*, render::view::Hdr};
 use bevy_vector_shapes::prelude::*;
 
 mod gallery_3d;
@@ -20,11 +19,8 @@ fn main() {
 fn setup(mut commands: Commands) {
     commands.spawn((
         Camera3d::default(),
-        Camera {
-            hdr: true,
-            ..default()
-        },
         Transform::from_xyz(0., 0., 16.).looking_at(Vec3::ZERO, Vec3::Y),
+        Hdr,
         Msaa::Off,
         Bloom::default(),
     ));

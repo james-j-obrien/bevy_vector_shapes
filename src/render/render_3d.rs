@@ -7,7 +7,7 @@ use bevy::{
         render_phase::DrawFunctions,
         render_resource::*,
         sync_world::{MainEntity, RenderEntity, TemporaryRenderEntity},
-        view::{ExtractedView, RenderLayers},
+        view::ExtractedView,
         Extract,
     },
 };

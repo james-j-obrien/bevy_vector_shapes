@@ -5,6 +5,7 @@ use bevy::{
         core_2d::CORE_2D_DEPTH_FORMAT, tonemapping::get_lut_bind_group_layout_entries,
     },
     ecs::system::{lifetimeless::SRes, SystemParamItem},
+    mesh::VertexBufferLayout,
     platform::collections::HashMap,
     prelude::*,
     render::{
@@ -300,7 +301,7 @@ impl<T: ShapeData> Shape2dPipeline<T> {
         RenderPipelineDescriptor {
             vertex: VertexState {
                 shader: self.shader.clone(),
-                entry_point: "vertex".into(),
+                entry_point: Some("vertex".into()),
                 shader_defs: shader_defs.clone(),
                 buffers: vec![VertexBufferLayout {
                     array_stride: std::mem::size_of::<[f32; 3]>() as u64,
@@ -311,7 +312,7 @@ impl<T: ShapeData> Shape2dPipeline<T> {
             fragment: Some(FragmentState {
                 shader: self.shader.clone(),
                 shader_defs: fragment_defs,
-                entry_point: "fragment".into(),
+                entry_point: Some("fragment".into()),
                 targets: vec![Some(ColorTargetState {
                     format,
                     blend,

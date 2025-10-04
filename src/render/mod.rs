@@ -2,7 +2,8 @@ use std::hash::Hash;
 use std::hash::Hasher;
 use std::marker::PhantomData;
 
-use bevy::asset::weak_handle;
+use bevy::asset::uuid_handle;
+use bevy::camera::visibility::RenderLayers;
 use bevy::ecs::system::StaticSystemParam;
 use bevy::math::FloatOrd;
 use bevy::render::batching::no_gpu_preprocessing::BatchedInstanceBuffer;
@@ -10,6 +11,8 @@ use bevy::render::batching::GetBatchData;
 use bevy::render::render_phase::{PhaseItemExtraIndex, SortedPhaseItem, ViewSortedRenderPhases};
 use bevy::render::sync_world::MainEntity;
 use bevy::render::sync_world::RenderEntity;
+use bevy::shader::ShaderDefVal;
+use bevy::shader::ShaderRef;
 use bevy::{
     asset::load_internal_asset,
     core_pipeline::{
@@ -20,13 +23,9 @@ use bevy::{
     reflect::GetTypeRegistration,
     render::{
         render_phase::{AddRenderCommand, CachedRenderPipelinePhaseItem, DrawFunctionId},
-        render_resource::{
-            Buffer, CachedRenderPipelineId, GpuArrayBuffer, GpuArrayBufferable, ShaderDefVal,
-            ShaderRef,
-        },
+        render_resource::{Buffer, CachedRenderPipelineId, GpuArrayBuffer, GpuArrayBufferable},
         renderer::{RenderDevice, RenderQueue},
-        view::RenderLayers,
-        Extract, Render, RenderApp, RenderSet,
+        Extract, Render, RenderApp, RenderSystems,
     },
 };
 use bitfield::bitfield;
@@ -48,25 +47,25 @@ pub(crate) mod render_3d;
 use render_3d::*;
 
 /// Handler to shader containing shared functionality.
-pub const CORE_HANDLE: Handle<Shader> = weak_handle!("00000000-0000-0000-b766-25c7b7116e7a");
+pub const CORE_HANDLE: Handle<Shader> = uuid_handle!("00000000-0000-0000-b766-25c7b7116e7a");
 
 /// Handler to shader containing shared constants.
-pub const CONSTANTS_HANDLE: Handle<Shader> = weak_handle!("00000000-0000-0000-c98e-c4f33ff6f60b");
+pub const CONSTANTS_HANDLE: Handle<Shader> = uuid_handle!("00000000-0000-0000-c98e-c4f33ff6f60b");
 
 /// Handler to shader for drawing discs.
-pub const DISC_HANDLE: Handle<Shader> = weak_handle!("00000000-0000-0000-ae5a-7141de1d0b16");
+pub const DISC_HANDLE: Handle<Shader> = uuid_handle!("00000000-0000-0000-ae5a-7141de1d0b16");
 
 /// Handler to shader for drawing lines.
-pub const LINE_HANDLE: Handle<Shader> = weak_handle!("00000000-0000-0000-bd87-2dd097d75b68");
+pub const LINE_HANDLE: Handle<Shader> = uuid_handle!("00000000-0000-0000-bd87-2dd097d75b68");
 
 /// Handler to shader for drawing regular polygons.
-pub const NGON_HANDLE: Handle<Shader> = weak_handle!("00000000-0000-0000-f167-5038026cdfbb");
+pub const NGON_HANDLE: Handle<Shader> = uuid_handle!("00000000-0000-0000-f167-5038026cdfbb");
 
 /// Handler to shader for drawing rectangles.
-pub const RECT_HANDLE: Handle<Shader> = weak_handle!("00000000-0000-0000-d121-147b5fcad83f");
+pub const RECT_HANDLE: Handle<Shader> = uuid_handle!("00000000-0000-0000-d121-147b5fcad83f");
 
 /// Handler to shader for drawing triangles.
-pub const TRIANGLE_HANDLE: Handle<Shader> = weak_handle!("00000000-0000-0000-ab4e-d06c34e4155f");
+pub const TRIANGLE_HANDLE: Handle<Shader> = uuid_handle!("00000000-0000-0000-ab4e-d06c34e4155f");
 
 /// Load the libraries shaders as internal assets.
 pub fn load_shaders(app: &mut App) {
@@ -293,14 +292,14 @@ fn setup_pipeline(app: &mut App) {
         .add_systems(ExtractSchedule, extract_render_layers)
         .add_systems(
             Render,
-            prepare_shape_view_bind_groups.in_set(RenderSet::PrepareBindGroups),
+            prepare_shape_view_bind_groups.in_set(RenderSystems::PrepareBindGroups),
         );
 }
 
 fn setup_type_pipeline<T: ShapeData + 'static>(app: &mut App) {
     app.sub_app_mut(RenderApp).add_systems(
         Render,
-        write_batched_instance_buffer::<T>.in_set(RenderSet::PrepareResourcesFlush),
+        write_batched_instance_buffer::<T>.in_set(RenderSystems::PrepareResourcesFlush),
     );
 }
 
@@ -316,11 +315,11 @@ fn setup_type_pipeline_3d<T: ShapeData + 'static>(app: &mut App) {
         .add_systems(
             Render,
             (
-                prepare_shape_3d_bind_group::<T>.in_set(RenderSet::PrepareBindGroups),
-                prepare_shape_3d_texture_bind_groups::<T>.in_set(RenderSet::PrepareBindGroups),
-                queue_shapes_3d::<T>.in_set(RenderSet::Queue),
+                prepare_shape_3d_bind_group::<T>.in_set(RenderSystems::PrepareBindGroups),
+                prepare_shape_3d_texture_bind_groups::<T>.in_set(RenderSystems::PrepareBindGroups),
+                queue_shapes_3d::<T>.in_set(RenderSystems::Queue),
                 batch_and_prepare_render_phase::<Transparent3d, Shape3dPipeline<T>>
-                    .in_set(RenderSet::PrepareResources),
+                    .in_set(RenderSystems::PrepareResources),
             ),
         );
 }
@@ -339,11 +338,12 @@ fn setup_type_pipeline_2d<T: ShapeData + 'static>(app: &mut App) {
             .add_systems(
                 Render,
                 (
-                    prepare_shape_2d_bind_group::<T>.in_set(RenderSet::PrepareBindGroups),
-                    prepare_shape_2d_texture_bind_groups::<T>.in_set(RenderSet::PrepareBindGroups),
-                    queue_shapes_2d::<T>.in_set(RenderSet::Queue),
+                    prepare_shape_2d_bind_group::<T>.in_set(RenderSystems::PrepareBindGroups),
+                    prepare_shape_2d_texture_bind_groups::<T>
+                        .in_set(RenderSystems::PrepareBindGroups),
+                    queue_shapes_2d::<T>.in_set(RenderSystems::Queue),
                     batch_and_prepare_render_phase::<Transparent2d, Shape2dPipeline<T>>
-                        .in_set(RenderSet::PrepareResources),
+                        .in_set(RenderSystems::PrepareResources),
                 ),
             );
     }
