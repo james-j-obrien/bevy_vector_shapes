@@ -185,6 +185,9 @@ pub struct CanvasBundle {
 
 impl CanvasBundle {
     /// Create a [`CanvasBundle`] from a given image with the given configuration.
+    ///
+    /// Note that [`CanvasConfig::hdr`] will not be reflected in the bundle, add a [`bevy::render::view::Hdr`] component instead
+    /// or use [`CanvasCommands::spawn_canvas`].
     pub fn new(image: Handle<Image>, config: CanvasConfig) -> Self {
         Self {
             camera_2d: Camera2d,
@@ -214,18 +217,18 @@ pub trait CanvasCommands<'w> {
     ///
     /// Returns the created [`Handle<Image>`] and [`EntityCommands`].
     fn spawn_canvas(
-        &mut self,
+        &'_ mut self,
         assets: &mut Assets<Image>,
         config: CanvasConfig,
-    ) -> (Handle<Image>, EntityCommands);
+    ) -> (Handle<Image>, EntityCommands<'_>);
 }
 
 impl<'w, 's> CanvasCommands<'w> for Commands<'w, 's> {
     fn spawn_canvas(
-        &mut self,
+        &'_ mut self,
         assets: &mut Assets<Image>,
         config: CanvasConfig,
-    ) -> (Handle<Image>, EntityCommands) {
+    ) -> (Handle<Image>, EntityCommands<'_>) {
         let handle = Canvas::create_image(
             assets,
             config.width,

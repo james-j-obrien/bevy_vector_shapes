@@ -159,11 +159,11 @@ impl LineBundle for ShapeBundle<LineComponent> {
 
 /// Extension trait for [`ShapeSpawner`] to enable spawning of line entities.
 pub trait LineSpawner<'w>: ShapeSpawner<'w> {
-    fn line(&mut self, start: Vec3, end: Vec3) -> ShapeEntityCommands;
+    fn line(&'_ mut self, start: Vec3, end: Vec3) -> ShapeEntityCommands<'_, '_>;
 }
 
 impl<'w, T: ShapeSpawner<'w>> LineSpawner<'w> for T {
-    fn line(&mut self, start: Vec3, end: Vec3) -> ShapeEntityCommands {
+    fn line(&'_ mut self, start: Vec3, end: Vec3) -> ShapeEntityCommands<'_, '_> {
         self.spawn_shape(ShapeBundle::line(self.config(), start, end))
     }
 }

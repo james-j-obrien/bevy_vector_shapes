@@ -163,11 +163,11 @@ impl RectangleBundle for ShapeBundle<RectangleComponent> {
 
 /// Extension trait for [`ShapeSpawner`] to enable spawning of rectangle entities.
 pub trait RectangleSpawner<'w> {
-    fn rect(&mut self, size: Vec2) -> ShapeEntityCommands;
+    fn rect(&'_ mut self, size: Vec2) -> ShapeEntityCommands<'_, '_>;
 }
 
 impl<'w, T: ShapeSpawner<'w>> RectangleSpawner<'w> for T {
-    fn rect(&mut self, size: Vec2) -> ShapeEntityCommands {
+    fn rect(&'_ mut self, size: Vec2) -> ShapeEntityCommands<'_, '_> {
         self.spawn_shape(ShapeBundle::rect(self.config(), size))
     }
 }

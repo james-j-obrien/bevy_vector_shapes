@@ -177,11 +177,11 @@ impl TriangleBundle for ShapeBundle<TriangleComponent> {
 
 /// Extension trait for [`ShapeSpawner`] to enable spawning of triangle entities.
 pub trait TriangleSpawner<'w> {
-    fn triangle(&mut self, v_a: Vec2, v_b: Vec2, v_c: Vec2) -> ShapeEntityCommands;
+    fn triangle(&'_ mut self, v_a: Vec2, v_b: Vec2, v_c: Vec2) -> ShapeEntityCommands<'_, '_>;
 }
 
 impl<'w, T: ShapeSpawner<'w>> TriangleSpawner<'w> for T {
-    fn triangle(&mut self, v_a: Vec2, v_b: Vec2, v_c: Vec2) -> ShapeEntityCommands {
+    fn triangle(&'_ mut self, v_a: Vec2, v_b: Vec2, v_c: Vec2) -> ShapeEntityCommands<'_, '_> {
         self.spawn_shape(ShapeBundle::triangle(self.config(), v_a, v_b, v_c))
     }
 }

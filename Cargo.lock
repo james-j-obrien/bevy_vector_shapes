@@ -1466,7 +1466,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_vector_shapes"
-version = "0.10.0"
+version = "0.11.0"
 dependencies = [
  "any_vec",
  "bevy",

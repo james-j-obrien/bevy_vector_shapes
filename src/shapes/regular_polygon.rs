@@ -179,11 +179,11 @@ impl RegularPolygonBundle for ShapeBundle<RegularPolygonComponent> {
 
 /// Extension trait for [`ShapeSpawner`] to enable spawning of regular polygon entities.
 pub trait RegularPolygonSpawner<'w> {
-    fn ngon(&mut self, sides: f32, radius: f32) -> ShapeEntityCommands;
+    fn ngon(&'_ mut self, sides: f32, radius: f32) -> ShapeEntityCommands<'_, '_>;
 }
 
 impl<'w, T: ShapeSpawner<'w>> RegularPolygonSpawner<'w> for T {
-    fn ngon(&mut self, sides: f32, radius: f32) -> ShapeEntityCommands {
+    fn ngon(&'_ mut self, sides: f32, radius: f32) -> ShapeEntityCommands<'_, '_> {
         self.spawn_shape(ShapeBundle::ngon(self.config(), sides, radius))
     }
 }
