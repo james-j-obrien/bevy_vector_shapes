@@ -1,8 +1,6 @@
 use bevy::{
-    math::vec2,
-    prelude::*,
-    reflect::Reflect,
-    render::render_resource::{ShaderRef, ShaderType},
+    math::vec2, prelude::*, reflect::Reflect, render::render_resource::ShaderType,
+    shader::ShaderRef,
 };
 use wgpu::vertex_attr_array;
 
@@ -53,7 +51,7 @@ impl ShapeComponent for TriangleComponent {
         flags.set_alignment(self.alignment);
 
         TriangleData {
-            transform: tf.compute_matrix().to_cols_array_2d(),
+            transform: tf.to_matrix().to_cols_array_2d(),
 
             color: fill.color.to_linear().to_f32_array(),
             thickness,
@@ -110,7 +108,7 @@ impl TriangleData {
         flags.set_hollow(config.hollow as u32);
 
         TriangleData {
-            transform: config.transform.compute_matrix().to_cols_array_2d(),
+            transform: config.transform.to_matrix().to_cols_array_2d(),
 
             color: config.color.to_linear().to_f32_array(),
             thickness: config.thickness,

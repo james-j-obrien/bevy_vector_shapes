@@ -1,8 +1,4 @@
-use bevy::{
-    prelude::*,
-    reflect::Reflect,
-    render::render_resource::{ShaderRef, ShaderType},
-};
+use bevy::{prelude::*, reflect::Reflect, render::render_resource::ShaderType, shader::ShaderRef};
 use wgpu::vertex_attr_array;
 
 use crate::{
@@ -76,7 +72,7 @@ impl ShapeComponent for DiscComponent {
         flags.set_arc(self.arc as u32);
 
         DiscData {
-            transform: tf.compute_matrix().to_cols_array_2d(),
+            transform: tf.to_matrix().to_cols_array_2d(),
 
             color: fill.color.to_linear().to_f32_array(),
             thickness,
@@ -131,7 +127,7 @@ impl DiscData {
         flags.set_arc(false as u32);
 
         DiscData {
-            transform: config.transform.compute_matrix().to_cols_array_2d(),
+            transform: config.transform.to_matrix().to_cols_array_2d(),
 
             color: config.color.to_linear().to_f32_array(),
             thickness: config.thickness,
@@ -155,7 +151,7 @@ impl DiscData {
         flags.set_arc(true as u32);
 
         DiscData {
-            transform: config.transform.compute_matrix().to_cols_array_2d(),
+            transform: config.transform.to_matrix().to_cols_array_2d(),
 
             color: config.color.to_linear().to_f32_array(),
             thickness: config.thickness,

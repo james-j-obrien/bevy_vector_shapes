@@ -1,6 +1,6 @@
 use std::ops::DerefMut;
 
-use bevy::{prelude::*, render::camera::CameraUpdateSystem};
+use bevy::{camera::CameraUpdateSystems, prelude::*};
 
 mod config;
 pub use config::*;
@@ -38,6 +38,6 @@ impl Plugin for PainterPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<ShapeStorage>()
             .add_systems(First, clear_storage)
-            .add_systems(PostUpdate, update_canvases.before(CameraUpdateSystem));
+            .add_systems(PostUpdate, update_canvases.before(CameraUpdateSystems));
     }
 }

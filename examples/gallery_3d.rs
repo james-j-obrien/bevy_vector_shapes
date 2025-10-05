@@ -6,7 +6,7 @@ use std::{
     ops::Range,
 };
 
-use bevy::{color::palettes::css::*, prelude::*, render::view::RenderLayers};
+use bevy::{camera::visibility::RenderLayers, color::palettes::css::*, prelude::*};
 use bevy_vector_shapes::prelude::*;
 
 pub trait Pastel {

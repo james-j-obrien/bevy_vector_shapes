@@ -1,8 +1,4 @@
-use bevy::{
-    prelude::*,
-    reflect::Reflect,
-    render::render_resource::{ShaderRef, ShaderType},
-};
+use bevy::{prelude::*, reflect::Reflect, render::render_resource::ShaderType, shader::ShaderRef};
 use wgpu::vertex_attr_array;
 
 use crate::{
@@ -59,7 +55,7 @@ impl ShapeComponent for RegularPolygonComponent {
         flags.set_alignment(self.alignment);
 
         NgonData {
-            transform: tf.compute_matrix().to_cols_array_2d(),
+            transform: tf.to_matrix().to_cols_array_2d(),
 
             color: fill.color.to_linear().to_f32_array(),
             thickness,
@@ -115,7 +111,7 @@ impl NgonData {
         flags.set_hollow(config.hollow as u32);
 
         NgonData {
-            transform: config.transform.compute_matrix().to_cols_array_2d(),
+            transform: config.transform.to_matrix().to_cols_array_2d(),
 
             color: config.color.to_linear().to_f32_array(),
             thickness: config.thickness,

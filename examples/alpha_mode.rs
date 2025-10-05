@@ -2,9 +2,9 @@
 
 use std::f32::consts::TAU;
 
+use bevy::camera::ScalingMode;
 use bevy::color::palettes::css::*;
 use bevy::prelude::*;
-use bevy::render::camera::ScalingMode;
 use bevy_vector_shapes::prelude::*;
 
 fn main() {
