@@ -234,22 +234,18 @@ impl DiscBundle for ShapeBundle<DiscComponent> {
 
 /// Extension trait for [`ShapeSpawner`] to enable spawning of entities for disc type shapes.
 pub trait DiscSpawner<'w> {
-    fn circle(&'_ mut self, radius: f32) -> ShapeEntityCommands<'_, '_>;
-    fn arc(
-        &'_ mut self,
-        radius: f32,
-        start_angle: f32,
-        end_angle: f32,
-    ) -> ShapeEntityCommands<'_, '_>;
+    fn circle(&mut self, radius: f32) -> ShapeEntityCommands<'_, '_>;
+    fn arc(&mut self, radius: f32, start_angle: f32, end_angle: f32)
+        -> ShapeEntityCommands<'_, '_>;
 }
 
 impl<'w, T: ShapeSpawner<'w>> DiscSpawner<'w> for T {
-    fn circle(&'_ mut self, radius: f32) -> ShapeEntityCommands<'_, '_> {
+    fn circle(&mut self, radius: f32) -> ShapeEntityCommands<'_, '_> {
         self.spawn_shape(ShapeBundle::circle(self.config(), radius))
     }
 
     fn arc(
-        &'_ mut self,
+        &mut self,
         radius: f32,
         start_angle: f32,
         end_angle: f32,

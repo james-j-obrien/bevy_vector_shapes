@@ -74,7 +74,7 @@ pub struct ShapeChildBuilder<'w> {
 impl<'w> ShapeChildBuilder<'w> {
     /// Spawns an entity with the given bundle and inserts it into the parent entity's [`Children`].
     /// Also adds [`Parent`] component to the created entity.
-    pub fn spawn(&'_ mut self, bundle: impl Bundle) -> EntityCommands<'_> {
+    pub fn spawn(&mut self, bundle: impl Bundle) -> EntityCommands<'_> {
         let e = self.commands.spawn(bundle);
         self.push_children.children.push(e.id());
         e
@@ -82,7 +82,7 @@ impl<'w> ShapeChildBuilder<'w> {
 
     /// Spawns an [`Entity`] with no components and inserts it into the parent entity's [`Children`].
     /// Also adds [`Parent`] component to the created entity.
-    pub fn spawn_empty(&'_ mut self) -> EntityCommands<'_> {
+    pub fn spawn_empty(&mut self) -> EntityCommands<'_> {
         let e = self.commands.spawn_empty();
         self.push_children.children.push(e.id());
         e
@@ -101,7 +101,7 @@ impl<'w> ShapeChildBuilder<'w> {
 }
 
 impl<'w> ShapeSpawner<'w> for ShapeChildBuilder<'w> {
-    fn spawn_shape(&'_ mut self, bundle: impl Bundle) -> ShapeEntityCommands<'_, '_> {
+    fn spawn_shape(&mut self, bundle: impl Bundle) -> ShapeEntityCommands<'_, '_> {
         let Self {
             commands, config, ..
         } = self;
