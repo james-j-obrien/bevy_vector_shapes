@@ -217,7 +217,7 @@ pub trait CanvasCommands<'w> {
     ///
     /// Returns the created [`Handle<Image>`] and [`EntityCommands`].
     fn spawn_canvas(
-        &'_ mut self,
+        &mut self,
         assets: &mut Assets<Image>,
         config: CanvasConfig,
     ) -> (Handle<Image>, EntityCommands<'_>);
@@ -225,7 +225,7 @@ pub trait CanvasCommands<'w> {
 
 impl<'w, 's> CanvasCommands<'w> for Commands<'w, 's> {
     fn spawn_canvas(
-        &'_ mut self,
+        &mut self,
         assets: &mut Assets<Image>,
         config: CanvasConfig,
     ) -> (Handle<Image>, EntityCommands<'_>) {
