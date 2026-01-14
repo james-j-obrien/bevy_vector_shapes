@@ -10,13 +10,13 @@ use wgpu::{Extent3d, TextureDescriptor, TextureDimension, TextureFormat, Texture
 /// Prepares the camera associated with each canvas.
 ///
 /// Replaces the image handle when the canvas is resized and applies [`CanvasMode`] behaviours.
-pub fn update_canvases(mut canvases: Query<(&mut Canvas, &mut Camera, &mut Projection)>) {
+pub fn update_canvases(mut canvases: Query<(&mut Canvas, &mut Camera, &mut RenderTarget,  &mut Projection)>) {
     canvases
         .iter_mut()
-        .for_each(|(mut canvas, mut camera, mut projection)| {
-            if let RenderTarget::Image(camera_handle) = &camera.target {
+        .for_each(|(mut canvas, mut camera, mut target, mut projection)| {
+            if let RenderTarget::Image(camera_handle) = target.as_ref() {
                 if camera_handle.handle != canvas.image {
-                    camera.target = RenderTarget::Image(canvas.image.clone().into());
+                    *target = RenderTarget::Image(canvas.image.clone().into());
                     projection.set_changed();
                 }
             }
@@ -179,6 +179,7 @@ impl CanvasConfig {
 pub struct CanvasBundle {
     camera_2d: Camera2d,
     camera: Camera,
+    target: RenderTarget,
     canvas: Canvas,
     render_layers: RenderLayers,
 }
@@ -193,10 +194,10 @@ impl CanvasBundle {
             camera_2d: Camera2d,
             camera: Camera {
                 order: config.order,
-                target: RenderTarget::Image(image.clone().into()),
                 clear_color: config.clear_color,
                 ..default()
             },
+            target: RenderTarget::Image(image.clone().into()),
             canvas: Canvas {
                 image,
                 width: config.width,

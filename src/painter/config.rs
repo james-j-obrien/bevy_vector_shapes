@@ -1,5 +1,5 @@
 use bevy::camera::visibility::RenderLayers;
-use bevy::ecs::component::Tick;
+use bevy::ecs::change_detection::Tick;
 use bevy::ecs::query::FilteredAccessSet;
 use bevy::ecs::system::{SystemMeta, SystemParam};
 use bevy::ecs::world::unsafe_world_cell::UnsafeWorldCell;

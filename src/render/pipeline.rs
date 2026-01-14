@@ -76,16 +76,15 @@ impl ShapePipelineKey {
 
 #[derive(Resource)]
 pub struct ShapePipelines {
-    pub view_layout: BindGroupLayout,
-    pub texture_layout: BindGroupLayout,
+    pub view_layout: BindGroupLayoutDescriptor,
+    pub texture_layout: BindGroupLayoutDescriptor,
     pipeline_cache: HashMap<(ShapePipelineKey, TypeId), CachedRenderPipelineId>,
 }
 
 impl FromWorld for ShapePipelines {
-    fn from_world(world: &mut World) -> Self {
-        let render_device = world.resource::<RenderDevice>();
+    fn from_world(_world: &mut World) -> Self {
         let tonemapping_lut_entries = get_lut_bind_group_layout_entries();
-        let view_layout = render_device.create_bind_group_layout(
+        let view_layout = BindGroupLayoutDescriptor::new(
             "shape_view_layout",
             &BindGroupLayoutEntries::with_indices(
                 ShaderStages::VERTEX_FRAGMENT,
@@ -103,8 +102,8 @@ impl FromWorld for ShapePipelines {
                 ),
             ),
         );
-        let texture_layout = render_device.create_bind_group_layout(
-            Some("shape_texture_layout"),
+        let texture_layout = BindGroupLayoutDescriptor::new(
+            "shape_texture_layout",
             &[
                 BindGroupLayoutEntry {
                     binding: 0,
@@ -159,18 +158,18 @@ impl ShapePipelines {
 #[derive(Resource)]
 pub struct Shape2dPipeline<T: ShapeData> {
     pub shader: Handle<Shader>,
-    pub layout: BindGroupLayout,
+    pub layout: BindGroupLayoutDescriptor,
     _marker: PhantomData<T>,
 }
 
 impl<T: ShapeData> FromWorld for Shape2dPipeline<T> {
     fn from_world(world: &mut World) -> Self {
         let render_device = world.resource::<RenderDevice>();
-        let layout = render_device.create_bind_group_layout(
-            Some("shape_layout"),
+        let layout = BindGroupLayoutDescriptor::new(
+            "shape_layout",
             &BindGroupLayoutEntries::with_indices(
                 ShaderStages::VERTEX,
-                ((0, GpuArrayBuffer::<T>::binding_layout(render_device)),),
+                ((0, GpuArrayBuffer::<T>::binding_layout(&render_device.limits())),),
             ),
         );
 
@@ -190,9 +189,9 @@ impl<T: ShapeData> FromWorld for Shape2dPipeline<T> {
 impl<T: ShapeData> Shape2dPipeline<T> {
     fn specialize(
         &self,
-        view_layout: &BindGroupLayout,
-        texture_layout: &BindGroupLayout,
-        shape_layout: &BindGroupLayout,
+        view_layout: &BindGroupLayoutDescriptor,
+        texture_layout: &BindGroupLayoutDescriptor,
+        shape_layout: &BindGroupLayoutDescriptor,
         key: ShapePipelineKey,
     ) -> RenderPipelineDescriptor {
         let mut shader_defs = Vec::new();

@@ -154,7 +154,7 @@ pub trait ShapeData: Send + Sync + GpuArrayBufferable + 'static {
 
         if let Some(render_app) = app.get_sub_app(RenderApp) {
             if let Some(per_object_buffer_batch_size) =
-                GpuArrayBuffer::<Self>::batch_size(render_app.world().resource::<RenderDevice>())
+                GpuArrayBuffer::<Self>::batch_size(&render_app.world().resource::<RenderDevice>().limits())
             {
                 shader_defs.push(ShaderDefVal::UInt(
                     "PER_OBJECT_BUFFER_BATCH_SIZE".into(),
@@ -328,7 +328,7 @@ fn setup_type_pipeline_2d<T: ShapeData + 'static>(app: &mut App) {
     if let Some(render_app) = app.get_sub_app_mut(RenderApp) {
         render_app
             .insert_resource(BatchedInstanceBuffer::<T>::new(
-                render_app.world().resource::<RenderDevice>(),
+                &render_app.world().resource::<RenderDevice>().limits(),
             ))
             .add_render_command::<Transparent2d, DrawShape2dCommand<T>>()
             .init_resource::<Shape2dInstances<T>>()
