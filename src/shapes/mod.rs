@@ -18,7 +18,7 @@ mod triangle;
 pub use triangle::*;
 
 /// Component that holds data related to a shape to be used during rendering,
-#[derive(Component, Clone, Reflect)]
+#[derive(Component, Clone, Reflect, Debug)]
 pub struct ShapeMaterial {
     /// Alpha mode to use when rendering, Blend, Add and Multiply are explicitly supported.
     pub alpha_mode: ShapeAlphaMode,
@@ -64,7 +64,7 @@ impl From<AlphaMode> for ShapeAlphaMode {
 }
 
 /// Used in [`ShapeFill`] to determine how a shape is rendered.
-#[derive(Default, Clone, Copy, Reflect)]
+#[derive(Default, Clone, Copy, Reflect, Debug)]
 pub enum FillType {
     /// Fully colored shape
     #[default]
@@ -76,7 +76,7 @@ pub enum FillType {
 }
 
 /// Component attached to each shape to determine how it is rendered.
-#[derive(Default, Component, Clone, Copy, Reflect)]
+#[derive(Default, Component, Clone, Copy, Reflect, Debug)]
 pub struct ShapeFill {
     pub color: Color,
     pub ty: FillType,
