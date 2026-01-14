@@ -10,7 +10,9 @@ use wgpu::{Extent3d, TextureDescriptor, TextureDimension, TextureFormat, Texture
 /// Prepares the camera associated with each canvas.
 ///
 /// Replaces the image handle when the canvas is resized and applies [`CanvasMode`] behaviours.
-pub fn update_canvases(mut canvases: Query<(&mut Canvas, &mut Camera, &mut RenderTarget,  &mut Projection)>) {
+pub fn update_canvases(
+    mut canvases: Query<(&mut Canvas, &mut Camera, &mut RenderTarget, &mut Projection)>,
+) {
     canvases
         .iter_mut()
         .for_each(|(mut canvas, mut camera, mut target, mut projection)| {

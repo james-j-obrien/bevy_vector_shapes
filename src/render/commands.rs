@@ -72,12 +72,12 @@ pub fn prepare_shape_view_bind_groups(
                 &shape_pipeline.view_layout.entries,
             )
         });
-        
+
         let lut_bindings =
             get_lut_bindings(&images, &tonemapping_luts, tonemapping, &fallback_image);
         let view_bind_group = render_device.create_bind_group(
             "shape_view_bind_group",
-            &view_bind_group_layout,
+            view_bind_group_layout,
             &BindGroupEntries::with_indices((
                 (0, view_binding.clone()),
                 (1, globals.clone()),
@@ -120,7 +120,7 @@ pub fn prepare_shape_2d_texture_bind_groups<T: ShapeData>(
                     .or_insert_with(|| {
                         render_device.create_bind_group(
                             "shape_texture_bind_group",
-                            &texture_bind_group_layout,
+                            texture_bind_group_layout,
                             &BindGroupEntries::sequential((
                                 &gpu_image.texture_view,
                                 &gpu_image.sampler,
@@ -155,7 +155,7 @@ pub fn prepare_shape_3d_texture_bind_groups<T: ShapeData>(
                     .or_insert_with(|| {
                         render_device.create_bind_group(
                             "shape_texture_bind_group",
-                            &texture_bind_group_layout,
+                            texture_bind_group_layout,
                             &BindGroupEntries::sequential((
                                 &gpu_image.texture_view,
                                 &gpu_image.sampler,

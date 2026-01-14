@@ -153,9 +153,9 @@ pub trait ShapeData: Send + Sync + GpuArrayBufferable + 'static {
         let mut shader_defs = Vec::with_capacity(1);
 
         if let Some(render_app) = app.get_sub_app(RenderApp) {
-            if let Some(per_object_buffer_batch_size) =
-                GpuArrayBuffer::<Self>::batch_size(&render_app.world().resource::<RenderDevice>().limits())
-            {
+            if let Some(per_object_buffer_batch_size) = GpuArrayBuffer::<Self>::batch_size(
+                &render_app.world().resource::<RenderDevice>().limits(),
+            ) {
                 shader_defs.push(ShaderDefVal::UInt(
                     "PER_OBJECT_BUFFER_BATCH_SIZE".into(),
                     per_object_buffer_batch_size,

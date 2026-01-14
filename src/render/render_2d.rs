@@ -184,16 +184,14 @@ pub fn prepare_shape_2d_bind_group<T: ShapeData + 'static>(
 ) {
     if let Some(binding) = shape_buffer.binding() {
         let bind_group_layout = layout.get_or_insert_with(|| {
-            render_device.create_bind_group_layout(
-                "shape_bind_group_layout",
-                &pipeline.layout.entries,
-            )
+            render_device
+                .create_bind_group_layout("shape_bind_group_layout", &pipeline.layout.entries)
         });
 
         commands.insert_resource(Shape2dBindGroup {
             value: render_device.create_bind_group(
                 "shape_bind_group",
-                &bind_group_layout,
+                bind_group_layout,
                 &BindGroupEntries::single(binding),
             ),
             _marker: PhantomData::<T>,

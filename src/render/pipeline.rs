@@ -169,7 +169,10 @@ impl<T: ShapeData> FromWorld for Shape2dPipeline<T> {
             "shape_layout",
             &BindGroupLayoutEntries::with_indices(
                 ShaderStages::VERTEX,
-                ((0, GpuArrayBuffer::<T>::binding_layout(&render_device.limits())),),
+                ((
+                    0,
+                    GpuArrayBuffer::<T>::binding_layout(&render_device.limits()),
+                ),),
             ),
         );
 
