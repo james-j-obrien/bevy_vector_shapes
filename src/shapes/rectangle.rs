@@ -52,6 +52,8 @@ impl ShapeComponent for RectangleComponent {
 
             size: self.size.into(),
             corner_radii: self.corner_radii.into(),
+
+            ..default()
         }
     }
 }
@@ -79,6 +81,9 @@ pub struct RectData {
 
     size: [f32; 2],
     corner_radii: [f32; 4],
+
+    #[cfg(target_arch = "wasm32")]
+    wgpu_padding: [u32; 4],
 }
 
 impl RectData {
@@ -97,6 +102,8 @@ impl RectData {
 
             size: size.into(),
             corner_radii: config.corner_radii.into(),
+
+            ..default()
         }
     }
 }

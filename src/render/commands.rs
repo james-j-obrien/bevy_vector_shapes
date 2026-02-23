@@ -266,11 +266,10 @@ impl<const I: usize, T: ShapeData + 'static, P: PhaseItem> RenderCommand<P>
             dynamic_offsets[offset_count] = dynamic_offset;
             offset_count += 1;
         }
-        pass.set_bind_group(
-            I,
-            &shape_bind_group.into_inner().value,
-            &dynamic_offsets[..offset_count],
-        );
+        let Some(value) = &shape_bind_group.into_inner().value else {
+            return RenderCommandResult::Failure("Shape bind group missing");
+        };
+        pass.set_bind_group(I, value, &dynamic_offsets[..offset_count]);
         RenderCommandResult::Success
     }
 }
@@ -298,11 +297,10 @@ impl<const I: usize, T: ShapeData + 'static, P: PhaseItem> RenderCommand<P>
             dynamic_offsets[offset_count] = dynamic_offset;
             offset_count += 1;
         }
-        pass.set_bind_group(
-            I,
-            &shape_bind_group.into_inner().value,
-            &dynamic_offsets[..offset_count],
-        );
+        let Some(value) = &shape_bind_group.into_inner().value else {
+            return RenderCommandResult::Failure("Shape bind group missing");
+        };
+        pass.set_bind_group(I, value, &dynamic_offsets[..offset_count]);
         RenderCommandResult::Success
     }
 }

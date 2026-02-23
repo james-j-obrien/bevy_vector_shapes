@@ -171,16 +171,25 @@ pub fn queue_shapes_2d<T: ShapeData>(
 
 #[derive(Resource)]
 pub struct Shape2dBindGroup<T: ShapeData> {
-    pub value: BindGroup,
+    pub value: Option<BindGroup>,
     _marker: PhantomData<T>,
 }
 
+impl<T: ShapeData> Default for Shape2dBindGroup<T> {
+    fn default() -> Self {
+        Self {
+            value: None,
+            _marker: PhantomData,
+        }
+    }
+}
+
 pub fn prepare_shape_2d_bind_group<T: ShapeData + 'static>(
-    mut commands: Commands,
     pipeline: Res<Shape2dPipeline<T>>,
     render_device: Res<RenderDevice>,
     shape_buffer: Res<BatchedInstanceBuffer<T>>,
     mut layout: Local<Option<BindGroupLayout>>,
+    mut bind_group: ResMut<Shape2dBindGroup<T>>,
 ) {
     if let Some(binding) = shape_buffer.binding() {
         let bind_group_layout = layout.get_or_insert_with(|| {
@@ -188,13 +197,12 @@ pub fn prepare_shape_2d_bind_group<T: ShapeData + 'static>(
                 .create_bind_group_layout("shape_bind_group_layout", &pipeline.layout.entries)
         });
 
-        commands.insert_resource(Shape2dBindGroup {
-            value: render_device.create_bind_group(
+        bind_group.value = render_device
+            .create_bind_group(
                 "shape_bind_group",
                 bind_group_layout,
                 &BindGroupEntries::single(binding),
-            ),
-            _marker: PhantomData::<T>,
-        });
+            )
+            .into();
     }
 }

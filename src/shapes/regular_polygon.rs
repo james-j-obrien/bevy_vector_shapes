@@ -65,7 +65,7 @@ impl ShapeComponent for RegularPolygonComponent {
             radius: self.radius,
             roundness: self.roundness,
 
-            padding: default(),
+            ..default()
         }
     }
 }
@@ -101,6 +101,8 @@ pub struct NgonData {
     roundness: f32,
 
     padding: [f32; 3],
+    #[cfg(target_arch = "wasm32")]
+    wgpu_padding: [u32; 4],
 }
 
 impl NgonData {
@@ -121,7 +123,7 @@ impl NgonData {
             radius,
             roundness: config.roundness,
 
-            padding: default(),
+            ..default()
         }
     }
 }

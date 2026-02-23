@@ -82,7 +82,7 @@ impl ShapeComponent for DiscComponent {
             start_angle: self.start_angle,
             end_angle: self.end_angle,
 
-            padding: default(),
+            ..default()
         }
     }
 }
@@ -116,6 +116,8 @@ pub struct DiscData {
     end_angle: f32,
 
     padding: [f32; 3],
+    #[cfg(target_arch = "wasm32")]
+    wgpu_padding: [u32; 4],
 }
 
 impl DiscData {
@@ -138,7 +140,7 @@ impl DiscData {
             start_angle: 0.0,
             end_angle: 0.0,
 
-            padding: default(),
+            ..default()
         }
     }
 
@@ -162,7 +164,7 @@ impl DiscData {
             start_angle,
             end_angle,
 
-            padding: default(),
+            ..default()
         }
     }
 }

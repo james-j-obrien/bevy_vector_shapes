@@ -64,7 +64,7 @@ impl ShapeComponent for TriangleComponent {
             ],
             roundness: self.roundness,
 
-            padding: default(),
+            ..default()
         }
     }
 }
@@ -116,7 +116,7 @@ impl TriangleData {
             vertices: [v_a.into(), v_b.into(), v_c.into()],
             roundness: config.roundness,
 
-            padding: default(),
+            ..default()
         }
     }
 }

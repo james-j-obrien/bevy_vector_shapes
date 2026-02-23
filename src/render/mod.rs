@@ -4,12 +4,11 @@ use std::marker::PhantomData;
 
 use bevy::asset::uuid_handle;
 use bevy::camera::visibility::RenderLayers;
-use bevy::ecs::system::StaticSystemParam;
 use bevy::math::FloatOrd;
+use bevy::render::batching::no_gpu_preprocessing::batch_and_prepare_sorted_render_phase;
 use bevy::render::batching::no_gpu_preprocessing::BatchedInstanceBuffer;
 use bevy::render::batching::GetBatchData;
-use bevy::render::render_phase::{PhaseItemExtraIndex, SortedPhaseItem, ViewSortedRenderPhases};
-use bevy::render::sync_world::MainEntity;
+use bevy::render::render_phase::{PhaseItemExtraIndex, ViewSortedRenderPhases};
 use bevy::render::sync_world::RenderEntity;
 use bevy::shader::ShaderDefVal;
 use bevy::shader::ShaderRef;
@@ -22,14 +21,13 @@ use bevy::{
     prelude::*,
     reflect::GetTypeRegistration,
     render::{
-        render_phase::{AddRenderCommand, CachedRenderPipelinePhaseItem, DrawFunctionId},
-        render_resource::{Buffer, CachedRenderPipelineId, GpuArrayBuffer, GpuArrayBufferable},
+        render_phase::AddRenderCommand,
+        render_resource::{Buffer, GpuArrayBuffer, GpuArrayBufferable},
         renderer::{RenderDevice, RenderQueue},
         Extract, Render, RenderApp, RenderSystems,
     },
 };
 use bitfield::bitfield;
-use nonmax::NonMaxU32;
 use wgpu::{util::BufferInitDescriptor, BufferUsages, VertexAttribute};
 
 use crate::prelude::*;
@@ -311,6 +309,7 @@ fn setup_type_pipeline_3d<T: ShapeData + 'static>(app: &mut App) {
         .init_resource::<Shape3dInstances<T>>()
         .init_resource::<Shape3dMaterials<T>>()
         .init_resource::<Shape3dPipeline<T>>()
+        .init_resource::<Shape3dBindGroup<T>>()
         .add_systems(ExtractSchedule, extract_shapes_3d::<T>)
         .add_systems(
             Render,
@@ -318,7 +317,7 @@ fn setup_type_pipeline_3d<T: ShapeData + 'static>(app: &mut App) {
                 prepare_shape_3d_bind_group::<T>.in_set(RenderSystems::PrepareBindGroups),
                 prepare_shape_3d_texture_bind_groups::<T>.in_set(RenderSystems::PrepareBindGroups),
                 queue_shapes_3d::<T>.in_set(RenderSystems::Queue),
-                batch_and_prepare_render_phase::<Transparent3d, Shape3dPipeline<T>>
+                batch_and_prepare_sorted_render_phase::<Transparent3d, Shape3dPipeline<T>>
                     .in_set(RenderSystems::PrepareResources),
             ),
         );
@@ -334,6 +333,7 @@ fn setup_type_pipeline_2d<T: ShapeData + 'static>(app: &mut App) {
             .init_resource::<Shape2dInstances<T>>()
             .init_resource::<Shape2dMaterials<T>>()
             .init_resource::<Shape2dPipeline<T>>()
+            .init_resource::<Shape2dBindGroup<T>>()
             .add_systems(ExtractSchedule, extract_shapes_2d::<T>)
             .add_systems(
                 Render,
@@ -342,7 +342,7 @@ fn setup_type_pipeline_2d<T: ShapeData + 'static>(app: &mut App) {
                     prepare_shape_2d_texture_bind_groups::<T>
                         .in_set(RenderSystems::PrepareBindGroups),
                     queue_shapes_2d::<T>.in_set(RenderSystems::Queue),
-                    batch_and_prepare_render_phase::<Transparent2d, Shape2dPipeline<T>>
+                    batch_and_prepare_sorted_render_phase::<Transparent2d, Shape2dPipeline<T>>
                         .in_set(RenderSystems::PrepareResources),
                 ),
             );
@@ -397,78 +397,5 @@ impl Plugin for ShapeRenderPlugin {
     fn finish(&self, app: &mut App) {
         load_shaders(app);
         setup_pipeline(app);
-    }
-}
-
-// TODO: PR to bevy to make this public
-#[derive(PartialEq)]
-struct BatchMeta<T: PartialEq> {
-    /// The pipeline id encompasses all pipeline configuration including vertex
-    /// buffers and layouts, shaders and their specializations, bind group
-    /// layouts, etc.
-    pipeline_id: CachedRenderPipelineId,
-    /// The draw function id defines the RenderCommands that are called to
-    /// set the pipeline and bindings, and make the draw command
-    draw_function_id: DrawFunctionId,
-    dynamic_offset: Option<NonMaxU32>,
-    pub user_data: T,
-}
-
-impl<T: PartialEq> BatchMeta<T> {
-    fn new(item: &impl CachedRenderPipelinePhaseItem, user_data: T) -> Self {
-        BatchMeta {
-            pipeline_id: item.cached_pipeline(),
-            draw_function_id: item.draw_function(),
-            dynamic_offset: match item.extra_index() {
-                PhaseItemExtraIndex::DynamicOffset(dynamic_offset) => {
-                    NonMaxU32::new(dynamic_offset)
-                }
-                _ => None,
-            },
-            user_data,
-        }
-    }
-}
-
-pub fn batch_and_prepare_render_phase<
-    I: CachedRenderPipelinePhaseItem + SortedPhaseItem,
-    GBD: GetBatchData,
->(
-    mut gpu_array_buffer: ResMut<BatchedInstanceBuffer<GBD::BufferData>>,
-    mut phases: ResMut<ViewSortedRenderPhases<I>>,
-    param: StaticSystemParam<GBD::Param>,
-) {
-    let system_param_item = param.into_inner();
-
-    let mut process_item = |item: &mut I| {
-        let (data, compare) = GBD::get_batch_data(
-            &system_param_item,
-            (item.entity(), MainEntity::from(Entity::PLACEHOLDER)),
-        )?;
-        let buffer_index = gpu_array_buffer.push(data.clone());
-
-        let index = buffer_index.index;
-        let (item_batch, item_index) = item.batch_range_and_extra_index_mut();
-        *item_batch = index..index + 1;
-        *item_index = PhaseItemExtraIndex::maybe_dynamic_offset(buffer_index.dynamic_offset);
-
-        compare
-    };
-
-    for phase in phases.values_mut() {
-        let items = phase.items.iter_mut().map(|item| {
-            let batch_data = process_item(item).map(|c| BatchMeta::new(item, c));
-
-            (item.batch_range_mut(), batch_data)
-        });
-
-        items.reduce(|(start_range, prev_batch_meta), (range, batch_meta)| {
-            if batch_meta.is_some() && prev_batch_meta == batch_meta {
-                start_range.end = range.end;
-                (start_range, prev_batch_meta)
-            } else {
-                (range, batch_meta)
-            }
-        });
     }
 }

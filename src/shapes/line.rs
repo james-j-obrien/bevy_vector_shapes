@@ -67,6 +67,8 @@ impl ShapeComponent for LineComponent {
 
             start: self.start,
             end: self.end,
+
+            ..default()
         }
     }
 }
@@ -83,6 +85,8 @@ pub struct LineData {
 
     start: Vec3,
     end: Vec3,
+    #[cfg(target_arch = "wasm32")]
+    wgpu_padding: [u32; 4],
 }
 
 impl LineData {
@@ -101,6 +105,8 @@ impl LineData {
 
             start,
             end,
+
+            ..default()
         }
     }
 }
