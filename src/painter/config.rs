@@ -1,7 +1,7 @@
 use bevy::camera::visibility::RenderLayers;
 use bevy::ecs::change_detection::Tick;
 use bevy::ecs::query::FilteredAccessSet;
-use bevy::ecs::system::{SystemMeta, SystemParam};
+use bevy::ecs::system::{SystemMeta, SystemParam, SystemParamValidationError};
 use bevy::ecs::world::unsafe_world_cell::UnsafeWorldCell;
 use bevy::platform::cell::SyncCell;
 use bevy::prelude::*;
@@ -206,8 +206,8 @@ unsafe impl SystemParam for &mut ShapeConfig {
         _system_meta: &SystemMeta,
         _world: UnsafeWorldCell<'w>,
         _change_tick: Tick,
-    ) -> Self::Item<'w, 's> {
-        state.shape_config.get()
+    ) -> Result<Self::Item<'w, 's>, SystemParamValidationError> {
+        Ok(state.shape_config.get())
     }
 
     fn apply(state: &mut Self::State, _system_meta: &SystemMeta, world: &mut World) {

@@ -1,9 +1,9 @@
 use bevy::{
-    camera::{visibility::RenderLayers, RenderTarget},
+    camera::{visibility::RenderLayers, Hdr, RenderTarget},
     ecs::system::EntityCommands,
-    image::ImageSampler,
+    image::{BevyDefault, ImageSampler},
     prelude::*,
-    render::view::{Hdr, ViewTarget},
+    render::view::ViewTarget,
 };
 use wgpu::{Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages};
 
@@ -120,15 +120,15 @@ impl Canvas {
     pub fn resize(&mut self, assets: &mut Assets<Image>, width: u32, height: u32) -> Handle<Image> {
         self.width = width;
         self.height = height;
-        let image = assets
+        let mut new_image = assets
             .get_mut(&self.image)
-            .expect("Tried to resize canvas image that does not exist.");
+            .expect("Tried to resize canvas image that does not exist.")
+            .clone();
         let size = Extent3d {
             width,
             height,
             ..default()
         };
-        let mut new_image = image.clone();
         new_image.resize(size);
         let handle = assets.add(new_image);
         self.image = handle.clone();

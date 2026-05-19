@@ -168,7 +168,8 @@ pub fn queue_shapes_3d<T: ShapeData>(
             };
             let mut view_key = key;
             view_key |= ShapePipelineKey::from_msaa_samples(msaa.samples());
-            view_key |= ShapePipelineKey::from_hdr(view.hdr);
+            // TODO:
+            // view_key |= ShapePipelineKey::from_hdr(view.hdr);
             let pipeline = shape_pipelines.specialize(&pipeline_cache, pipeline.as_ref(), view_key);
 
             // let default_id = AssetId::Uuid {
@@ -187,6 +188,7 @@ pub fn queue_shapes_3d<T: ShapeData>(
                     batch_range: 0..1,
                     extra_index: PhaseItemExtraIndex::None,
                     indexed: false,
+                    sorting_info: TransparentSortingInfo3d::AlwaysOnTop,
                 });
             }
         }

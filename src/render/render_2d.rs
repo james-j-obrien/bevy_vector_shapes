@@ -147,7 +147,8 @@ pub fn queue_shapes_2d<T: ShapeData>(
 
             let mut view_key = key;
             view_key |= ShapePipelineKey::from_msaa_samples(msaa.samples());
-            view_key |= ShapePipelineKey::from_hdr(view.hdr);
+            // TODO:
+            // view_key |= ShapePipelineKey::from_hdr(view.hdr);
             view_key |= ShapePipelineKey::PIPELINE_2D;
             let pipeline = shape_pipelines.specialize(&pipeline_cache, pipeline.as_ref(), view_key);
 

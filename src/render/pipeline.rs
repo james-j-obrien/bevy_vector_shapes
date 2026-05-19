@@ -5,6 +5,7 @@ use bevy::{
         core_2d::CORE_2D_DEPTH_FORMAT, tonemapping::get_lut_bind_group_layout_entries,
     },
     ecs::system::{lifetimeless::SRes, SystemParamItem},
+    image::BevyDefault,
     mesh::VertexBufferLayout,
     platform::collections::HashMap,
     prelude::*,
@@ -245,8 +246,8 @@ impl<T: ShapeData> Shape2dPipeline<T> {
         if key.contains(ShapePipelineKey::PIPELINE_2D) {
             depth_stencil = Some(DepthStencilState {
                 format: CORE_2D_DEPTH_FORMAT,
-                depth_write_enabled,
-                depth_compare: CompareFunction::GreaterEqual,
+                depth_write_enabled: Some(depth_write_enabled),
+                depth_compare: Some(CompareFunction::GreaterEqual),
                 stencil: StencilState {
                     front: StencilFaceState::IGNORE,
                     back: StencilFaceState::IGNORE,
@@ -263,8 +264,8 @@ impl<T: ShapeData> Shape2dPipeline<T> {
         } else {
             depth_stencil = Some(DepthStencilState {
                 format: TextureFormat::Depth32Float,
-                depth_write_enabled,
-                depth_compare: CompareFunction::Greater,
+                depth_write_enabled: Some(depth_write_enabled),
+                depth_compare: Some(CompareFunction::Greater),
                 stencil: StencilState {
                     front: StencilFaceState::IGNORE,
                     back: StencilFaceState::IGNORE,
@@ -338,23 +339,30 @@ impl<T: ShapeData> Shape2dPipeline<T> {
                 alpha_to_coverage_enabled: false,
             },
             label: Some(label),
-            push_constant_ranges: vec![],
             zero_initialize_workgroup_memory: false,
+            ..Default::default()
         }
     }
 }
 
 impl<T: ShapeData> GetBatchData for Shape2dPipeline<T> {
     type Param = SRes<Shape2dInstances<T>>;
-    type CompareData = ShapePipelineMaterial;
+    type BatchCompareData = ShapePipelineMaterial;
+    type BatchSetCompareData = ShapePipelineMaterial;
     type BufferData = T;
 
     fn get_batch_data(
         instances: &SystemParamItem<Self::Param>,
         (entity, _main_entity): (Entity, MainEntity),
-    ) -> Option<(Self::BufferData, Option<Self::CompareData>)> {
+    ) -> Option<(
+        Self::BufferData,
+        Option<(Self::BatchSetCompareData, Self::BatchCompareData)>,
+    )> {
         let instance = instances.get(&entity)?;
-        Some((instance.data.clone(), Some(instance.material.clone())))
+        Some((
+            instance.data.clone(),
+            Some((instance.material.clone(), instance.material.clone())),
+        ))
     }
 }
 
@@ -369,14 +377,21 @@ impl<T: ShapeData> FromWorld for Shape3dPipeline<T> {
 
 impl<T: ShapeData> GetBatchData for Shape3dPipeline<T> {
     type Param = SRes<Shape3dInstances<T>>;
-    type CompareData = ShapePipelineMaterial;
+    type BatchCompareData = ShapePipelineMaterial;
+    type BatchSetCompareData = ShapePipelineMaterial;
     type BufferData = T;
 
     fn get_batch_data(
         instances: &SystemParamItem<Self::Param>,
         (entity, _main_entity): (Entity, MainEntity),
-    ) -> Option<(Self::BufferData, Option<Self::CompareData>)> {
+    ) -> Option<(
+        Self::BufferData,
+        Option<(Self::BatchSetCompareData, Self::BatchCompareData)>,
+    )> {
         let instance = instances.get(&entity)?;
-        Some((instance.data.clone(), Some(instance.material.clone())))
+        Some((
+            instance.data.clone(),
+            Some((instance.material.clone(), instance.material.clone())),
+        ))
     }
 }
