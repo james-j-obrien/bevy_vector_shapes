@@ -1,6 +1,6 @@
 // Demonstrates shapes respecting global bloom settings
 
-use bevy::{post_process::bloom::Bloom, prelude::*, render::view::Hdr};
+use bevy::{camera::Hdr, post_process::bloom::Bloom, prelude::*};
 use bevy_vector_shapes::prelude::*;
 
 mod gallery_3d;

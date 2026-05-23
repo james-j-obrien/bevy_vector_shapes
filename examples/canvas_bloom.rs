@@ -2,7 +2,7 @@
 // Note you will still get some bloom effects even without an HDR canvas,
 // but in order to allow for color values below 1.0 the canvas needs HDR enabled
 
-use bevy::{image::ImageSampler, post_process::bloom::Bloom, prelude::*, render::view::Hdr};
+use bevy::{camera::Hdr, image::ImageSampler, post_process::bloom::Bloom, prelude::*};
 use bevy_vector_shapes::prelude::*;
 
 mod gallery_3d;

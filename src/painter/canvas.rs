@@ -1,9 +1,8 @@
 use bevy::{
-    camera::{visibility::RenderLayers, RenderTarget},
+    camera::{visibility::RenderLayers, Hdr, RenderTarget},
     ecs::system::EntityCommands,
     image::ImageSampler,
     prelude::*,
-    render::view::{Hdr, ViewTarget},
 };
 use wgpu::{Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages};
 
@@ -95,9 +94,9 @@ impl Canvas {
                 size,
                 dimension: TextureDimension::D2,
                 format: if hdr {
-                    ViewTarget::TEXTURE_FORMAT_HDR
+                    TextureFormat::Rgba16Float
                 } else {
-                    TextureFormat::bevy_default()
+                    TextureFormat::Bgra8UnormSrgb
                 },
                 mip_level_count: 1,
                 sample_count: 1,
@@ -120,15 +119,15 @@ impl Canvas {
     pub fn resize(&mut self, assets: &mut Assets<Image>, width: u32, height: u32) -> Handle<Image> {
         self.width = width;
         self.height = height;
-        let image = assets
-            .get_mut(&self.image)
-            .expect("Tried to resize canvas image that does not exist.");
+        let mut new_image = assets
+            .get(&self.image)
+            .expect("Tried to resize canvas image that does not exist.")
+            .clone();
         let size = Extent3d {
             width,
             height,
             ..default()
         };
-        let mut new_image = image.clone();
         new_image.resize(size);
         let handle = assets.add(new_image);
         self.image = handle.clone();
@@ -189,7 +188,7 @@ pub struct CanvasBundle {
 impl CanvasBundle {
     /// Create a [`CanvasBundle`] from a given image with the given configuration.
     ///
-    /// Note that [`CanvasConfig::hdr`] will not be reflected in the bundle, add a [`bevy::render::view::Hdr`] component instead
+    /// Note that [`CanvasConfig::hdr`] will not be reflected in the bundle, add a [`bevy::camera::Hdr`] component instead
     /// or use [`CanvasCommands::spawn_canvas`].
     pub fn new(image: Handle<Image>, config: CanvasConfig) -> Self {
         Self {

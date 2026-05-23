@@ -147,14 +147,18 @@ pub fn queue_shapes_2d<T: ShapeData>(
 
             let mut view_key = key;
             view_key |= ShapePipelineKey::from_msaa_samples(msaa.samples());
-            view_key |= ShapePipelineKey::from_hdr(view.hdr);
             view_key |= ShapePipelineKey::PIPELINE_2D;
-            let pipeline = shape_pipelines.specialize(&pipeline_cache, pipeline.as_ref(), view_key);
+            let pipeline = shape_pipelines.specialize(
+                &pipeline_cache,
+                pipeline.as_ref(),
+                view_key,
+                view.target_format,
+            );
 
             for &entity in entities {
                 // SAFETY: we insert this alongside inserting into the vector we are currently iterating
                 let instance = unsafe { instance_data.get(&entity).unwrap_unchecked() };
-                transparent_phase.add(Transparent2d {
+                transparent_phase.add_transient(Transparent2d {
                     entity: (entity, MainEntity::from(Entity::PLACEHOLDER)),
                     pipeline,
                     draw_function,

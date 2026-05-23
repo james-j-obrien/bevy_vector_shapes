@@ -168,8 +168,12 @@ pub fn queue_shapes_3d<T: ShapeData>(
             };
             let mut view_key = key;
             view_key |= ShapePipelineKey::from_msaa_samples(msaa.samples());
-            view_key |= ShapePipelineKey::from_hdr(view.hdr);
-            let pipeline = shape_pipelines.specialize(&pipeline_cache, pipeline.as_ref(), view_key);
+            let pipeline = shape_pipelines.specialize(
+                &pipeline_cache,
+                pipeline.as_ref(),
+                view_key,
+                view.target_format,
+            );
 
             // let default_id = AssetId::Uuid {
             //     uuid: AssetId::<Mesh>::DEFAULT_UUID,
@@ -179,10 +183,14 @@ pub fn queue_shapes_3d<T: ShapeData>(
                 // SAFETY: we insert this alongside inserting into the vector we are currently iterating
                 let instance = unsafe { instance_data.get(&entity).unwrap_unchecked() };
                 let distance = rangefinder.distance(&instance.origin);
-                transparent_phase.add(Transparent3d {
+                transparent_phase.add_transient(Transparent3d {
                     entity: (entity, MainEntity::from(Entity::PLACEHOLDER)),
                     draw_function: draw_transparent,
                     pipeline,
+                    sorting_info: TransparentSortingInfo3d::Sorted {
+                        mesh_center: instance.origin,
+                        depth_bias: 0.0,
+                    },
                     distance,
                     batch_range: 0..1,
                     extra_index: PhaseItemExtraIndex::None,
