@@ -1,6 +1,5 @@
 #import bevy_vector_shapes::core
 #import bevy_vector_shapes::core::{view, image, image_sampler}
-#import bevy_vector_shapes::constants::{PI, TAU}
 
 struct Vertex {
     @builtin(instance_index) index: u32,
@@ -43,31 +42,52 @@ struct VertexOutput {
 fn vertex(v: Vertex) -> VertexOutput {
     var out: VertexOutput;
 
-    // Vertex positions for a basic quad
     let vertex = v.pos;
     let shape = shapes[v.index];
-
-    // Reconstruct our transformation matrix
     let matrix = mat4x4<f32>(
         shape.matrix_0,
         shape.matrix_1,
         shape.matrix_2,
         shape.matrix_3
     );
-    // Shortest of the two side lengths for the rectangle
-    var shortest_side = min(shape.size.x, shape.size.y);
+    let shortest_side = min(shape.size.x, shape.size.y);
+    let half_shortest_side = shortest_side / 2.0;
 
-    var vertex_data = core::get_vertex_data(matrix, vertex.xy * shape.size / 2.0, shape.thickness, shape.flags);
-    out.clip_position = vertex_data.clip_pos;
-
-    // Our vertex outputs should all be in uv space so scale our uv space such that the shortest side is of length 1
     out.size = shape.size / shortest_side;
+
+#ifdef PIPELINE_2D
+    let local_position = vertex.xy * shape.size / 2.0;
+    let scale = max(core::get_scale(matrix), vec2<f32>(0.000001));
+    let scaled_position = local_position * scale;
+    let y_axis = matrix[1].xyz;
+    let y_axis_length = length(y_axis);
+    var y_direction = vec3<f32>(0.0, 1.0, 0.0);
+    if y_axis_length > 0.000001 {
+        y_direction = y_axis / y_axis_length;
+    }
+    let thickness_data = core::get_thickness_data(
+        shape.thickness,
+        core::f_thickness_type(shape.flags),
+        matrix[3].xyz,
+        y_direction,
+    );
+    let aa_padding = core::AA_PADDING / thickness_data.pixels_per_u;
+    let padded_local_position = local_position + sign(local_position) * aa_padding / scale;
+    let uv_ratio = (abs(scaled_position) + aa_padding) / max(abs(scaled_position), vec2<f32>(0.000001));
+
+    out.clip_position = view.view_proj * matrix * vec4<f32>(padded_local_position, 0.0, 1.0);
+    out.uv = vertex.xy * out.size * uv_ratio;
+    out.thickness = core::calculate_thickness(thickness_data, half_shortest_side, shape.flags);
+#endif
+
+#ifdef PIPELINE_3D
+    let vertex_data = core::get_vertex_data(matrix, vertex.xy * shape.size / 2.0, shape.thickness, shape.flags);
+    out.clip_position = vertex_data.clip_pos;
     out.uv = vertex.xy * out.size * vertex_data.uv_ratio;
-    out.thickness = core::calculate_thickness(vertex_data.thickness_data, shortest_side / 2.0, shape.flags);
+    out.thickness = core::calculate_thickness(vertex_data.thickness_data, half_shortest_side, shape.flags);
+#endif
 
-    // Our corner radii cannot be more than half the shortest side so cap them
     out.corner_radii = 2.0 * min(shape.corner_radii / shortest_side, vec4<f32>(0.5));
-
     out.color = shape.color;
 #ifdef TEXTURED
     out.texture_uv = core::get_texture_uv(vertex.xy);
@@ -118,30 +138,17 @@ fn quadrant(in: vec2<f32>) -> i32 {
 #ifdef FRAGMENT
 @fragment
 fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
-    // Mask representing whether this fragment falls within the shape
-    var in_shape = f.color.a;
+    let radius = f.corner_radii[quadrant(f.uv)];
+    let signed_distance = rectSDF(f.uv, f.size - radius) - radius;
+    let alpha = f.color.a
+        * core::step_aa(-f.thickness, signed_distance)
+        * core::step_aa(signed_distance, 0.0);
 
-    // Use quadrant to determine which corner radii to use
-    var quadrant = quadrant(f.uv);
-    var radii = f.corner_radii[quadrant];
+    var color = core::color_output(vec4<f32>(f.color.rgb, alpha));
 
-    // Calculate our positions distance from the rectangle
-    var dist = rectSDF(f.uv, f.size - radii) - radii;
-    
-    // Cut off points outside the shape or within the hollow area
-    in_shape *= core::step_aa(-f.thickness, dist) * core::step_aa(dist, 0.);
-
-
-
-    var color = core::color_output(vec4<f32>(f.color.rgb, in_shape));
 #ifdef TEXTURED
     color = color * textureSample(image, image_sampler, f.texture_uv);
 #endif
-
-    // Discard fragments no longer in the shape
-    if in_shape < 0.0001 {
-        discard;
-    }
 
     return color;
 }
