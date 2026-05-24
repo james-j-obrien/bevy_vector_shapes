@@ -82,7 +82,7 @@ impl ShapeComponent for DiscComponent {
             start_angle: self.start_angle,
             end_angle: self.end_angle,
 
-            padding: default(),
+            padding: Vec4::ZERO,
         }
     }
 }
@@ -115,7 +115,7 @@ pub struct DiscData {
     start_angle: f32,
     end_angle: f32,
 
-    padding: [f32; 3],
+    padding: Vec4,
 }
 
 impl DiscData {
@@ -138,7 +138,7 @@ impl DiscData {
             start_angle: 0.0,
             end_angle: 0.0,
 
-            padding: default(),
+            padding: Vec4::ZERO,
         }
     }
 
@@ -162,7 +162,7 @@ impl DiscData {
             start_angle,
             end_angle,
 
-            padding: default(),
+            padding: Vec4::ZERO,
         }
     }
 }

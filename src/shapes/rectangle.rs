@@ -52,6 +52,7 @@ impl ShapeComponent for RectangleComponent {
 
             size: self.size.into(),
             corner_radii: self.corner_radii.into(),
+            padding: Vec4::ZERO,
         }
     }
 }
@@ -79,6 +80,7 @@ pub struct RectData {
 
     size: [f32; 2],
     corner_radii: [f32; 4],
+    padding: Vec4,
 }
 
 impl RectData {
@@ -97,6 +99,7 @@ impl RectData {
 
             size: size.into(),
             corner_radii: config.corner_radii.into(),
+            padding: Vec4::ZERO,
         }
     }
 }
