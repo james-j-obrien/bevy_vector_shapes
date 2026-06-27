@@ -35,7 +35,7 @@ struct VertexOutput {
     @location(2) thickness: f32,
     @location(3) angle: f32,
     @location(4) delta: f32,
-    @location(5) cap: u32,
+    @location(5) @interpolate(flat) cap: u32,
 #ifdef TEXTURED
     @location(6) texture_uv: vec2<f32>,
 #endif
@@ -94,7 +94,7 @@ struct FragmentInput {
     @location(2) thickness: f32,
     @location(3) angle: f32,
     @location(4) delta: f32,
-    @location(5) cap: u32,
+    @location(5) @interpolate(flat) cap: u32,
 #ifdef TEXTURED
     @location(6) texture_uv: vec2<f32>,
 #endif
@@ -116,18 +116,16 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
     in_shape *= core::step_aa_pd(-f.delta, angle, abs(angle)) * core::step_aa_pd(angle, f.delta, abs(angle));
 
     // Handle rounded caps
+    // Take the delta in the direction towards our point
+    var nearest_angle = sign(angle) * f.delta;
+
+    // With that delta find the point at the end of the arc
+    // Use thickness to offset from the radius
+    var end_point = vec2<f32>(cos(nearest_angle), sin(nearest_angle)) * (1.0 - f.thickness / 2.0);
+
+    // Mask in points near the end point based on our thickness
+    var mask = core::step_aa(length(end_point - f.uv), f.thickness / 2.0);
     if f.cap == 2u {
-        // Take the delta in the direction towards our point
-        var nearest_angle = sign(angle) * f.delta;
-
-        // With that delta find the point at the end of the arc
-        // Use thickness to offset from the radius
-        var end_point = vec2<f32>(cos(nearest_angle), sin(nearest_angle)) * (1.0 - f.thickness / 2.0);
-
-        // Mask in points near the end point based on our thickness
-        var dist = length(end_point - f.uv);
-
-        var mask = core::step_aa(dist, f.thickness / 2.0);
         in_shape = min(max(in_shape, mask), f.color.a);
     }
 
