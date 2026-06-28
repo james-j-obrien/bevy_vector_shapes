@@ -58,10 +58,6 @@ fn vertex(v: Vertex) -> VertexOutput {
         shape.matrix_3
     );
 
-    // Calculate vertex data shared between most shapes
-    var vertex_data = core::get_vertex_data(matrix, vertex.xy * shape.radius, shape.thickness, shape.flags);
-    out.clip_position = vertex_data.clip_pos;
-
     // Here we precompute several values related to our polygon
 
     // The central angle is the angle at the center of the polygon between two adjacent vertices
@@ -79,10 +75,44 @@ fn vertex(v: Vertex) -> VertexOutput {
     // Calculate our world space apothem for a polygon with the given radius
     var apothem = unit_apothem * shape.radius;
 
-    // We want 1 unit in uv space to be the length of the apothem of our polygon 
-    // so scale world to uv space using the world space apothem
-    out.uv = vertex_data.local_pos / (apothem * vertex_data.scale) * vertex_data.uv_ratio;
-    out.thickness = core::calculate_thickness(vertex_data.thickness_data, apothem, shape.flags);
+    let local_position = vertex.xy * shape.radius;
+
+    let origin = matrix[3].xyz;
+    let alignment = core::f_alignment(shape.flags);
+
+    var y_basis = normalize(matrix[1].xyz);
+    var z_basis = normalize(matrix[2].xyz);
+    if alignment == 1u {
+        y_basis = normalize((view.view * vec4<f32>(0.0, 1.0, 0.0, 0.0)).xyz);
+#ifdef PIPELINE_2D
+        z_basis = transpose(view.inverse_view)[2].xyz;
+#endif
+#ifdef PIPELINE_3D
+        z_basis = normalize(view.world_position - origin);
+#endif
+    }
+
+    let x_basis = normalize(cross(y_basis, z_basis));
+    y_basis = cross(x_basis, z_basis);
+
+    let scale = core::get_scale(matrix);
+    let scaled_position = local_position * scale;
+    let thickness_data = core::get_thickness_data(
+        shape.thickness,
+        core::f_thickness_type(shape.flags),
+        origin,
+        y_basis,
+    );
+    let aa_padding = core::AA_PADDING / thickness_data.pixels_per_u;
+    let padded_position = scaled_position + sign(local_position) * aa_padding;
+    let uv_ratio = padded_position / scaled_position;
+    let world_position = origin + padded_position.x * x_basis + padded_position.y * y_basis;
+
+    out.clip_position = view.view_proj * vec4<f32>(world_position, 1.0);
+    // We want 1 unit in uv space to be the length of the apothem of our polygon,
+    // so scale world to uv space using the world space apothem.
+    out.uv = scaled_position / (apothem * scale) * uv_ratio;
+    out.thickness = core::calculate_thickness(thickness_data, apothem, shape.flags);
     out.roundness = min(shape.roundness / apothem, 1.0);
 
     // Scale our half side length to match our uv space of 1 unit per apothem

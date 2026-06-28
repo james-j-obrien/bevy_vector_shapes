@@ -44,29 +44,55 @@ struct VertexOutput {
 fn vertex(v: Vertex) -> VertexOutput {
     var out: VertexOutput;
 
-    // Vertex positions for a basic quad
     let vertex = v.pos;
     let shape = shapes[v.index];
-
-    // Reconstruct our transformation matrix
     let matrix = mat4x4<f32>(
         shape.matrix_0,
         shape.matrix_1,
         shape.matrix_2,
         shape.matrix_3
     );
-    // Shortest of the two side lengths for the rectangle
-    var shortest_side = min(shape.size.x, shape.size.y);
+    let shortest_side = min(shape.size.x, shape.size.y);
+    let half_shortest_side = shortest_side / 2.0;
 
-    var vertex_data = core::get_vertex_data(matrix, vertex.xy * shape.size / 2.0, shape.thickness, shape.flags);
-    out.clip_position = vertex_data.clip_pos;
-
-    // Our vertex outputs should all be in uv space so scale our uv space such that the shortest side is of length 1
     out.size = shape.size / shortest_side;
-    out.uv = vertex.xy * out.size * vertex_data.uv_ratio;
-    out.thickness = core::calculate_thickness(vertex_data.thickness_data, shortest_side / 2.0, shape.flags);
 
-    // Our corner radii cannot be more than half the shortest side so cap them
+    let local_position = vertex.xy * shape.size / 2.0;
+    let origin = matrix[3].xyz;
+    let alignment = core::f_alignment(shape.flags);
+
+    var y_basis = normalize(matrix[1].xyz);
+    var z_basis = normalize(matrix[2].xyz);
+    if alignment == 1u {
+        y_basis = normalize((view.view * vec4<f32>(0.0, 1.0, 0.0, 0.0)).xyz);
+#ifdef PIPELINE_2D
+        z_basis = transpose(view.inverse_view)[2].xyz;
+#endif
+#ifdef PIPELINE_3D
+        z_basis = normalize(view.world_position - origin);
+#endif
+    }
+
+    let x_basis = normalize(cross(y_basis, z_basis));
+    y_basis = cross(x_basis, z_basis);
+
+    let scale = core::get_scale(matrix);
+    let scaled_position = local_position * scale;
+    let thickness_data = core::get_thickness_data(
+        shape.thickness,
+        core::f_thickness_type(shape.flags),
+        origin,
+        y_basis,
+    );
+    let aa_padding = core::AA_PADDING / thickness_data.pixels_per_u;
+    let padded_position = scaled_position + sign(local_position) * aa_padding;
+    let uv_ratio = padded_position / scaled_position;
+    let world_position = origin + padded_position.x * x_basis + padded_position.y * y_basis;
+
+    out.clip_position = view.view_proj * vec4<f32>(world_position, 1.0);
+    out.uv = vertex.xy * out.size * uv_ratio;
+    out.thickness = core::calculate_thickness(thickness_data, half_shortest_side, shape.flags);
+
     out.corner_radii = 2.0 * min(shape.corner_radii / shortest_side, vec4<f32>(0.5));
 
     out.color = shape.color;
