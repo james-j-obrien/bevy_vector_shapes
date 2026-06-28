@@ -1734,7 +1734,7 @@ dependencies = [
 
 [[package]]
 name = "bevy_vector_shapes"
-version = "0.12.1"
+version = "0.13.0"
 dependencies = [
  "any_vec",
  "bevy",
@@ -6173,27 +6173,3 @@ dependencies = [
  "quote",
  "syn",
 ]
-
-[[patch.unused]]
-name = "vmdl"
-version = "0.3.0"
-
-[[patch.unused]]
-name = "vtf"
-version = "0.4.0"
-
-[[patch.unused]]
-name = "vpk"
-version = "0.3.0"
-
-[[patch.unused]]
-name = "vbsp"
-version = "0.9.1"
-
-[[patch.unused]]
-name = "qbsp"
-version = "0.14.1"
-
-[[patch.unused]]
-name = "vmt-parser"
-version = "0.2.0"

@@ -62,6 +62,7 @@ fn draw(mut painter: ShapePainter) {
 
 | bevy | bevy_vector_shapes |
 | ---- | ------------------ |
+| 0.19 | 0.13.0             |
 | 0.18 | 0.12.1             |
 | 0.17 | 0.11.1             |
 | 0.16 | 0.10.0             |
