@@ -23,7 +23,6 @@ bitflags::bitflags! {
     #[repr(transparent)]
     pub struct ShapePipelineKey: u32 {
         const NONE                              = 0;
-        const HDR                               = (1 << 0);
         const PIPELINE_2D                       = (1 << 2);
         const LOCAL_AA                          = (1 << 3);
         const TEXTURED                          = (1 << 4);
@@ -48,14 +47,6 @@ impl ShapePipelineKey {
         Self::from_bits_retain(msaa_bits)
     }
 
-    pub fn from_hdr(hdr: bool) -> Self {
-        if hdr {
-            ShapePipelineKey::HDR
-        } else {
-            ShapePipelineKey::NONE
-        }
-    }
-
     pub fn msaa_samples(&self) -> u32 {
         1 << ((self.bits() >> Self::MSAA_SHIFT_BITS) & Self::MSAA_MASK_BITS)
     }
@@ -78,7 +69,7 @@ impl ShapePipelineKey {
 pub struct ShapePipelines {
     pub view_layout: BindGroupLayoutDescriptor,
     pub texture_layout: BindGroupLayoutDescriptor,
-    pipeline_cache: HashMap<(ShapePipelineKey, TypeId), CachedRenderPipelineId>,
+    pipeline_cache: HashMap<(ShapePipelineKey, TextureFormat, TypeId), CachedRenderPipelineId>,
 }
 
 impl FromWorld for ShapePipelines {
@@ -138,6 +129,7 @@ impl ShapePipelines {
         cache: &PipelineCache,
         pipeline: &Shape2dPipeline<T>,
         key: ShapePipelineKey,
+        target_format: TextureFormat,
     ) -> CachedRenderPipelineId {
         let Self {
             view_layout,
@@ -146,10 +138,15 @@ impl ShapePipelines {
         } = self;
 
         *pipeline_cache
-            .entry((key, TypeId::of::<T>()))
+            .entry((key, target_format, TypeId::of::<T>()))
             .or_insert_with(|| {
-                let descriptor =
-                    pipeline.specialize(view_layout, texture_layout, &pipeline.layout, key);
+                let descriptor = pipeline.specialize(
+                    view_layout,
+                    texture_layout,
+                    &pipeline.layout,
+                    key,
+                    target_format,
+                );
                 cache.queue_render_pipeline(descriptor)
             })
     }
@@ -196,6 +193,7 @@ impl<T: ShapeData> Shape2dPipeline<T> {
         texture_layout: &BindGroupLayoutDescriptor,
         shape_layout: &BindGroupLayoutDescriptor,
         key: ShapePipelineKey,
+        target_format: TextureFormat,
     ) -> RenderPipelineDescriptor {
         let mut shader_defs = Vec::new();
         let (label, blend, depth_stencil, depth_write_enabled);
@@ -245,8 +243,8 @@ impl<T: ShapeData> Shape2dPipeline<T> {
         if key.contains(ShapePipelineKey::PIPELINE_2D) {
             depth_stencil = Some(DepthStencilState {
                 format: CORE_2D_DEPTH_FORMAT,
-                depth_write_enabled,
-                depth_compare: CompareFunction::GreaterEqual,
+                depth_write_enabled: Some(depth_write_enabled),
+                depth_compare: Some(CompareFunction::GreaterEqual),
                 stencil: StencilState {
                     front: StencilFaceState::IGNORE,
                     back: StencilFaceState::IGNORE,
@@ -263,8 +261,8 @@ impl<T: ShapeData> Shape2dPipeline<T> {
         } else {
             depth_stencil = Some(DepthStencilState {
                 format: TextureFormat::Depth32Float,
-                depth_write_enabled,
-                depth_compare: CompareFunction::Greater,
+                depth_write_enabled: Some(depth_write_enabled),
+                depth_compare: Some(CompareFunction::Greater),
                 stencil: StencilState {
                     front: StencilFaceState::IGNORE,
                     back: StencilFaceState::IGNORE,
@@ -286,10 +284,7 @@ impl<T: ShapeData> Shape2dPipeline<T> {
             shader_defs.push("DISABLE_LOCAL_AA".into())
         }
 
-        let format = match key.contains(ShapePipelineKey::HDR) {
-            true => bevy::render::view::ViewTarget::TEXTURE_FORMAT_HDR,
-            false => TextureFormat::bevy_default(),
-        };
+        let format = target_format;
 
         let mut layout = vec![view_layout.clone(), shape_layout.clone()];
         if key.contains(ShapePipelineKey::TEXTURED) {
@@ -338,7 +333,7 @@ impl<T: ShapeData> Shape2dPipeline<T> {
                 alpha_to_coverage_enabled: false,
             },
             label: Some(label),
-            push_constant_ranges: vec![],
+            immediate_size: 0,
             zero_initialize_workgroup_memory: false,
         }
     }
@@ -346,15 +341,19 @@ impl<T: ShapeData> Shape2dPipeline<T> {
 
 impl<T: ShapeData> GetBatchData for Shape2dPipeline<T> {
     type Param = SRes<Shape2dInstances<T>>;
-    type CompareData = ShapePipelineMaterial;
+    type BatchCompareData = ShapePipelineMaterial;
+    type BatchSetCompareData = ();
     type BufferData = T;
 
     fn get_batch_data(
         instances: &SystemParamItem<Self::Param>,
         (entity, _main_entity): (Entity, MainEntity),
-    ) -> Option<(Self::BufferData, Option<Self::CompareData>)> {
+    ) -> Option<(
+        Self::BufferData,
+        Option<(Self::BatchSetCompareData, Self::BatchCompareData)>,
+    )> {
         let instance = instances.get(&entity)?;
-        Some((instance.data.clone(), Some(instance.material.clone())))
+        Some((instance.data.clone(), Some(((), instance.material.clone()))))
     }
 }
 
@@ -369,14 +368,18 @@ impl<T: ShapeData> FromWorld for Shape3dPipeline<T> {
 
 impl<T: ShapeData> GetBatchData for Shape3dPipeline<T> {
     type Param = SRes<Shape3dInstances<T>>;
-    type CompareData = ShapePipelineMaterial;
+    type BatchCompareData = ShapePipelineMaterial;
+    type BatchSetCompareData = ();
     type BufferData = T;
 
     fn get_batch_data(
         instances: &SystemParamItem<Self::Param>,
         (entity, _main_entity): (Entity, MainEntity),
-    ) -> Option<(Self::BufferData, Option<Self::CompareData>)> {
+    ) -> Option<(
+        Self::BufferData,
+        Option<(Self::BatchSetCompareData, Self::BatchCompareData)>,
+    )> {
         let instance = instances.get(&entity)?;
-        Some((instance.data.clone(), Some(instance.material.clone())))
+        Some((instance.data.clone(), Some(((), instance.material.clone()))))
     }
 }

@@ -456,7 +456,7 @@ pub fn batch_and_prepare_render_phase<
     };
 
     for phase in phases.values_mut() {
-        let items = phase.items.iter_mut().map(|item| {
+        let items = phase.items.values_mut().map(|item| {
             let batch_data = process_item(item).map(|c| BatchMeta::new(item, c));
 
             (item.batch_range_mut(), batch_data)
