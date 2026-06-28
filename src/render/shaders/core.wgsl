@@ -192,20 +192,16 @@ fn get_basis_vectors_from_up(matrix: mat4x4<f32>, origin: vec3<f32>, up: vec3<f3
     // vector the same way as the y basis, otherwise take the direction to the camera
     var z_basis: vec3<f32>;
     var y_basis = up;
-    switch alignment {
-        // Alignment::Flat
-        default: {
-            z_basis = normalize(matrix[2].xyz);
-        }
+    if alignment == 1u {
         // Alignment::Billboard
-        case 1u: {
-            y_basis = normalize((view.view * vec4<f32>(0.0, 1.0, 0.0, 0.0)).xyz);
-            z_basis = p_to_camera_dir(origin);
-        }
+        y_basis = normalize((view.view * vec4<f32>(0.0, 1.0, 0.0, 0.0)).xyz);
+        z_basis = p_to_camera_dir(origin);
+    } else if alignment == 2u {
         // Alignment::Billboard for lines
-        case 2u: {
-            z_basis = p_to_camera_dir(origin);
-        }
+        z_basis = p_to_camera_dir(origin);
+    } else {
+        // Alignment::Flat
+        z_basis = normalize(matrix[2].xyz);
     }
 
     // The x basis is then calculated as the cross product of the y and z basis

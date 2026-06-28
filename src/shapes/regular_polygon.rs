@@ -65,7 +65,7 @@ impl ShapeComponent for RegularPolygonComponent {
             radius: self.radius,
             roundness: self.roundness,
 
-            padding: default(),
+            padding: Vec4::ZERO,
         }
     }
 }
@@ -100,7 +100,7 @@ pub struct NgonData {
     radius: f32,
     roundness: f32,
 
-    padding: [f32; 3],
+    padding: Vec4,
 }
 
 impl NgonData {
@@ -121,7 +121,7 @@ impl NgonData {
             radius,
             roundness: config.roundness,
 
-            padding: default(),
+            padding: Vec4::ZERO,
         }
     }
 }

@@ -19,6 +19,7 @@ struct Shape {
 
     @location(7) size: vec2<f32>,
     @location(8) corner_radii: vec4<f32>,
+    @location(9) padding: vec4<f32>,
 }
 
 #ifdef PER_OBJECT_BUFFER_BATCH_SIZE
