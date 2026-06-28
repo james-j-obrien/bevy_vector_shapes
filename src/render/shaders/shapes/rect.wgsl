@@ -44,17 +44,21 @@ struct VertexOutput {
 fn vertex(v: Vertex) -> VertexOutput {
     var out: VertexOutput;
 
+    // Vertex positions for a basic quad
     let vertex = v.pos;
     let shape = shapes[v.index];
+
+    // Reconstruct our transformation matrix
     let matrix = mat4x4<f32>(
         shape.matrix_0,
         shape.matrix_1,
         shape.matrix_2,
         shape.matrix_3
     );
-    let shortest_side = min(shape.size.x, shape.size.y);
-    let half_shortest_side = shortest_side / 2.0;
+    // Shortest of the two side lengths for the rectangle
+    var shortest_side = min(shape.size.x, shape.size.y);
 
+    // Our vertex outputs should all be in uv space so scale our uv space such that the shortest side is of length 1
     out.size = shape.size / shortest_side;
 
     let local_position = vertex.xy * shape.size / 2.0;
@@ -91,8 +95,9 @@ fn vertex(v: Vertex) -> VertexOutput {
 
     out.clip_position = view.view_proj * vec4<f32>(world_position, 1.0);
     out.uv = vertex.xy * out.size * uv_ratio;
-    out.thickness = core::calculate_thickness(thickness_data, half_shortest_side, shape.flags);
+    out.thickness = core::calculate_thickness(thickness_data, shortest_side / 2.0, shape.flags);
 
+    // Our corner radii cannot be more than half the shortest side so cap them
     out.corner_radii = 2.0 * min(shape.corner_radii / shortest_side, vec4<f32>(0.5));
 
     out.color = shape.color;

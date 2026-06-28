@@ -76,7 +76,6 @@ fn vertex(v: Vertex) -> VertexOutput {
     var apothem = unit_apothem * shape.radius;
 
     let local_position = vertex.xy * shape.radius;
-
     let origin = matrix[3].xyz;
     let alignment = core::f_alignment(shape.flags);
 
@@ -109,8 +108,8 @@ fn vertex(v: Vertex) -> VertexOutput {
     let world_position = origin + padded_position.x * x_basis + padded_position.y * y_basis;
 
     out.clip_position = view.view_proj * vec4<f32>(world_position, 1.0);
-    // We want 1 unit in uv space to be the length of the apothem of our polygon,
-    // so scale world to uv space using the world space apothem.
+    // We want 1 unit in uv space to be the length of the apothem of our polygon
+    // so scale world to uv space using the world space apothem
     out.uv = scaled_position / (apothem * scale) * uv_ratio;
     out.thickness = core::calculate_thickness(thickness_data, apothem, shape.flags);
     out.roundness = min(shape.roundness / apothem, 1.0);

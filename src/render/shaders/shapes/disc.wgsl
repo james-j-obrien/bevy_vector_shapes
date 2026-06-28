@@ -89,6 +89,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     let uv_ratio = padded_position / scaled_position;
     let world_position = origin + padded_position.x * x_basis + padded_position.y * y_basis;
 
+    // Multiply the world space position by the view projection matrix to convert to our clip position
     out.clip_position = view.view_proj * vec4<f32>(world_position, 1.0);
     out.uv = vertex.xy * uv_ratio;
     out.thickness = core::calculate_thickness(thickness_data, shape.radius, shape.flags);
