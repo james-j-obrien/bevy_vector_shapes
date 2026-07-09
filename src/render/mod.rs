@@ -4,12 +4,12 @@ use std::marker::PhantomData;
 
 use bevy::asset::uuid_handle;
 use bevy::camera::visibility::RenderLayers;
+use bevy::ecs::entity::{EntityGeneration, EntityIndex};
 use bevy::ecs::system::StaticSystemParam;
 use bevy::math::FloatOrd;
 use bevy::render::batching::no_gpu_preprocessing::BatchedInstanceBuffer;
 use bevy::render::batching::GetBatchData;
 use bevy::render::render_phase::{PhaseItemExtraIndex, SortedPhaseItem, ViewSortedRenderPhases};
-use bevy::render::sync_world::MainEntity;
 use bevy::render::sync_world::RenderEntity;
 use bevy::shader::ShaderDefVal;
 use bevy::shader::ShaderRef;
@@ -124,13 +124,45 @@ pub struct ShapeInstance<T> {
     /// This shape's material.
     pub material: ShapePipelineMaterial,
 
-    /// The point in space used for ordering this point.
-    /// Ignored by the 3D pipeline.
+    /// The point in space used for ordering this shape.
+    /// The `z` component is the 2D sort key, the full point orders 3D shapes.
     pub origin: Vec3,
 
     /// The [`ShapeData`] of this shape.
     pub data: T,
 }
+
+/// Per-frame index of an interned [`ShapePipelineMaterial`].
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct ShapeMaterialIndex(pub u32);
+
+/// Generation values for fabricated keys start here, hope no-one entity churns too much.
+const FABRICATED_GENERATION_BASE: u32 = 0x4000_0000;
+
+/// Stable per-shape-type id used to build fabricated keys for immediate mode shapes.
+#[derive(Resource)]
+pub(crate) struct ShapeTypeTag<T> {
+    tag: u32,
+    _marker: PhantomData<T>,
+}
+
+impl<T> ShapeTypeTag<T> {
+    /// Builds the key for the immediate mode shape instance at `index`.
+    ///
+    /// Optimised for <16 unique shape types
+    #[inline]
+    pub(crate) fn fabricate(&self, index: u32) -> Entity {
+        debug_assert!(index < 1 << 28, "shape instance index overflow");
+        Entity::from_index_and_generation(
+            EntityIndex::from_raw_u32((index << 4) | self.tag)
+                .expect("shape instance index overflow"),
+            EntityGeneration::from_bits(FABRICATED_GENERATION_BASE | self.tag),
+        )
+    }
+}
+
+#[derive(Resource, Default)]
+struct ShapeTypeTagAllocator(u32);
 
 /// Trait implemented by each shapes shader data, defines common methods used in the rendering pipeline.
 pub trait ShapeData: Send + Sync + GpuArrayBufferable + 'static {
@@ -241,17 +273,20 @@ impl Hash for RenderLayersHash {
 
 #[derive(Resource)]
 pub struct QuadVertices {
-    buffer: Buffer,
+    pub(crate) buffer: Buffer,
+    pub(crate) indices: Buffer,
 }
 
-const QUAD: [[f32; 3]; 6] = [
+// Four corners drawn indexed so the shared corners only run the vertex shader once.
+// The first three indices form the triangle used by shapes with `VERTICES = 3`.
+const QUAD: [[f32; 3]; 4] = [
     [-1.0, 1.0, 0.0],
     [1.0, 1.0, 0.0],
     [1.0, -1.0, 0.0],
-    [1.0, -1.0, 0.0],
     [-1.0, -1.0, 0.0],
-    [-1.0, 1.0, 0.0],
 ];
+
+const QUAD_INDICES: [u16; 6] = [0, 1, 2, 2, 3, 0];
 
 impl FromWorld for QuadVertices {
     fn from_world(world: &mut World) -> Self {
@@ -266,8 +301,18 @@ impl FromWorld for QuadVertices {
                 )
             },
         });
+        let indices = render_device.create_buffer_with_data(&BufferInitDescriptor {
+            usage: BufferUsages::INDEX,
+            label: Some("quad_index_buffer"),
+            contents: unsafe {
+                std::slice::from_raw_parts(
+                    QUAD_INDICES.as_ptr().cast(),
+                    std::mem::size_of_val(&QUAD_INDICES) / std::mem::size_of::<u8>(),
+                )
+            },
+        });
 
-        Self { buffer }
+        Self { buffer, indices }
     }
 }
 
@@ -292,15 +337,32 @@ fn setup_pipeline(app: &mut App) {
         .add_systems(ExtractSchedule, extract_render_layers)
         .add_systems(
             Render,
-            prepare_shape_view_bind_groups.in_set(RenderSystems::PrepareBindGroups),
+            (
+                prepare_shape_view_bind_groups.in_set(RenderSystems::PrepareBindGroups),
+                prune_shape_texture_bind_groups.in_set(RenderSystems::PrepareBindGroups),
+            ),
         );
 }
 
 fn setup_type_pipeline<T: ShapeData + 'static>(app: &mut App) {
-    app.sub_app_mut(RenderApp).add_systems(
-        Render,
-        write_batched_instance_buffer::<T>.in_set(RenderSystems::PrepareResourcesFlush),
-    );
+    let render_app = app.sub_app_mut(RenderApp);
+    let tag = {
+        let mut allocator = render_app
+            .world_mut()
+            .get_resource_or_insert_with(ShapeTypeTagAllocator::default);
+        let tag = allocator.0;
+        allocator.0 += 1;
+        tag
+    };
+    render_app
+        .insert_resource(ShapeTypeTag::<T> {
+            tag,
+            _marker: PhantomData,
+        })
+        .add_systems(
+            Render,
+            write_batched_instance_buffer::<T>.in_set(RenderSystems::PrepareResourcesFlush),
+        );
 }
 
 fn setup_type_pipeline_3d<T: ShapeData + 'static>(app: &mut App) {
@@ -441,10 +503,8 @@ pub fn batch_and_prepare_render_phase<
     let system_param_item = param.into_inner();
 
     let mut process_item = |item: &mut I| {
-        let (data, compare) = GBD::get_batch_data(
-            &system_param_item,
-            (item.entity(), MainEntity::from(Entity::PLACEHOLDER)),
-        )?;
+        let (data, compare) =
+            GBD::get_batch_data(&system_param_item, (item.entity(), item.main_entity()))?;
         let buffer_index = gpu_array_buffer.push(data.clone());
 
         let index = buffer_index.index;

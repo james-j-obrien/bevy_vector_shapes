@@ -5,14 +5,14 @@ use bevy::{
     render::{
         render_phase::{DrawFunctions, PhaseItemExtraIndex},
         render_resource::*,
-        sync_world::{MainEntity, RenderEntity, TemporaryRenderEntity},
+        sync_world::{MainEntity, RenderEntity},
         view::ExtractedView,
         Extract,
     },
 };
 
 #[derive(Resource, Deref, DerefMut)]
-pub struct Shape2dInstances<T: ShapeData>(EntityHashMap<ShapeInstance<T>>);
+pub struct Shape2dInstances<T: ShapeData>(EntityHashMap<(ShapeMaterialIndex, ShapeInstance<T>)>);
 
 impl<T: ShapeData> Default for Shape2dInstances<T> {
     fn default() -> Self {
@@ -22,7 +22,7 @@ impl<T: ShapeData> Default for Shape2dInstances<T> {
 
 #[derive(Resource, Deref, DerefMut)]
 pub struct Shape2dMaterials<T: ShapeData>(
-    #[deref] HashMap<ShapePipelineMaterial, Vec<Entity>>,
+    #[deref] HashMap<ShapePipelineMaterial, (ShapeMaterialIndex, Vec<Entity>)>,
     PhantomData<T>,
 );
 
@@ -32,8 +32,8 @@ impl<T: ShapeData> Default for Shape2dMaterials<T> {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn extract_shapes_2d<T: ShapeData>(
-    mut commands: Commands,
     shapes: Extract<
         Query<
             (
@@ -49,6 +49,7 @@ pub fn extract_shapes_2d<T: ShapeData>(
         >,
     >,
     storage: Extract<Res<ShapeStorage>>,
+    tag: Res<ShapeTypeTag<T>>,
     mut instance_data: ResMut<Shape2dInstances<T>>,
     mut materials: ResMut<Shape2dMaterials<T>>,
     render_entities: Extract<Query<&RenderEntity>>,
@@ -72,20 +73,33 @@ pub fn extract_shapes_2d<T: ShapeData>(
             }
         })
         .for_each(|(entity, material, data)| {
-            materials.entry(material.clone()).or_default().push(entity);
+            // Only clone the material when it hasn't been seen before this frame
+            let material_index = if let Some((index, entities)) = materials.get_mut(&material) {
+                entities.push(entity);
+                *index
+            } else {
+                let index = ShapeMaterialIndex(materials.len() as u32);
+                materials.insert(material.clone(), (index, vec![entity]));
+                index
+            };
+            // Cache the sort key in the origin so queueing doesn't recompute it per view
+            let origin = Vec3::new(0.0, 0.0, data.distance());
             instance_data.insert(
                 entity,
-                ShapeInstance {
-                    material,
-                    origin: Vec3::ZERO,
-                    data,
-                },
+                (
+                    material_index,
+                    ShapeInstance {
+                        material,
+                        origin,
+                        data,
+                    },
+                ),
             );
         });
 
     if let Some(iter) = storage.get::<T>(ShapePipelineType::Shape2d) {
-        iter.cloned().for_each(|mut instance| {
-            let entity = commands.spawn(TemporaryRenderEntity).id();
+        for (index, mut instance) in iter.cloned().enumerate() {
+            let entity = tag.fabricate(index as u32);
             if let Some(canvas) = &mut instance.material.canvas {
                 *canvas = *canvases.entry(*canvas).or_insert_with(|| {
                     render_entities
@@ -94,12 +108,18 @@ pub fn extract_shapes_2d<T: ShapeData>(
                         .unwrap_or(Entity::PLACEHOLDER)
                 });
             }
-            materials
-                .entry(instance.material.clone())
-                .or_default()
-                .push(entity);
-            instance_data.insert(entity, instance);
-        });
+            let material_index =
+                if let Some((index, entities)) = materials.get_mut(&instance.material) {
+                    entities.push(entity);
+                    *index
+                } else {
+                    let index = ShapeMaterialIndex(materials.len() as u32);
+                    materials.insert(instance.material.clone(), (index, vec![entity]));
+                    index
+                };
+            instance.origin = Vec3::new(0.0, 0.0, instance.data.distance());
+            instance_data.insert(entity, (material_index, instance));
+        }
     }
 }
 
@@ -112,35 +132,37 @@ pub fn queue_shapes_2d<T: ShapeData>(
     instance_data: Res<Shape2dInstances<T>>,
     mut shape_pipelines: ResMut<ShapePipelines>,
     mut phases: ResMut<ViewSortedRenderPhases<Transparent2d>>,
-    mut views: Query<(&ExtractedView, &Msaa, Option<&RenderLayers>)>,
+    views: Query<(&ExtractedView, &Msaa, Option<&RenderLayers>)>,
 ) {
     let draw_function = transparent_2d_draw_functions
         .read()
         .id::<DrawShape2dCommand<T>>();
-    let view_count = views.iter().count();
+    let default_layers = RenderLayers::default();
+    let mut visible_views = Vec::with_capacity(views.iter().count());
 
-    for (material, entities) in materials.iter() {
+    for (material, (_, entities)) in materials.iter() {
         let mut key = ShapePipelineKey::from_material(material);
         if !material.disable_laa {
             key |= ShapePipelineKey::LOCAL_AA;
         }
 
-        let mut visible_views = Vec::with_capacity(view_count);
+        visible_views.clear();
         if let Some(canvas) = material.canvas {
-            if let Ok(view) = views.get_mut(canvas) {
+            if let Ok(view) = views.get(canvas) {
                 visible_views.push(view);
             }
         } else {
             views
-                .iter_mut()
+                .iter()
                 .filter(|(_, _, layers)| {
-                    let render_layers = layers.cloned().unwrap_or_default();
-                    render_layers.intersects(&material.render_layers.0)
+                    layers
+                        .unwrap_or(&default_layers)
+                        .intersects(&material.render_layers.0)
                 })
                 .for_each(|view| visible_views.push(view))
         };
 
-        for (view, msaa, _) in visible_views.into_iter() {
+        for &(view, msaa, _) in visible_views.iter() {
             let Some(transparent_phase) = phases.get_mut(&view.retained_view_entity) else {
                 continue;
             };
@@ -157,16 +179,16 @@ pub fn queue_shapes_2d<T: ShapeData>(
 
             for &entity in entities {
                 // SAFETY: we insert this alongside inserting into the vector we are currently iterating
-                let instance = unsafe { instance_data.get(&entity).unwrap_unchecked() };
+                let (_, instance) = unsafe { instance_data.get(&entity).unwrap_unchecked() };
                 transparent_phase.add_transient(Transparent2d {
-                    entity: (entity, MainEntity::from(Entity::PLACEHOLDER)),
+                    entity: (entity, MainEntity::from(entity)),
                     pipeline,
                     draw_function,
-                    sort_key: FloatOrd(instance.data.distance()),
+                    sort_key: FloatOrd(instance.origin.z),
                     batch_range: 0..1,
                     extra_index: PhaseItemExtraIndex::None,
                     extracted_index: usize::MAX,
-                    indexed: false,
+                    indexed: true,
                 });
             }
         }
@@ -185,19 +207,40 @@ pub fn prepare_shape_2d_bind_group<T: ShapeData + 'static>(
     render_device: Res<RenderDevice>,
     shape_buffer: Res<BatchedInstanceBuffer<T>>,
     mut layout: Local<Option<BindGroupLayout>>,
+    mut cached: Local<Option<(wgpu::Buffer, BindGroup)>>,
 ) {
     if let Some(binding) = shape_buffer.binding() {
-        let bind_group_layout = layout.get_or_insert_with(|| {
-            render_device
-                .create_bind_group_layout("shape_bind_group_layout", &pipeline.layout.entries)
-        });
+        // The bind group only depends on the underlying buffer, which is reused
+        // between frames unless it needed to grow, so cache by buffer identity.
+        let cache_hit = match (&binding, cached.as_ref()) {
+            (BindingResource::Buffer(new), Some((buffer, _))) => new.buffer == buffer,
+            _ => false,
+        };
 
-        commands.insert_resource(Shape2dBindGroup {
-            value: render_device.create_bind_group(
+        let value = if cache_hit {
+            cached.as_ref().unwrap().1.clone()
+        } else {
+            let bind_group_layout = layout.get_or_insert_with(|| {
+                render_device
+                    .create_bind_group_layout("shape_bind_group_layout", &pipeline.layout.entries)
+            });
+            let buffer = match &binding {
+                BindingResource::Buffer(new) => Some(new.buffer.clone()),
+                _ => None,
+            };
+            let bind_group = render_device.create_bind_group(
                 "shape_bind_group",
                 bind_group_layout,
                 &BindGroupEntries::single(binding),
-            ),
+            );
+            if let Some(buffer) = buffer {
+                *cached = Some((buffer, bind_group.clone()));
+            }
+            bind_group
+        };
+
+        commands.insert_resource(Shape2dBindGroup {
+            value,
             _marker: PhantomData::<T>,
         });
     }

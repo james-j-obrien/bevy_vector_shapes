@@ -161,6 +161,12 @@ fn step_aa_pd(edge: f32, x: f32, in: f32) -> f32 {
     var pd = partial_derivative(in);
     return 1.0 - saturate(-value / pd);
 }
+
+// Variant taking the partial derivative directly, for callers in non-uniform control flow
+fn step_aa_d(edge: f32, x: f32, pd: f32) -> f32 {
+    var value = x - edge;
+    return 1.0 - saturate(-value / pd);
+}
 #endif
 #endif
 
@@ -172,6 +178,10 @@ fn step_aa(edge: f32, x: f32) -> f32 {
 }
 
 fn step_aa_pd(edge: f32, x: f32, pd: f32) -> f32 {
+    return step(edge, x);
+}
+
+fn step_aa_d(edge: f32, x: f32, pd: f32) -> f32 {
     return step(edge, x);
 }
 #endif

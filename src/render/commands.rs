@@ -92,9 +92,50 @@ pub fn prepare_shape_view_bind_groups(
     }
 }
 
+/// Bind groups for each texture in use by a shape material.
+///
+/// Keyed by asset id rather than handle so this map doesn't keep dropped images alive,
+/// the view id is stored so bind groups are recreated when an image is reloaded.
 #[derive(Resource, Default)]
 pub struct ShapeTextureBindGroups {
-    values: HashMap<Handle<Image>, BindGroup>,
+    values: HashMap<AssetId<Image>, (TextureViewId, BindGroup)>,
+}
+
+/// Drops bind groups for textures whose images no longer exist.
+pub fn prune_shape_texture_bind_groups(
+    gpu_images: Res<RenderAssets<GpuImage>>,
+    mut image_bind_groups: ResMut<ShapeTextureBindGroups>,
+) {
+    image_bind_groups
+        .values
+        .retain(|id, _| gpu_images.get(*id).is_some());
+}
+
+fn prepare_texture_bind_group(
+    render_device: &RenderDevice,
+    layout: &BindGroupLayout,
+    gpu_images: &RenderAssets<GpuImage>,
+    image_bind_groups: &mut ShapeTextureBindGroups,
+    handle: &Handle<Image>,
+) {
+    let Some(gpu_image) = gpu_images.get(handle.id()) else {
+        return;
+    };
+    let view_id = gpu_image.texture_view.id();
+    let stale = image_bind_groups
+        .values
+        .get(&handle.id())
+        .is_none_or(|(id, _)| *id != view_id);
+    if stale {
+        let bind_group = render_device.create_bind_group(
+            "shape_texture_bind_group",
+            layout,
+            &BindGroupEntries::sequential((&gpu_image.texture_view, &gpu_image.sampler)),
+        );
+        image_bind_groups
+            .values
+            .insert(handle.id(), (view_id, bind_group));
+    }
 }
 
 pub fn prepare_shape_2d_texture_bind_groups<T: ShapeData>(
@@ -113,21 +154,13 @@ pub fn prepare_shape_2d_texture_bind_groups<T: ShapeData>(
     });
     for material in materials.keys() {
         if let Some(handle) = &material.texture {
-            if let Some(gpu_image) = gpu_images.get(handle.id()) {
-                image_bind_groups
-                    .values
-                    .entry(handle.clone())
-                    .or_insert_with(|| {
-                        render_device.create_bind_group(
-                            "shape_texture_bind_group",
-                            texture_bind_group_layout,
-                            &BindGroupEntries::sequential((
-                                &gpu_image.texture_view,
-                                &gpu_image.sampler,
-                            )),
-                        )
-                    });
-            }
+            prepare_texture_bind_group(
+                &render_device,
+                texture_bind_group_layout,
+                &gpu_images,
+                &mut image_bind_groups,
+                handle,
+            );
         }
     }
 }
@@ -148,21 +181,13 @@ pub fn prepare_shape_3d_texture_bind_groups<T: ShapeData>(
     });
     for material in materials.keys() {
         if let Some(handle) = &material.texture {
-            if let Some(gpu_image) = gpu_images.get(handle.id()) {
-                image_bind_groups
-                    .values
-                    .entry(handle.clone())
-                    .or_insert_with(|| {
-                        render_device.create_bind_group(
-                            "shape_texture_bind_group",
-                            texture_bind_group_layout,
-                            &BindGroupEntries::sequential((
-                                &gpu_image.texture_view,
-                                &gpu_image.sampler,
-                            )),
-                        )
-                    });
-            }
+            prepare_texture_bind_group(
+                &render_device,
+                texture_bind_group_layout,
+                &gpu_images,
+                &mut image_bind_groups,
+                handle,
+            );
         }
     }
 }
@@ -204,12 +229,16 @@ impl<const I: usize, T: ShapeData, P: PhaseItem> RenderCommand<P>
         (bind_groups, instances): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
-        let Some(material) = instances.get(&item.entity()).map(|i| &i.material) else {
+        let Some(material) = instances
+            .get(&item.main_entity().id())
+            .map(|(_, i)| &i.material)
+        else {
             return RenderCommandResult::Success;
         };
         if let Some(handle) = &material.texture {
             let bind_groups = bind_groups.into_inner();
-            pass.set_bind_group(I, bind_groups.values.get(&handle.clone()).unwrap(), &[]);
+            let (_, bind_group) = bind_groups.values.get(&handle.id()).unwrap();
+            pass.set_bind_group(I, bind_group, &[]);
         }
         RenderCommandResult::Success
     }
@@ -232,12 +261,16 @@ impl<const I: usize, T: ShapeData, P: PhaseItem> RenderCommand<P>
         (bind_groups, instances): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
-        let Some(material) = instances.get(&item.entity()).map(|i| &i.material) else {
+        let Some(material) = instances
+            .get(&item.main_entity().id())
+            .map(|(_, i)| &i.material)
+        else {
             return RenderCommandResult::Success;
         };
         if let Some(handle) = &material.texture {
             let bind_groups = bind_groups.into_inner();
-            pass.set_bind_group(I, bind_groups.values.get(&handle.clone()).unwrap(), &[]);
+            let (_, bind_group) = bind_groups.values.get(&handle.id()).unwrap();
+            pass.set_bind_group(I, bind_group, &[]);
         }
         RenderCommandResult::Success
     }
@@ -323,8 +356,10 @@ impl<P: PhaseItem, T: ShapeData> RenderCommand<P> for DrawShape<T> {
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
         let batch_range = item.batch_range();
-        pass.set_vertex_buffer(0, quad.into_inner().buffer.slice(..));
-        pass.draw(0..T::VERTICES, batch_range.clone());
+        let quad = quad.into_inner();
+        pass.set_vertex_buffer(0, quad.buffer.slice(..));
+        pass.set_index_buffer(quad.indices.slice(..), IndexFormat::Uint16);
+        pass.draw_indexed(0..T::VERTICES, 0, batch_range.clone());
 
         RenderCommandResult::Success
     }
