@@ -112,33 +112,50 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
     var dist = length(f.uv) - 1.;
     in_shape *= core::step_aa(-f.thickness, dist) * core::step_aa(dist, 0.);
 
-    // Cut off points outside the allowed range of angles
-    var angle = atan2(f.uv.y, f.uv.x);
-    in_shape *= core::step_aa_pd(-f.delta, angle, abs(angle)) * core::step_aa_pd(angle, f.delta, abs(angle));
+    var uv_ddx = dpdx(f.uv);
+    var uv_ddy = dpdy(f.uv);
 
-    // Handle rounded caps
-    // Take the delta in the direction towards our point
-    var nearest_angle = sign(angle) * f.delta;
+    // Angle and cap masking only applies to arcs, skip it for full discs
+    if f.delta < PI {
+        // Cut off points outside the allowed range of angles
+        var angle = atan2(f.uv.y, f.uv.x);
 
-    // With that delta find the point at the end of the arc
-    // Use thickness to offset from the radius
-    var end_point = vec2<f32>(cos(nearest_angle), sin(nearest_angle)) * (1.0 - f.thickness / 2.0);
+        var r2 = max(dot(f.uv, f.uv), 1e-6);
+        var angle_pd = length(vec2<f32>(
+            f.uv.x * uv_ddx.y - f.uv.y * uv_ddx.x,
+            f.uv.x * uv_ddy.y - f.uv.y * uv_ddy.x
+        )) / r2;
 
-    // Mask in points near the end point based on our thickness
-    var mask = core::step_aa(length(end_point - f.uv), f.thickness / 2.0);
-    if f.cap == 2u {
-        in_shape = min(max(in_shape, mask), f.color.a);
+        in_shape *= core::step_aa_d(-f.delta, angle, angle_pd) * core::step_aa_d(angle, f.delta, angle_pd);
+
+        // Handle rounded caps
+        // Take the delta in the direction towards our point
+        var nearest_angle = sign(angle) * f.delta;
+
+        // With that delta find the point at the end of the arc
+        // Use thickness to offset from the radius
+        var end_point = vec2<f32>(cos(nearest_angle), sin(nearest_angle)) * (1.0 - f.thickness / 2.0);
+
+        // Mask in points near the end point based on our thickness
+        var to_end = f.uv - end_point;
+        var cap_dist = length(to_end);
+        var cap_dir = to_end / max(cap_dist, 1e-6);
+        var cap_pd = length(vec2<f32>(dot(cap_dir, uv_ddx), dot(cap_dir, uv_ddy)));
+        var mask = core::step_aa_d(cap_dist, f.thickness / 2.0, cap_pd);
+        if f.cap == 2u {
+            in_shape = max(in_shape, mask * f.color.a);
+        }
+    }
+
+    // Discard fragments no longer in the shape before sampling any texture
+    if in_shape < 0.0001 {
+        discard;
     }
 
     var color = core::color_output(vec4<f32>(f.color.rgb, in_shape));
 #ifdef TEXTURED
     color = color * textureSample(image, image_sampler, f.texture_uv);
 #endif
-
-    // Discard fragments no longer in the shape
-    if in_shape < 0.0001 {
-        discard;
-    }
 
     return color;
 }

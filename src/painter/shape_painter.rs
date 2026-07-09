@@ -52,7 +52,10 @@ impl ShapeStorage {
     }
 
     fn clear(&mut self) {
-        self.shapes = HashMap::default();
+        // Clear in place so the allocations are reused by the next frame's shapes.
+        for vec in self.shapes.values_mut() {
+            vec.clear();
+        }
     }
 }
 

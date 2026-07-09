@@ -4,13 +4,11 @@ use bevy::{
     core_pipeline::{
         core_2d::CORE_2D_DEPTH_FORMAT, tonemapping::get_lut_bind_group_layout_entries,
     },
-    ecs::system::{lifetimeless::SRes, SystemParamItem},
     mesh::VertexBufferLayout,
     platform::collections::HashMap,
     prelude::*,
     render::{
-        globals::GlobalsUniform, render_resource::*, renderer::RenderDevice,
-        sync_world::MainEntity, view::ViewUniform,
+        globals::GlobalsUniform, render_resource::*, renderer::RenderDevice, view::ViewUniform,
     },
 };
 use binding_types::uniform_buffer;
@@ -339,47 +337,11 @@ impl<T: ShapeData> Shape2dPipeline<T> {
     }
 }
 
-impl<T: ShapeData> GetBatchData for Shape2dPipeline<T> {
-    type Param = SRes<Shape2dInstances<T>>;
-    type BatchCompareData = ShapePipelineMaterial;
-    type BatchSetCompareData = ();
-    type BufferData = T;
-
-    fn get_batch_data(
-        instances: &SystemParamItem<Self::Param>,
-        (entity, _main_entity): (Entity, MainEntity),
-    ) -> Option<(
-        Self::BufferData,
-        Option<(Self::BatchSetCompareData, Self::BatchCompareData)>,
-    )> {
-        let instance = instances.get(&entity)?;
-        Some((instance.data.clone(), Some(((), instance.material.clone()))))
-    }
-}
-
 #[derive(Resource, Deref, DerefMut)]
 pub struct Shape3dPipeline<T: ShapeData>(Shape2dPipeline<T>);
 
 impl<T: ShapeData> FromWorld for Shape3dPipeline<T> {
     fn from_world(world: &mut World) -> Self {
         Self(Shape2dPipeline::<T>::from_world(world))
-    }
-}
-
-impl<T: ShapeData> GetBatchData for Shape3dPipeline<T> {
-    type Param = SRes<Shape3dInstances<T>>;
-    type BatchCompareData = ShapePipelineMaterial;
-    type BatchSetCompareData = ();
-    type BufferData = T;
-
-    fn get_batch_data(
-        instances: &SystemParamItem<Self::Param>,
-        (entity, _main_entity): (Entity, MainEntity),
-    ) -> Option<(
-        Self::BufferData,
-        Option<(Self::BatchSetCompareData, Self::BatchCompareData)>,
-    )> {
-        let instance = instances.get(&entity)?;
-        Some((instance.data.clone(), Some(((), instance.material.clone()))))
     }
 }

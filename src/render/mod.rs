@@ -4,13 +4,13 @@ use std::marker::PhantomData;
 
 use bevy::asset::uuid_handle;
 use bevy::camera::visibility::RenderLayers;
-use bevy::ecs::system::StaticSystemParam;
+use bevy::ecs::entity::{EntityGeneration, EntityIndex};
 use bevy::math::FloatOrd;
 use bevy::render::batching::no_gpu_preprocessing::BatchedInstanceBuffer;
-use bevy::render::batching::GetBatchData;
-use bevy::render::render_phase::{PhaseItemExtraIndex, SortedPhaseItem, ViewSortedRenderPhases};
+use bevy::render::render_phase::{
+    DrawFunctions, PhaseItemExtraIndex, SortedPhaseItem, ViewSortedRenderPhases,
+};
 use bevy::render::sync_world::MainEntity;
-use bevy::render::sync_world::RenderEntity;
 use bevy::shader::ShaderDefVal;
 use bevy::shader::ShaderRef;
 use bevy::{
@@ -25,7 +25,7 @@ use bevy::{
         render_phase::{AddRenderCommand, CachedRenderPipelinePhaseItem, DrawFunctionId},
         render_resource::{Buffer, CachedRenderPipelineId, GpuArrayBuffer, GpuArrayBufferable},
         renderer::{RenderDevice, RenderQueue},
-        Extract, Render, RenderApp, RenderSystems,
+        Render, RenderApp, RenderSystems,
     },
 };
 use bitfield::bitfield;
@@ -124,12 +124,100 @@ pub struct ShapeInstance<T> {
     /// This shape's material.
     pub material: ShapePipelineMaterial,
 
-    /// The point in space used for ordering this point.
-    /// Ignored by the 3D pipeline.
+    /// The point in space used for ordering this shape.
+    /// Ignored by the 2D pipeline.
     pub origin: Vec3,
 
     /// The [`ShapeData`] of this shape.
     pub data: T,
+}
+
+/// Per-frame storage of extracted shape instances for one shape type, grouped by material.
+pub struct ShapeInstanceBuffer<T: ShapeData> {
+    /// Unique materials seen this frame
+    pub materials: Vec<ShapePipelineMaterial>,
+    /// (material index, shape data)
+    pub instances: Vec<(u32, T)>,
+    /// Ordering origin: `z` is the 2D sort key, the full point feeds the 3D rangefinder.
+    pub origins: Vec<Vec3>,
+    /// Instance indices grouped by material index.
+    pub groups: Vec<Vec<u32>>,
+}
+
+impl<T: ShapeData> Default for ShapeInstanceBuffer<T> {
+    fn default() -> Self {
+        Self {
+            materials: Vec::new(),
+            instances: Vec::new(),
+            origins: Vec::new(),
+            groups: Vec::new(),
+        }
+    }
+}
+
+impl<T: ShapeData> ShapeInstanceBuffer<T> {
+    pub fn clear(&mut self) {
+        self.materials.clear();
+        self.instances.clear();
+        self.origins.clear();
+        for group in &mut self.groups {
+            group.clear();
+        }
+    }
+
+    pub fn intern(&mut self, material: &ShapePipelineMaterial) -> u32 {
+        if let Some(index) = self.materials.iter().position(|m| m == material) {
+            index as u32
+        } else {
+            self.materials.push(material.clone());
+            if self.groups.len() < self.materials.len() {
+                self.groups.push(Vec::new());
+            }
+            (self.materials.len() - 1) as u32
+        }
+    }
+
+    pub fn push(&mut self, material: u32, origin: Vec3, data: T) {
+        let index = self.instances.len() as u32;
+        self.instances.push((material, data));
+        self.origins.push(origin);
+        self.groups[material as usize].push(index);
+    }
+}
+
+/// Stable per-shape-type id used to build fabricated phase-item keys.
+#[derive(Resource)]
+pub struct ShapeTypeTag<T> {
+    tag: u32,
+    _marker: PhantomData<T>,
+}
+
+/// Generation values for fabricated keys start here, hopefully no-one renders entities this old.
+const FABRICATED_GENERATION_BASE: u32 = 0x4000_0000;
+
+impl<T> ShapeTypeTag<T> {
+    /// Builds the phase-item key for the instance at `index
+    #[inline]
+    pub fn phase_key(&self, index: u32) -> (Entity, MainEntity) {
+        let entity = Entity::from_index_and_generation(
+            EntityIndex::from_raw_u32(index).expect("shape instance index overflow"),
+            EntityGeneration::from_bits(FABRICATED_GENERATION_BASE | self.tag),
+        );
+        (entity, MainEntity::from(entity))
+    }
+}
+
+#[derive(Resource, Default)]
+struct ShapeTypeTagAllocator(u32);
+
+/// Connects a [`ShapeInstanceBuffer`] resource to the phase item type it queues into,
+/// so [`batch_and_prepare_render_phase`] can look up instances and identify its items.
+pub trait ShapeBatchSource<I: CachedRenderPipelinePhaseItem + SortedPhaseItem>:
+    Resource + std::ops::Deref<Target = ShapeInstanceBuffer<Self::Data>>
+{
+    type Data: ShapeData;
+    /// The draw command registered for this phase, used to identify our items.
+    type Command: 'static;
 }
 
 /// Trait implemented by each shapes shader data, defines common methods used in the rendering pipeline.
@@ -241,17 +329,18 @@ impl Hash for RenderLayersHash {
 
 #[derive(Resource)]
 pub struct QuadVertices {
-    buffer: Buffer,
+    pub(crate) buffer: Buffer,
+    pub(crate) indices: Buffer,
 }
 
-const QUAD: [[f32; 3]; 6] = [
+const QUAD: [[f32; 3]; 4] = [
     [-1.0, 1.0, 0.0],
     [1.0, 1.0, 0.0],
     [1.0, -1.0, 0.0],
-    [1.0, -1.0, 0.0],
     [-1.0, -1.0, 0.0],
-    [-1.0, 1.0, 0.0],
 ];
+
+const QUAD_INDICES: [u16; 6] = [0, 1, 2, 2, 3, 0];
 
 impl FromWorld for QuadVertices {
     fn from_world(world: &mut World) -> Self {
@@ -266,21 +355,18 @@ impl FromWorld for QuadVertices {
                 )
             },
         });
+        let indices = render_device.create_buffer_with_data(&BufferInitDescriptor {
+            usage: BufferUsages::INDEX,
+            label: Some("quad_index_buffer"),
+            contents: unsafe {
+                std::slice::from_raw_parts(
+                    QUAD_INDICES.as_ptr().cast(),
+                    std::mem::size_of_val(&QUAD_INDICES) / std::mem::size_of::<u8>(),
+                )
+            },
+        });
 
-        Self { buffer }
-    }
-}
-
-/// System that extracts [`RenderLayers`] for each camera
-///
-/// Having to do this isn't ideal but with the way the render pipeline is setup for shapes using `visible_entities` is not ideal either.
-/// This may be removed once a better implementation is possible.
-pub fn extract_render_layers(
-    mut commands: Commands,
-    cameras: Extract<Query<(&RenderEntity, &RenderLayers), With<Camera>>>,
-) {
-    for (entity, render_layers) in &cameras {
-        commands.entity(entity.id()).insert(render_layers.clone());
+        Self { buffer, indices }
     }
 }
 
@@ -289,7 +375,6 @@ fn setup_pipeline(app: &mut App) {
         .init_resource::<ShapePipelines>()
         .init_resource::<ShapeTextureBindGroups>()
         .init_resource::<QuadVertices>()
-        .add_systems(ExtractSchedule, extract_render_layers)
         .add_systems(
             Render,
             prepare_shape_view_bind_groups.in_set(RenderSystems::PrepareBindGroups),
@@ -297,10 +382,24 @@ fn setup_pipeline(app: &mut App) {
 }
 
 fn setup_type_pipeline<T: ShapeData + 'static>(app: &mut App) {
-    app.sub_app_mut(RenderApp).add_systems(
-        Render,
-        write_batched_instance_buffer::<T>.in_set(RenderSystems::PrepareResourcesFlush),
-    );
+    let render_app = app.sub_app_mut(RenderApp);
+    let tag = {
+        let mut allocator = render_app
+            .world_mut()
+            .get_resource_or_insert_with(ShapeTypeTagAllocator::default);
+        let tag = allocator.0;
+        allocator.0 += 1;
+        tag
+    };
+    render_app
+        .insert_resource(ShapeTypeTag::<T> {
+            tag,
+            _marker: PhantomData,
+        })
+        .add_systems(
+            Render,
+            write_batched_instance_buffer::<T>.in_set(RenderSystems::PrepareResourcesFlush),
+        );
 }
 
 fn setup_type_pipeline_3d<T: ShapeData + 'static>(app: &mut App) {
@@ -308,8 +407,7 @@ fn setup_type_pipeline_3d<T: ShapeData + 'static>(app: &mut App) {
         .add_render_command::<Opaque3d, DrawShape3dCommand<T>>()
         .add_render_command::<Transparent3d, DrawShape3dCommand<T>>()
         .add_render_command::<AlphaMask3d, DrawShape3dCommand<T>>()
-        .init_resource::<Shape3dInstances<T>>()
-        .init_resource::<Shape3dMaterials<T>>()
+        .init_resource::<Shape3dInstanceBuffer<T>>()
         .init_resource::<Shape3dPipeline<T>>()
         .add_systems(ExtractSchedule, extract_shapes_3d::<T>)
         .add_systems(
@@ -318,7 +416,7 @@ fn setup_type_pipeline_3d<T: ShapeData + 'static>(app: &mut App) {
                 prepare_shape_3d_bind_group::<T>.in_set(RenderSystems::PrepareBindGroups),
                 prepare_shape_3d_texture_bind_groups::<T>.in_set(RenderSystems::PrepareBindGroups),
                 queue_shapes_3d::<T>.in_set(RenderSystems::Queue),
-                batch_and_prepare_render_phase::<Transparent3d, Shape3dPipeline<T>>
+                batch_and_prepare_render_phase::<Transparent3d, Shape3dInstanceBuffer<T>>
                     .in_set(RenderSystems::PrepareResources),
             ),
         );
@@ -331,8 +429,7 @@ fn setup_type_pipeline_2d<T: ShapeData + 'static>(app: &mut App) {
                 &render_app.world().resource::<RenderDevice>().limits(),
             ))
             .add_render_command::<Transparent2d, DrawShape2dCommand<T>>()
-            .init_resource::<Shape2dInstances<T>>()
-            .init_resource::<Shape2dMaterials<T>>()
+            .init_resource::<Shape2dInstanceBuffer<T>>()
             .init_resource::<Shape2dPipeline<T>>()
             .add_systems(ExtractSchedule, extract_shapes_2d::<T>)
             .add_systems(
@@ -342,7 +439,7 @@ fn setup_type_pipeline_2d<T: ShapeData + 'static>(app: &mut App) {
                     prepare_shape_2d_texture_bind_groups::<T>
                         .in_set(RenderSystems::PrepareBindGroups),
                     queue_shapes_2d::<T>.in_set(RenderSystems::Queue),
-                    batch_and_prepare_render_phase::<Transparent2d, Shape2dPipeline<T>>
+                    batch_and_prepare_render_phase::<Transparent2d, Shape2dInstanceBuffer<T>>
                         .in_set(RenderSystems::PrepareResources),
                 ),
             );
@@ -430,21 +527,24 @@ impl<T: PartialEq> BatchMeta<T> {
     }
 }
 
-pub fn batch_and_prepare_render_phase<
-    I: CachedRenderPipelinePhaseItem + SortedPhaseItem,
-    GBD: GetBatchData,
->(
-    mut gpu_array_buffer: ResMut<BatchedInstanceBuffer<GBD::BufferData>>,
+pub fn batch_and_prepare_render_phase<I, S>(
+    mut gpu_array_buffer: ResMut<BatchedInstanceBuffer<S::Data>>,
     mut phases: ResMut<ViewSortedRenderPhases<I>>,
-    param: StaticSystemParam<GBD::Param>,
-) {
-    let system_param_item = param.into_inner();
+    source: Res<S>,
+    draw_functions: Res<DrawFunctions<I>>,
+) where
+    I: CachedRenderPipelinePhaseItem + SortedPhaseItem,
+    S: ShapeBatchSource<I>,
+{
+    let draw_function = draw_functions.read().id::<S::Command>();
 
     let mut process_item = |item: &mut I| {
-        let (data, compare) = GBD::get_batch_data(
-            &system_param_item,
-            (item.entity(), MainEntity::from(Entity::PLACEHOLDER)),
-        )?;
+        // Only process items we own
+        if item.draw_function() != draw_function {
+            return None;
+        }
+        let instance_index = item.main_entity().id().index_u32();
+        let (material, data) = source.instances.get(instance_index as usize)?;
         let buffer_index = gpu_array_buffer.push(data.clone());
 
         let index = buffer_index.index;
@@ -452,7 +552,7 @@ pub fn batch_and_prepare_render_phase<
         *item_batch = index..index + 1;
         *item_index = PhaseItemExtraIndex::maybe_dynamic_offset(buffer_index.dynamic_offset);
 
-        compare
+        Some(*material)
     };
 
     for phase in phases.values_mut() {

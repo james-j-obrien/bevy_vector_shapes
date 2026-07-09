@@ -100,7 +100,7 @@ pub struct ShapeTextureBindGroups {
 pub fn prepare_shape_2d_texture_bind_groups<T: ShapeData>(
     render_device: Res<RenderDevice>,
     shape_pipelines: Res<ShapePipelines>,
-    materials: ResMut<Shape2dMaterials<T>>,
+    buffer: Res<Shape2dInstanceBuffer<T>>,
     gpu_images: Res<RenderAssets<GpuImage>>,
     mut image_bind_groups: ResMut<ShapeTextureBindGroups>,
     mut layout: Local<Option<BindGroupLayout>>,
@@ -111,7 +111,7 @@ pub fn prepare_shape_2d_texture_bind_groups<T: ShapeData>(
             &shape_pipelines.texture_layout.entries,
         )
     });
-    for material in materials.keys() {
+    for material in buffer.materials.iter() {
         if let Some(handle) = &material.texture {
             if let Some(gpu_image) = gpu_images.get(handle.id()) {
                 image_bind_groups
@@ -135,7 +135,7 @@ pub fn prepare_shape_2d_texture_bind_groups<T: ShapeData>(
 pub fn prepare_shape_3d_texture_bind_groups<T: ShapeData>(
     render_device: Res<RenderDevice>,
     shape_pipelines: Res<ShapePipelines>,
-    materials: ResMut<Shape3dMaterials<T>>,
+    buffer: Res<Shape3dInstanceBuffer<T>>,
     gpu_images: Res<RenderAssets<GpuImage>>,
     mut image_bind_groups: ResMut<ShapeTextureBindGroups>,
     mut layout: Local<Option<BindGroupLayout>>,
@@ -146,7 +146,7 @@ pub fn prepare_shape_3d_texture_bind_groups<T: ShapeData>(
             &shape_pipelines.texture_layout.entries,
         )
     });
-    for material in materials.keys() {
+    for material in buffer.materials.iter() {
         if let Some(handle) = &material.texture {
             if let Some(gpu_image) = gpu_images.get(handle.id()) {
                 image_bind_groups
@@ -194,22 +194,24 @@ impl<const I: usize, T: ShapeData, P: PhaseItem> RenderCommand<P>
 {
     type ViewQuery = ();
     type ItemQuery = ();
-    type Param = (SRes<ShapeTextureBindGroups>, SRes<Shape2dInstances<T>>);
+    type Param = (SRes<ShapeTextureBindGroups>, SRes<Shape2dInstanceBuffer<T>>);
 
     #[inline]
     fn render<'w>(
         item: &P,
         _view: (),
         _item_query: Option<()>,
-        (bind_groups, instances): SystemParamItem<'w, '_, Self::Param>,
+        (bind_groups, buffer): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
-        let Some(material) = instances.get(&item.entity()).map(|i| &i.material) else {
+        // The instance index is encoded in the fabricated phase-item key.
+        let index = item.main_entity().id().index_u32();
+        let Some(&(material, _)) = buffer.instances.get(index as usize) else {
             return RenderCommandResult::Success;
         };
-        if let Some(handle) = &material.texture {
+        if let Some(handle) = &buffer.materials[material as usize].texture {
             let bind_groups = bind_groups.into_inner();
-            pass.set_bind_group(I, bind_groups.values.get(&handle.clone()).unwrap(), &[]);
+            pass.set_bind_group(I, bind_groups.values.get(handle).unwrap(), &[]);
         }
         RenderCommandResult::Success
     }
@@ -222,22 +224,24 @@ impl<const I: usize, T: ShapeData, P: PhaseItem> RenderCommand<P>
 {
     type ViewQuery = ();
     type ItemQuery = ();
-    type Param = (SRes<ShapeTextureBindGroups>, SRes<Shape3dInstances<T>>);
+    type Param = (SRes<ShapeTextureBindGroups>, SRes<Shape3dInstanceBuffer<T>>);
 
     #[inline]
     fn render<'w>(
         item: &P,
         _view: (),
         _item_query: Option<()>,
-        (bind_groups, instances): SystemParamItem<'w, '_, Self::Param>,
+        (bind_groups, buffer): SystemParamItem<'w, '_, Self::Param>,
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
-        let Some(material) = instances.get(&item.entity()).map(|i| &i.material) else {
+        // The instance index is encoded in the fabricated phase-item key.
+        let index = item.main_entity().id().index_u32();
+        let Some(&(material, _)) = buffer.instances.get(index as usize) else {
             return RenderCommandResult::Success;
         };
-        if let Some(handle) = &material.texture {
+        if let Some(handle) = &buffer.materials[material as usize].texture {
             let bind_groups = bind_groups.into_inner();
-            pass.set_bind_group(I, bind_groups.values.get(&handle.clone()).unwrap(), &[]);
+            pass.set_bind_group(I, bind_groups.values.get(handle).unwrap(), &[]);
         }
         RenderCommandResult::Success
     }
@@ -323,8 +327,10 @@ impl<P: PhaseItem, T: ShapeData> RenderCommand<P> for DrawShape<T> {
         pass: &mut TrackedRenderPass<'w>,
     ) -> RenderCommandResult {
         let batch_range = item.batch_range();
-        pass.set_vertex_buffer(0, quad.into_inner().buffer.slice(..));
-        pass.draw(0..T::VERTICES, batch_range.clone());
+        let quad = quad.into_inner();
+        pass.set_vertex_buffer(0, quad.buffer.slice(..));
+        pass.set_index_buffer(quad.indices.slice(..), IndexFormat::Uint16);
+        pass.draw_indexed(0..T::VERTICES, 0, batch_range.clone());
 
         RenderCommandResult::Success
     }
