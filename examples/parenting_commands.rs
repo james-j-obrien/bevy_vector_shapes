@@ -4,7 +4,6 @@
 use std::f32::consts::PI;
 
 use bevy::color::palettes::css::*;
-use bevy::math::primitives::Cuboid;
 use bevy::prelude::*;
 use bevy_vector_shapes::prelude::*;
 

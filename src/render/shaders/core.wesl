@@ -1,45 +1,19 @@
-#define_import_path bevy_vector_shapes::core
-
-struct ColorGrading {
-    exposure: f32,
-    gamma: f32,
-    pre_saturation: f32,
-    post_saturation: f32,
-}
-
-struct View {
-    view_proj: mat4x4<f32>,
-    unjittered_view_proj: mat4x4<f32>,
-    inverse_view_proj: mat4x4<f32>,
-    view: mat4x4<f32>,
-    inverse_view: mat4x4<f32>,
-    projection: mat4x4<f32>,
-    inverse_projection: mat4x4<f32>,
-    world_position: vec3<f32>,
-    // viewport(x_origin, y_origin, width, height)
-    viewport: vec4<f32>,
-    color_grading: ColorGrading,
-    mip_bias: f32,
-};
+import bevy_render::view::View;
 
 @group(0) @binding(0)
 var<uniform> view: View;
 
-#ifdef TEXTURED
-#ifdef FRAGMENT
-
+@if(TEXTURED)
 @group(2) @binding(0)
 var image: texture_2d<f32>;
 
+@if(TEXTURED)
 @group(2) @binding(1)
 var image_sampler: sampler;
 
-#endif
-#endif
-
 // Calculate pixels per world unit from a given position and up vector
 fn pixels_per_unit(pos: vec3<f32>, dir: vec3<f32>) -> f32 {
-    var vp = transpose(view.view_proj);
+    var vp = transpose(view.clip_from_world);
     var mag = dot(vp[3], vec4<f32>(pos, 1.));
     var clip = vec2<f32>(
         dot(vp[0].xyz, dir) / mag,
@@ -90,13 +64,11 @@ fn calculate_thickness(thickness_data: ThicknessData, uv_scale: f32, flags: u32)
 }
 
 fn p_to_camera_dir(p: vec3<f32>) -> vec3<f32> {
-#ifdef PIPELINE_2D
-    return transpose(view.inverse_view)[2].xyz;
-#endif
+    @if(PIPELINE_2D)
+    return transpose(view.view_from_world)[2].xyz;
 
-#ifdef PIPELINE_3D
+    @if(PIPELINE_3D)
     return normalize(view.world_position - p);
-#endif
 }
 
 // Rotate the given 2d vector on the z axis by the given angle
@@ -138,24 +110,25 @@ fn f_arc(flags: u32) -> u32 {
     return (flags >> 6u) & 1u;
 }
 
-#ifdef LOCAL_AA
+@if(LOCAL_AA)
 const AA_PADDING: f32 = 2.0;
 
-// Due to https://github.com/gfx-rs/naga/issues/1743 this cannot be compiled into the vertex shader on web
-#ifdef FRAGMENT
+@if(LOCAL_AA)
 fn partial_derivative(v: f32) -> f32 {
     var dv = vec2<f32>(dpdx(v), dpdy(v));
     return length(dv);
 }
 
 // Apply local anti aliasing based on the partial derivative of x and y per pixel
-// This is imperfect and is open to improvement 
+// This is imperfect and is open to improvement
+@if(LOCAL_AA)
 fn step_aa(edge: f32, x: f32) -> f32 {
     var value = x - edge;
     var pd = partial_derivative(value);
     return 1.0 - saturate(-value / pd);
 }
 
+@if(LOCAL_AA)
 fn step_aa_pd(edge: f32, x: f32, in: f32) -> f32 {
     var value = x - edge;
     var pd = partial_derivative(in);
@@ -163,28 +136,29 @@ fn step_aa_pd(edge: f32, x: f32, in: f32) -> f32 {
 }
 
 // Variant taking the partial derivative directly, for callers in non-uniform control flow
+@if(LOCAL_AA)
 fn step_aa_d(edge: f32, x: f32, pd: f32) -> f32 {
     var value = x - edge;
     return 1.0 - saturate(-value / pd);
 }
-#endif
-#endif
 
-#ifdef DISABLE_LOCAL_AA
+@if(DISABLE_LOCAL_AA)
 const AA_PADDING: f32 = 0.0;
 
+@if(DISABLE_LOCAL_AA)
 fn step_aa(edge: f32, x: f32) -> f32 {
     return step(edge, x);
 }
 
+@if(DISABLE_LOCAL_AA)
 fn step_aa_pd(edge: f32, x: f32, pd: f32) -> f32 {
     return step(edge, x);
 }
 
+@if(DISABLE_LOCAL_AA)
 fn step_aa_d(edge: f32, x: f32, pd: f32) -> f32 {
     return step(edge, x);
 }
-#endif
 
 // Calculate xy scale by taking it directly from the length of the basis vectors in the matrix
 fn get_scale(matrix: mat4x4<f32>) -> vec2<f32> {
@@ -198,13 +172,13 @@ fn get_basis_vectors(matrix: mat4x4<f32>, origin: vec3<f32>, flags: u32) -> mat3
 // Calculate each of the basis vectors for our shape
 // Z-basis is either taken from the mesh or from the direction to the camera depending on alignment
 fn get_basis_vectors_from_up(matrix: mat4x4<f32>, origin: vec3<f32>, up: vec3<f32>, alignment: u32) -> mat3x3<f32> {
-    // The z basis depends on our configured alignment, when rendering flat rotate the 
+    // The z basis depends on our configured alignment, when rendering flat rotate the
     // vector the same way as the y basis, otherwise take the direction to the camera
     var z_basis: vec3<f32>;
     var y_basis = up;
     if alignment == 1u {
         // Alignment::Billboard
-        y_basis = normalize((view.view * vec4<f32>(0.0, 1.0, 0.0, 0.0)).xyz);
+        y_basis = normalize((view.world_from_view * vec4<f32>(0.0, 1.0, 0.0, 0.0)).xyz);
         z_basis = p_to_camera_dir(origin);
     } else if alignment == 2u {
         // Alignment::Billboard for lines
@@ -264,7 +238,7 @@ fn get_vertex_data(matrix: mat4x4<f32>, vertex: vec2<f32>, thickness: f32, flags
     var world_pos = origin + (padded_pos.x * basis_vectors[0]) + (padded_pos.y * basis_vectors[1]);
 
     // Transform to clip space
-    out.clip_pos = view.view_proj * vec4<f32>(world_pos, 1.0);
+    out.clip_pos = view.clip_from_world * vec4<f32>(world_pos, 1.0);
     return out;
 }
 
@@ -272,19 +246,14 @@ fn get_texture_uv(vertex: vec2<f32>) -> vec2<f32> {
     return (vertex + 1.0) / 2.0;
 }
 
-#ifdef FRAGMENT
 // Transform our color output to respect the alpha mode set for our shape and combine with our texture if any
 fn color_output(in: vec4<f32>) -> vec4<f32> {
-#ifdef BLEND_MULTIPLY
+    @if(BLEND_MULTIPLY)
     var color = vec4<f32>(in.rgb * in.a, in.a);
-#endif
-#ifdef BLEND_ADD
+    @if(BLEND_ADD)
     var color = vec4<f32>(in.rgb * in.a, 0.0);
-#endif
-#ifdef BLEND_ALPHA
+    @if(BLEND_ALPHA)
     var color = in;
-#endif
 
     return color;
 }
-#endif

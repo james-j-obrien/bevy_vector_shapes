@@ -1,6 +1,8 @@
-#import bevy_vector_shapes::core
-#import bevy_vector_shapes::core::{view, image, image_sampler}
-#import bevy_vector_shapes::constants::{PI, TAU}
+import bevy_vector_shapes::render::shaders::core;
+import bevy_vector_shapes::render::shaders::core::view;
+@if(TEXTURED)
+import bevy_vector_shapes::render::shaders::core::{image, image_sampler};
+import bevy_vector_shapes::render::shaders::constants::{PI, TAU};
 
 struct Vertex {
     @builtin(instance_index) index: u32,
@@ -13,7 +15,7 @@ struct Shape {
     @location(2) matrix_2: vec4<f32>,
     @location(3) matrix_3: vec4<f32>,
 
-    @location(4) color: vec4<f32>,  
+    @location(4) color: vec4<f32>,
     @location(5) thickness: f32,
     @location(6) flags: u32,
 
@@ -22,11 +24,10 @@ struct Shape {
     @location(9) padding: vec4<f32>,
 }
 
-#ifdef PER_OBJECT_BUFFER_BATCH_SIZE
-@group(1) @binding(0) var<uniform> shapes: array<Shape, #{PER_OBJECT_BUFFER_BATCH_SIZE}u>;
-#else
+@if(PER_OBJECT_BUFFER_BATCH_SIZE)
+@group(1) @binding(0) var<uniform> shapes: array<Shape, constants::PER_OBJECT_BUFFER_BATCH_SIZE>;
+@else
 @group(1) @binding(0) var<storage> shapes: array<Shape>;
-#endif 
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -35,9 +36,8 @@ struct VertexOutput {
     @location(2) size: vec2<f32>,
     @location(3) corner_radii: vec4<f32>,
     @location(4) thickness: f32,
-#ifdef TEXTURED
+    @if(TEXTURED)
     @location(5) texture_uv: vec2<f32>,
-#endif
 };
 
 @vertex
@@ -70,9 +70,8 @@ fn vertex(v: Vertex) -> VertexOutput {
     out.corner_radii = 2.0 * min(shape.corner_radii / shortest_side, vec4<f32>(0.5));
 
     out.color = shape.color;
-#ifdef TEXTURED
+    @if(TEXTURED)
     out.texture_uv = core::get_texture_uv(vertex.xy);
-#endif
     return out;
 }
 
@@ -82,14 +81,13 @@ struct FragmentInput {
     @location(2) size: vec2<f32>,
     @location(3) corner_radii: vec4<f32>,
     @location(4) thickness: f32,
-#ifdef TEXTURED
+    @if(TEXTURED)
     @location(5) texture_uv: vec2<f32>,
-#endif
 };
 
 // Given a position, and a size determine the distance between a point and the rectangle with those side lengths
 fn rectSDF(position: vec2<f32>, size: vec2<f32>) -> f32 {
-    // Rectangles are symmetrical across both axis so we can mirror our point 
+    // Rectangles are symmetrical across both axis so we can mirror our point
     // into the positive x and y axis by taking the absolute value
     var pos = abs(position);
 
@@ -100,7 +98,7 @@ fn rectSDF(position: vec2<f32>, size: vec2<f32>) -> f32 {
     // from outside, however if we are inside the rect this is all 0s
     var outside_to_edge = max(vec2<f32>(0.), to_corner);
 
-    // If the point is inside the rect then it is always below or to the left of our corner 
+    // If the point is inside the rect then it is always below or to the left of our corner
     // so take the largest negative value from our vector, this will be 0 outside the rect
     var inside_length = min(0., max(to_corner.x, to_corner.y));
 
@@ -115,8 +113,6 @@ fn quadrant(in: vec2<f32>) -> i32 {
     return -uv.y + (-uv.x * uv.y + 3) / 2;
 }
 
-// Due to https://github.com/gfx-rs/naga/issues/1743 this cannot be compiled into the vertex shader on web
-#ifdef FRAGMENT
 @fragment
 fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
     // Mask representing whether this fragment falls within the shape
@@ -128,7 +124,7 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
 
     // Calculate our positions distance from the rectangle
     var dist = rectSDF(f.uv, f.size - radii) - radii;
-    
+
     // Cut off points outside the shape or within the hollow area
     in_shape *= core::step_aa(-f.thickness, dist) * core::step_aa(dist, 0.);
 
@@ -138,10 +134,8 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
     }
 
     var color = core::color_output(vec4<f32>(f.color.rgb, in_shape));
-#ifdef TEXTURED
+    @if(TEXTURED)
     color = color * textureSample(image, image_sampler, f.texture_uv);
-#endif
 
     return color;
 }
-#endif

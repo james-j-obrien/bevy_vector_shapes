@@ -3,7 +3,7 @@ use wgpu::vertex_attr_array;
 
 use crate::{
     prelude::*,
-    render::{Flags, ShapeComponent, ShapeData, RECT_HANDLE},
+    render::{Flags, ShapeComponent, ShapeData, RECT_SHADER_PATH},
 };
 
 /// Component containing the data for drawing a rectangle.
@@ -124,7 +124,7 @@ impl ShapeData for RectData {
     }
 
     fn shader() -> ShaderRef {
-        RECT_HANDLE.into()
+        RECT_SHADER_PATH.into()
     }
 
     fn transform(&self) -> Mat4 {

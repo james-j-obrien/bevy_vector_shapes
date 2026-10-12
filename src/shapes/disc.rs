@@ -3,7 +3,7 @@ use wgpu::vertex_attr_array;
 
 use crate::{
     prelude::*,
-    render::{Flags, ShapeComponent, ShapeData, DISC_HANDLE},
+    render::{Flags, ShapeComponent, ShapeData, DISC_SHADER_PATH},
 };
 
 /// Component containing the data for drawing a disc.
@@ -188,7 +188,7 @@ impl ShapeData for DiscData {
     }
 
     fn shader() -> ShaderRef {
-        DISC_HANDLE.into()
+        DISC_SHADER_PATH.into()
     }
 
     fn transform(&self) -> Mat4 {

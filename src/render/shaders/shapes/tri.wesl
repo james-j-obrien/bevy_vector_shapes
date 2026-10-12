@@ -1,6 +1,8 @@
-#import bevy_vector_shapes::core
-#import bevy_vector_shapes::core::{view, image, image_sampler}
-#import bevy_vector_shapes::constants::{PI, TAU}
+import bevy_vector_shapes::render::shaders::core;
+import bevy_vector_shapes::render::shaders::core::view;
+@if(TEXTURED)
+import bevy_vector_shapes::render::shaders::core::{image, image_sampler};
+import bevy_vector_shapes::render::shaders::constants::{PI, TAU};
 
 struct Vertex {
     @builtin(instance_index) index: u32,
@@ -14,22 +16,20 @@ struct Shape {
     @location(2) matrix_2: vec4<f32>,
     @location(3) matrix_3: vec4<f32>,
 
-    @location(4) color: vec4<f32>,  
+    @location(4) color: vec4<f32>,
     @location(5) thickness: f32,
     @location(6) flags: u32,
-  
+
     @location(7) v_0: vec2<f32>,
     @location(8) v_1: vec2<f32>,
     @location(9) v_2: vec2<f32>,
     @location(10) roundness: f32,
 };
 
-#ifdef PER_OBJECT_BUFFER_BATCH_SIZE
-@group(1) @binding(0) var<uniform> shapes: array<Shape, #{PER_OBJECT_BUFFER_BATCH_SIZE}u>;
-#else
+@if(PER_OBJECT_BUFFER_BATCH_SIZE)
+@group(1) @binding(0) var<uniform> shapes: array<Shape, constants::PER_OBJECT_BUFFER_BATCH_SIZE>;
+@else
 @group(1) @binding(0) var<storage> shapes: array<Shape>;
-#endif 
-
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -41,9 +41,8 @@ struct VertexOutput {
     @location(4) v_1: vec2<f32>,
     @location(5) v_2: vec2<f32>,
     @location(6) roundness: f32,
-#ifdef TEXTURED
+    @if(TEXTURED)
     @location(7) texture_uv: vec2<f32>,
-#endif
 };
 
 @vertex
@@ -78,7 +77,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     let l_s_2 = length(shape.v_0 - shape.v_1);
 
     let p = l_s_0 + l_s_1 + l_s_2;
-    let center = (l_s_0 * shape.v_0 + l_s_1 * shape.v_1 + l_s_2 * shape.v_2) / p; 
+    let center = (l_s_0 * shape.v_0 + l_s_1 * shape.v_1 + l_s_2 * shape.v_2) / p;
     let s = p / 2.0;
     let in_radius = sqrt((s - l_s_0) * (s - l_s_1) * (s - l_s_2) / s);
 
@@ -122,7 +121,7 @@ fn vertex(v: Vertex) -> VertexOutput {
 
     // Rotate the position based on our basis vectors and add the world position offset
     var world_pos = origin + (padded_pos.x * basis_vectors[0]) - (padded_pos.y * basis_vectors[1]);
-    out.clip_position = view.view_proj * vec4<f32>(world_pos, 1.0);
+    out.clip_position = view.clip_from_world * vec4<f32>(world_pos, 1.0);
 
     out.uv = vertex.xy * uv_ratio / min_dist;
     out.thickness = core::calculate_thickness(thickness_data, min_dist, shape.flags);
@@ -133,9 +132,8 @@ fn vertex(v: Vertex) -> VertexOutput {
     out.v_2 = (v_2 / min_dist) * ((min_dist - 2.0 * shape.roundness) / min_dist) ;
 
     out.color = shape.color;
-#ifdef TEXTURED
+    @if(TEXTURED)
     out.texture_uv = core::get_texture_uv(vertex.xy);
-#endif
     return out;
 }
 
@@ -148,9 +146,8 @@ struct FragmentInput {
     @location(4) v_1: vec2<f32>,
     @location(5) v_2: vec2<f32>,
     @location(6) roundness: f32,
-#ifdef TEXTURED
+    @if(TEXTURED)
     @location(7) texture_uv: vec2<f32>,
-#endif
 };
 
 fn cross2d(a: vec2<f32>, b: vec2<f32>) -> f32 {
@@ -190,8 +187,6 @@ fn triangleSDF(p: vec2<f32>, a: vec2<f32>, b: vec2<f32>, c: vec2<f32>) -> f32 {
     return -sqrt(d.x) * sign(d.y);
 }
 
-// Due to https://github.com/gfx-rs/naga/issues/1743 this cannot be compiled into the vertex shader on web
-#ifdef FRAGMENT
 @fragment
 fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
     // Mask representing whether this fragment falls within the shape
@@ -209,10 +204,8 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
     }
 
     var color = core::color_output(vec4<f32>(f.color.rgb, in_shape));
-#ifdef TEXTURED
+    @if(TEXTURED)
     color = color * textureSample(image, image_sampler, f.texture_uv);
-#endif
 
     return color;
 }
-#endif
