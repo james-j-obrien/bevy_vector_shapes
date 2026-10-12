@@ -34,5 +34,7 @@ jobs:
       if: runner.os == 'linux'
     - name: Build
       run: cargo build --verbose --workspace --features "bevy/x11"
+    - name: Validate shader variants
+      run: cargo test --test shaders
     - name: Run fmt check
       run: cargo fmt --all -- --check

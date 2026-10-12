@@ -1,5 +1,5 @@
 use bevy::{
-    core_pipeline::tonemapping::{get_lut_bindings, Tonemapping, TonemappingLuts},
+    core_pipeline::tonemapping::{get_lut_bindings, TonemappingLuts},
     ecs::{
         query::ROQueryItem,
         system::{
@@ -18,7 +18,7 @@ use bevy::{
         render_resource::{BindGroup, *},
         renderer::RenderDevice,
         texture::{FallbackImage, GpuImage},
-        view::{ExtractedView, ViewUniformOffset, ViewUniforms},
+        view::{ExtractedView, Tonemapping, ViewUniformOffset, ViewUniforms},
     },
 };
 

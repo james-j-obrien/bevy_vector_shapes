@@ -3,7 +3,7 @@ use wgpu::vertex_attr_array;
 
 use crate::{
     prelude::*,
-    render::{Flags, ShapeComponent, ShapeData, NGON_HANDLE},
+    render::{Flags, ShapeComponent, ShapeData, NGON_SHADER_PATH},
 };
 
 /// Component containing the data for drawing a regular polygon.
@@ -147,7 +147,7 @@ impl ShapeData for NgonData {
     }
 
     fn shader() -> ShaderRef {
-        NGON_HANDLE.into()
+        NGON_SHADER_PATH.into()
     }
 
     fn transform(&self) -> Mat4 {

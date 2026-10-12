@@ -6,7 +6,7 @@ use wgpu::vertex_attr_array;
 
 use crate::{
     prelude::*,
-    render::{Flags, ShapeComponent, ShapeData, TRIANGLE_HANDLE},
+    render::{Flags, ShapeComponent, ShapeData, TRIANGLE_SHADER_PATH},
 };
 
 /// Component containing the data for drawing a triangle.
@@ -145,7 +145,7 @@ impl ShapeData for TriangleData {
     }
 
     fn shader() -> ShaderRef {
-        TRIANGLE_HANDLE.into()
+        TRIANGLE_SHADER_PATH.into()
     }
 
     fn transform(&self) -> Mat4 {

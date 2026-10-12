@@ -1,7 +1,6 @@
 use bevy::camera::visibility::RenderLayers;
 use bevy::ecs::change_detection::Tick;
-use bevy::ecs::query::FilteredAccessSet;
-use bevy::ecs::system::{SystemMeta, SystemParam, SystemParamValidationError};
+use bevy::ecs::system::{SystemAccess, SystemMeta, SystemParam, SystemParamValidationError};
 use bevy::ecs::world::unsafe_world_cell::UnsafeWorldCell;
 use bevy::platform::cell::SyncCell;
 use bevy::prelude::*;
@@ -189,13 +188,13 @@ unsafe impl SystemParam for &mut ShapeConfig {
     fn init_access(
         state: &Self::State,
         system_meta: &mut SystemMeta,
-        component_access_set: &mut FilteredAccessSet,
+        system_access: &mut SystemAccess,
         world: &mut World,
     ) {
         Res::<BaseShapeConfig>::init_access(
             &state.resource_state,
             system_meta,
-            component_access_set,
+            system_access,
             world,
         );
     }

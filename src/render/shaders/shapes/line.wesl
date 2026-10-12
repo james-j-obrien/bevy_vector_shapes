@@ -1,13 +1,15 @@
-#import bevy_vector_shapes::core
-#import bevy_vector_shapes::core::{view, image, image_sampler}
-#import bevy_vector_shapes::constants::{PI, TAU}
+import bevy_vector_shapes::render::shaders::core;
+import bevy_vector_shapes::render::shaders::core::view;
+@if(TEXTURED)
+import bevy_vector_shapes::render::shaders::core::{image, image_sampler};
+import bevy_vector_shapes::render::shaders::constants::{PI, TAU};
 
 struct Vertex {
     @builtin(instance_index) index: u32,
     @location(0) pos: vec3<f32>
 };
 
-struct Shape { 
+struct Shape {
     @location(0) matrix_0: vec4<f32>,
     @location(1) matrix_1: vec4<f32>,
     @location(2) matrix_2: vec4<f32>,
@@ -21,20 +23,18 @@ struct Shape {
     @location(8) end: vec3<f32>,
 };
 
-#ifdef PER_OBJECT_BUFFER_BATCH_SIZE
-@group(1) @binding(0) var<uniform> shapes: array<Shape, #{PER_OBJECT_BUFFER_BATCH_SIZE}u>;
-#else
+@if(PER_OBJECT_BUFFER_BATCH_SIZE)
+@group(1) @binding(0) var<uniform> shapes: array<Shape, constants::PER_OBJECT_BUFFER_BATCH_SIZE>;
+@else
 @group(1) @binding(0) var<storage> shapes: array<Shape>;
-#endif 
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) color: vec4<f32>,
     @location(1) uv: vec2<f32>,
     @location(2) cap_ratio: f32,
-#ifdef TEXTURED
+    @if(TEXTURED)
     @location(3) texture_uv: vec2<f32>,
-#endif
 };
 
 @vertex
@@ -124,13 +124,12 @@ fn vertex(v: Vertex) -> VertexOutput {
     var world_pos = origin + local_offset.x * basis_vectors[0] + local_offset.y * basis_vectors[1];
 
     // Multiply the world space position by the view projection matrix to convert to our clip position
-    out.clip_position = view.view_proj * vec4<f32>(world_pos, 1.0);
+    out.clip_position = view.clip_from_world * vec4<f32>(world_pos, 1.0);
     out.uv = vertex.xy * uv_ratio;
 
     out.color = out_color;
-#ifdef TEXTURED
+    @if(TEXTURED)
     out.texture_uv = core::get_texture_uv(vertex.xy);
-#endif
     return out;
 }
 
@@ -138,13 +137,10 @@ struct FragmentInput {
     @location(0) color: vec4<f32>,
     @location(1) uv: vec2<f32>,
     @location(2) cap_ratio: f32,
-#ifdef TEXTURED
+    @if(TEXTURED)
     @location(3) texture_uv: vec2<f32>,
-#endif
 };
 
-// Due to https://github.com/gfx-rs/naga/issues/1743 this cannot be compiled into the vertex shader on web
-#ifdef FRAGMENT
 @fragment
 fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
     var in_shape = f.color.a;
@@ -183,10 +179,8 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
     }
 
     var color = core::color_output(vec4<f32>(f.color.rgb, in_shape));
-#ifdef TEXTURED
+    @if(TEXTURED)
     color = color * textureSample(image, image_sampler, f.texture_uv);
-#endif
 
     return color;
 }
-#endif

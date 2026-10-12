@@ -2,7 +2,6 @@ use std::hash::Hash;
 use std::hash::Hasher;
 use std::marker::PhantomData;
 
-use bevy::asset::uuid_handle;
 use bevy::camera::visibility::RenderLayers;
 use bevy::ecs::entity::{EntityGeneration, EntityIndex};
 use bevy::ecs::system::StaticSystemParam;
@@ -11,10 +10,9 @@ use bevy::render::batching::no_gpu_preprocessing::BatchedInstanceBuffer;
 use bevy::render::batching::GetBatchData;
 use bevy::render::render_phase::{PhaseItemExtraIndex, SortedPhaseItem, ViewSortedRenderPhases};
 use bevy::render::sync_world::RenderEntity;
-use bevy::shader::ShaderDefVal;
-use bevy::shader::ShaderRef;
+use bevy::shader::{load_shader_library, ShaderDefVal, ShaderRef};
 use bevy::{
-    asset::load_internal_asset,
+    asset::embedded_asset,
     core_pipeline::{
         core_2d::Transparent2d,
         core_3d::{AlphaMask3d, Opaque3d, Transparent3d},
@@ -46,76 +44,26 @@ use render_2d::*;
 pub(crate) mod render_3d;
 use render_3d::*;
 
-/// Handler to shader containing shared functionality.
-pub const CORE_HANDLE: Handle<Shader> = uuid_handle!("00000000-0000-0000-b766-25c7b7116e7a");
+pub(crate) const DISC_SHADER_PATH: &str =
+    "embedded://bevy_vector_shapes/render/shaders/shapes/disc.wesl";
+pub(crate) const LINE_SHADER_PATH: &str =
+    "embedded://bevy_vector_shapes/render/shaders/shapes/line.wesl";
+pub(crate) const NGON_SHADER_PATH: &str =
+    "embedded://bevy_vector_shapes/render/shaders/shapes/ngon.wesl";
+pub(crate) const RECT_SHADER_PATH: &str =
+    "embedded://bevy_vector_shapes/render/shaders/shapes/rect.wesl";
+pub(crate) const TRIANGLE_SHADER_PATH: &str =
+    "embedded://bevy_vector_shapes/render/shaders/shapes/tri.wesl";
 
-/// Handler to shader containing shared constants.
-pub const CONSTANTS_HANDLE: Handle<Shader> = uuid_handle!("00000000-0000-0000-c98e-c4f33ff6f60b");
-
-/// Handler to shader for drawing discs.
-pub const DISC_HANDLE: Handle<Shader> = uuid_handle!("00000000-0000-0000-ae5a-7141de1d0b16");
-
-/// Handler to shader for drawing lines.
-pub const LINE_HANDLE: Handle<Shader> = uuid_handle!("00000000-0000-0000-bd87-2dd097d75b68");
-
-/// Handler to shader for drawing regular polygons.
-pub const NGON_HANDLE: Handle<Shader> = uuid_handle!("00000000-0000-0000-f167-5038026cdfbb");
-
-/// Handler to shader for drawing rectangles.
-pub const RECT_HANDLE: Handle<Shader> = uuid_handle!("00000000-0000-0000-d121-147b5fcad83f");
-
-/// Handler to shader for drawing triangles.
-pub const TRIANGLE_HANDLE: Handle<Shader> = uuid_handle!("00000000-0000-0000-ab4e-d06c34e4155f");
-
-/// Load the libraries shaders as internal assets.
+/// Register the library's embedded shaders.
 pub fn load_shaders(app: &mut App) {
-    load_internal_asset!(app, CORE_HANDLE, "shaders/core.wgsl", Shader::from_wgsl);
-    load_internal_asset!(
-        app,
-        CONSTANTS_HANDLE,
-        "shaders/constants.wgsl",
-        Shader::from_wgsl
-    );
-    let defs = DiscData::shader_defs(app);
-    load_internal_asset!(
-        app,
-        DISC_HANDLE,
-        "shaders/shapes/disc.wgsl",
-        Shader::from_wgsl_with_defs,
-        defs
-    );
-    let defs = LineData::shader_defs(app);
-    load_internal_asset!(
-        app,
-        LINE_HANDLE,
-        "shaders/shapes/line.wgsl",
-        Shader::from_wgsl_with_defs,
-        defs
-    );
-    let defs = NgonData::shader_defs(app);
-    load_internal_asset!(
-        app,
-        NGON_HANDLE,
-        "shaders/shapes/ngon.wgsl",
-        Shader::from_wgsl_with_defs,
-        defs
-    );
-    let defs = RectData::shader_defs(app);
-    load_internal_asset!(
-        app,
-        RECT_HANDLE,
-        "shaders/shapes/rect.wgsl",
-        Shader::from_wgsl_with_defs,
-        defs
-    );
-    let defs = TriangleData::shader_defs(app);
-    load_internal_asset!(
-        app,
-        TRIANGLE_HANDLE,
-        "shaders/shapes/tri.wgsl",
-        Shader::from_wgsl_with_defs,
-        defs
-    );
+    load_shader_library!(app, "shaders/core.wesl");
+    load_shader_library!(app, "shaders/constants.wesl");
+    embedded_asset!(app, "shaders/shapes/disc.wesl");
+    embedded_asset!(app, "shaders/shapes/line.wesl");
+    embedded_asset!(app, "shaders/shapes/ngon.wesl");
+    embedded_asset!(app, "shaders/shapes/rect.wesl");
+    embedded_asset!(app, "shaders/shapes/tri.wesl");
 }
 
 /// Contains data necessary to render a single shape.
@@ -181,18 +129,14 @@ pub trait ShapeData: Send + Sync + GpuArrayBufferable + 'static {
     /// Transform of the shape to be used for z-ordering in 3D.
     fn transform(&self) -> Mat4;
 
-    fn shader_defs(app: &App) -> Vec<ShaderDefVal> {
+    fn shader_defs(limits: &wgpu::Limits) -> Vec<ShaderDefVal> {
         let mut shader_defs = Vec::with_capacity(1);
 
-        if let Some(render_app) = app.get_sub_app(RenderApp) {
-            if let Some(per_object_buffer_batch_size) = GpuArrayBuffer::<Self>::batch_size(
-                &render_app.world().resource::<RenderDevice>().limits(),
-            ) {
-                shader_defs.push(ShaderDefVal::UInt(
-                    "PER_OBJECT_BUFFER_BATCH_SIZE".into(),
-                    per_object_buffer_batch_size,
-                ));
-            }
+        if let Some(per_object_buffer_batch_size) = GpuArrayBuffer::<Self>::batch_size(limits) {
+            shader_defs.push(ShaderDefVal::UInt(
+                "PER_OBJECT_BUFFER_BATCH_SIZE".into(),
+                per_object_buffer_batch_size,
+            ));
         }
 
         shader_defs
@@ -454,10 +398,11 @@ impl<T: ShapeComponent> Plugin for ShapeType3dPlugin<T> {
 pub struct ShapeRenderPlugin;
 
 impl Plugin for ShapeRenderPlugin {
-    fn build(&self, _app: &mut App) {}
+    fn build(&self, app: &mut App) {
+        load_shaders(app);
+    }
 
     fn finish(&self, app: &mut App) {
-        load_shaders(app);
         setup_pipeline(app);
     }
 }

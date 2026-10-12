@@ -1,33 +1,34 @@
-#import bevy_vector_shapes::core
-#import bevy_vector_shapes::core::{view, image, image_sampler}
-#import bevy_vector_shapes::constants::{PI, TAU}
+import bevy_vector_shapes::render::shaders::core;
+import bevy_vector_shapes::render::shaders::core::view;
+@if(TEXTURED)
+import bevy_vector_shapes::render::shaders::core::{image, image_sampler};
+import bevy_vector_shapes::render::shaders::constants::{PI, TAU};
 
 struct Vertex {
     @builtin(instance_index) index: u32,
     @location(0) pos: vec3<f32>
 };
 
-struct Shape { 
+struct Shape {
     @location(0) matrix_0: vec4<f32>,
     @location(1) matrix_1: vec4<f32>,
     @location(2) matrix_2: vec4<f32>,
     @location(3) matrix_3: vec4<f32>,
 
-    @location(4) color: vec4<f32>,  
+    @location(4) color: vec4<f32>,
     @location(5) thickness: f32,
     @location(6) flags: u32,
-  
+
     @location(7) radius: f32,
-    @location(8) start_angle: f32, 
+    @location(8) start_angle: f32,
     @location(9) end_angle: f32,
     @location(10) padding: vec4<f32>,
 };
 
-#ifdef PER_OBJECT_BUFFER_BATCH_SIZE
-@group(1) @binding(0) var<uniform> shapes: array<Shape, #{PER_OBJECT_BUFFER_BATCH_SIZE}u>;
-#else
+@if(PER_OBJECT_BUFFER_BATCH_SIZE)
+@group(1) @binding(0) var<uniform> shapes: array<Shape, constants::PER_OBJECT_BUFFER_BATCH_SIZE>;
+@else
 @group(1) @binding(0) var<storage> shapes: array<Shape>;
-#endif 
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -37,9 +38,8 @@ struct VertexOutput {
     @location(3) angle: f32,
     @location(4) delta: f32,
     @location(5) @interpolate(flat) cap: u32,
-#ifdef TEXTURED
+    @if(TEXTURED)
     @location(6) texture_uv: vec2<f32>,
-#endif
 };
 
 @vertex
@@ -83,9 +83,8 @@ fn vertex(v: Vertex) -> VertexOutput {
     }
 
     out.color = shape.color;
-#ifdef TEXTURED
+    @if(TEXTURED)
     out.texture_uv = core::get_texture_uv(vertex.xy);
-#endif
     return out;
 }
 
@@ -96,13 +95,10 @@ struct FragmentInput {
     @location(3) angle: f32,
     @location(4) delta: f32,
     @location(5) @interpolate(flat) cap: u32,
-#ifdef TEXTURED
+    @if(TEXTURED)
     @location(6) texture_uv: vec2<f32>,
-#endif
 };
 
-// Due to https://github.com/gfx-rs/naga/issues/1743 this cannot be compiled into the vertex shader on web
-#ifdef FRAGMENT
 @fragment
 fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
     // Mask representing whether this fragment falls within the shape
@@ -153,10 +149,8 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
     }
 
     var color = core::color_output(vec4<f32>(f.color.rgb, in_shape));
-#ifdef TEXTURED
+    @if(TEXTURED)
     color = color * textureSample(image, image_sampler, f.texture_uv);
-#endif
 
     return color;
 }
-#endif

@@ -1,6 +1,8 @@
-#import bevy_vector_shapes::core
-#import bevy_vector_shapes::core::{view, image, image_sampler}
-#import bevy_vector_shapes::constants::{PI, TAU}
+import bevy_vector_shapes::render::shaders::core;
+import bevy_vector_shapes::render::shaders::core::view;
+@if(TEXTURED)
+import bevy_vector_shapes::render::shaders::core::{image, image_sampler};
+import bevy_vector_shapes::render::shaders::constants::{PI, TAU};
 
 struct Vertex {
     @builtin(instance_index) index: u32,
@@ -13,21 +15,20 @@ struct Shape {
     @location(2) matrix_2: vec4<f32>,
     @location(3) matrix_3: vec4<f32>,
 
-    @location(4) color: vec4<f32>,  
+    @location(4) color: vec4<f32>,
     @location(5) thickness: f32,
     @location(6) flags: u32,
-  
+
     @location(7) sides: f32,
     @location(8) radius: f32,
     @location(9) roundness: f32,
     @location(10) padding: vec4<f32>,
 };
 
-#ifdef PER_OBJECT_BUFFER_BATCH_SIZE
-@group(1) @binding(0) var<uniform> shapes: array<Shape, #{PER_OBJECT_BUFFER_BATCH_SIZE}u>;
-#else
+@if(PER_OBJECT_BUFFER_BATCH_SIZE)
+@group(1) @binding(0) var<uniform> shapes: array<Shape, constants::PER_OBJECT_BUFFER_BATCH_SIZE>;
+@else
 @group(1) @binding(0) var<storage> shapes: array<Shape>;
-#endif 
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
@@ -37,9 +38,8 @@ struct VertexOutput {
     @location(3) central_angle: f32,
     @location(4) half_side_length: f32,
     @location(5) roundness: f32,
-#ifdef TEXTURED
+    @if(TEXTURED)
     @location(6) texture_uv: vec2<f32>,
-#endif
 };
 
 @vertex
@@ -66,7 +66,7 @@ fn vertex(v: Vertex) -> VertexOutput {
 
     // The central angle is the angle at the center of the polygon between two adjacent vertices
     // https://en.wikipedia.org/wiki/Central_angle
-    out.central_angle = TAU / shape.sides; 
+    out.central_angle = TAU / shape.sides;
 
     // Calculate the apothem for a radius 1 polygon
     // The apothem is the length between the center of the polygon and a side at a right angle
@@ -79,7 +79,7 @@ fn vertex(v: Vertex) -> VertexOutput {
     // Calculate our world space apothem for a polygon with the given radius
     var apothem = unit_apothem * shape.radius;
 
-    // We want 1 unit in uv space to be the length of the apothem of our polygon 
+    // We want 1 unit in uv space to be the length of the apothem of our polygon
     // so scale world to uv space using the world space apothem
     out.uv = vertex_data.local_pos / (apothem * vertex_data.scale) * vertex_data.uv_ratio;
     out.thickness = core::calculate_thickness(vertex_data.thickness_data, apothem, shape.flags);
@@ -90,9 +90,8 @@ fn vertex(v: Vertex) -> VertexOutput {
     out.half_side_length = half_side_length / unit_apothem * (1.0 - out.roundness);
 
     out.color = shape.color;
-#ifdef TEXTURED
+    @if(TEXTURED)
     out.texture_uv = core::get_texture_uv(vertex.xy);
-#endif
     return out;
 }
 
@@ -103,9 +102,8 @@ struct FragmentInput {
     @location(3) central_angle: f32,
     @location(4) half_side_length: f32,
     @location(5) roundness: f32,
-#ifdef TEXTURED
+    @if(TEXTURED)
     @location(6) texture_uv: vec2<f32>,
-#endif
 };
 
 // Given a position, a central angle and a half side length determine the distance
@@ -123,7 +121,7 @@ fn ngonSDF(position: vec2<f32>, central_angle: f32, half_side_length: f32, apoth
     // Calculate the vector to that vertex
     var nearest_vertex = vec2<f32>(cos(nearest_angle), sin(nearest_angle));
 
-    // Transform our point such that the x axis is along the apothem and the y axis is 
+    // Transform our point such that the x axis is along the apothem and the y axis is
     //  along the side connected to the nearest vertex clockwise
     pos = mat2x2<f32>(nearest_vertex.x, -nearest_vertex.y, nearest_vertex.y, nearest_vertex.x) * pos;
 
@@ -136,8 +134,6 @@ fn ngonSDF(position: vec2<f32>, central_angle: f32, half_side_length: f32, apoth
     return length(pos - nearest_point) * sign(pos.x - apothem);
 }
 
-// Due to https://github.com/gfx-rs/naga/issues/1743 this cannot be compiled into the vertex shader on web
-#ifdef FRAGMENT
 @fragment
 fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
     // Mask representing whether this fragment falls within the shape
@@ -145,7 +141,7 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
 
     // Calculate our positions distance from the polygon
     var dist = ngonSDF(f.uv, f.central_angle, f.half_side_length, 1.0 - f.roundness) - f.roundness;
-    
+
     // Cut off points outside the shape or within the hollow area
     in_shape *= core::step_aa(-f.thickness, dist) * core::step_aa(dist, 0.);
 
@@ -155,10 +151,8 @@ fn fragment(f: FragmentInput) -> @location(0) vec4<f32> {
     }
 
     var color = core::color_output(vec4<f32>(f.color.rgb, in_shape));
-#ifdef TEXTURED
+    @if(TEXTURED)
     color = color * textureSample(image, image_sampler, f.texture_uv);
-#endif
 
     return color;
 }
-#endif

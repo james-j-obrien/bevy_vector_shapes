@@ -155,6 +155,7 @@ impl ShapePipelines {
 #[derive(Resource)]
 pub struct Shape2dPipeline<T: ShapeData> {
     pub shader: Handle<Shader>,
+    shader_defs: Vec<ShaderDefVal>,
     pub layout: BindGroupLayoutDescriptor,
     _marker: PhantomData<T>,
 }
@@ -173,11 +174,13 @@ impl<T: ShapeData> FromWorld for Shape2dPipeline<T> {
             ),
         );
 
-        let asset_server = world.resource_mut::<AssetServer>();
+        let shader_defs = T::shader_defs(&render_device.limits());
+        let asset_server = world.resource::<AssetServer>();
         Self {
             layout,
+            shader_defs,
             shader: match T::shader() {
-                ShaderRef::Default => RECT_HANDLE,
+                ShaderRef::Default => asset_server.load(RECT_SHADER_PATH),
                 ShaderRef::Handle(handle) => handle,
                 ShaderRef::Path(path) => asset_server.load(path),
             },
@@ -195,7 +198,7 @@ impl<T: ShapeData> Shape2dPipeline<T> {
         key: ShapePipelineKey,
         target_format: TextureFormat,
     ) -> RenderPipelineDescriptor {
-        let mut shader_defs = Vec::new();
+        let mut shader_defs = self.shader_defs.clone();
         let (label, blend, depth_stencil, depth_write_enabled);
 
         let pass = key.intersection(ShapePipelineKey::BLEND_RESERVED_BITS);
@@ -292,13 +295,11 @@ impl<T: ShapeData> Shape2dPipeline<T> {
             shader_defs.push("TEXTURED".into());
         }
 
-        let mut fragment_defs = shader_defs.clone();
-        fragment_defs.push("FRAGMENT".into());
-
         RenderPipelineDescriptor {
             vertex: VertexState {
                 shader: self.shader.clone(),
                 entry_point: Some("vertex".into()),
+                constants: default(),
                 shader_defs: shader_defs.clone(),
                 buffers: vec![VertexBufferLayout {
                     array_stride: std::mem::size_of::<[f32; 3]>() as u64,
@@ -308,8 +309,9 @@ impl<T: ShapeData> Shape2dPipeline<T> {
             },
             fragment: Some(FragmentState {
                 shader: self.shader.clone(),
-                shader_defs: fragment_defs,
+                shader_defs,
                 entry_point: Some("fragment".into()),
+                constants: default(),
                 targets: vec![Some(ColorTargetState {
                     format,
                     blend,

@@ -3,7 +3,7 @@ use wgpu::vertex_attr_array;
 
 use crate::{
     prelude::*,
-    render::{Flags, ShapeComponent, ShapeData, LINE_HANDLE},
+    render::{Flags, ShapeComponent, ShapeData, LINE_SHADER_PATH},
 };
 
 /// Component containing the data for drawing a line.
@@ -125,7 +125,7 @@ impl ShapeData for LineData {
     }
 
     fn shader() -> ShaderRef {
-        LINE_HANDLE.into()
+        LINE_SHADER_PATH.into()
     }
 
     fn transform(&self) -> Mat4 {
